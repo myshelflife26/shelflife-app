@@ -1,0 +1,140 @@
+# 🚨 FINAL FIREBASE RULES - COPY AND PASTE THIS NOW
+
+## The Problem
+The split `get` and `list` rules were causing issues with queries. The simpler `read` rule works better.
+
+## Deploy These Rules NOW
+
+Go to Firebase Console and paste the ENTIRE content below:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is management/manager
+    function isManagement() {
+      return isSignedIn() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'management' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
+    }
+
+    // Master Figures collection
+    match /masterFigures/{figureId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManagement();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isManagement();
+    }
+
+    // Figures collection - FIXED
+    match /figures/{figureId} {
+      // Users can read their own figures or public/listed figures from others
+      allow read: if resource.data.isPublic == true ||
+                     resource.data.isListed == true ||
+                     resource.data.userId == request.auth.uid ||
+                     isManagement();
+
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId) || isManagement();
+    }
+
+    // Reactions collection
+    match /reactions/{reactionId} {
+      allow read: if true;
+      allow create, delete: if isSignedIn();
+    }
+
+    // Messages collection
+    match /messages/{messageId} {
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow update: if isSignedIn() && resource.data.toUserId == request.auth.uid;
+      allow delete: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    // Community figures collection
+    match /communityFigures/{figureId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+    }
+
+    // Trades collection
+    match /trades/{tradeId} {
+      allow read: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    // Admirer requests collection
+    match /admirer_requests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.admirerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+    }
+
+    // Admirers collection
+    match /admirers/{relationshipId} {
+      allow read: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+    }
+
+    // User ratings collection
+    match /userRatings/{ratingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.fromUserId == request.auth.uid;
+    }
+  }
+}
+```
+
+## After You Publish
+
+1. Wait 60 seconds for rules to propagate
+2. Hard refresh the browser (Ctrl+Shift+R or Cmd+Shift+R)
+3. Try the trade button again
+
+This should 100% fix the permissions error!

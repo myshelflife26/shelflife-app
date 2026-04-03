@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YoJoe Scraper Bookmarklet</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #2563eb;
+    }
+    .bookmarklet {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .bookmarklet:hover {
+      background: #1d4ed8;
+    }
+    .code-block {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    .step {
+      background: #f0f9ff;
+      border-left: 4px solid #2563eb;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .success {
+      background: #dcfce7;
+      border-left: 4px solid #16a34a;
+      padding: 16px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>📦 YoJoe → ShelfLife Scraper</h1>
+
+  <p>This bookmarklet lets you scrape G.I. Joe figures directly from YoJoe.com and export them as CSV for ShelfLife.</p>
+
+  <div class="warning">
+    <strong>⚠️ CORS Limitation:</strong> Browsers block direct scraping from other websites. This bookmarklet runs <em>on</em> YoJoe.com itself, bypassing the restriction.
+  </div>
+
+  <h2>📚 How to Install</h2>
+
+  <div class="step">
+    <strong>Step 1:</strong> Drag this button to your bookmarks bar:
+    <br><br>
+    <a href="javascript:(function()%7Bconst%20figures%3D%5B%5D%3Bconst%20links%3Ddocument.querySelectorAll('a%5Bhref*%3D%22.shtml%22%5D')%3Bconst%20yearMatch%3Dwindow.location.href.match(%2F%5C%2Faction%5C%2F(%5Cd%2B)%5C%2F)%3Blet%20year%3Bundefined%3Bif(yearMatch)%7Bconst%20shortYear%3DparseInt(yearMatch%5B1%5D)%3Byear%3DshortYear%3C50%3F2000%2BshortYear%3A1900%2BshortYear%7Dconst%20seenNames%3Dnew%20Set()%3Bfor(const%20link%20of%20Array.from(links))%7Bconst%20title%3Dlink.title%7C%7C''%3Bconst%20img%3Dlink.querySelector('img')%3Bconst%20alt%3Dimg%3F.alt%7C%7C''%3Blet%20figureName%3Dtitle%7C%7Calt%3Bif(!figureName)continue%3Bconst%20cleanName%3DfigureName.replace(%2F%5Cs*%5C(v%5Cd%2B%5C)%5Cs*%2Fgi%2C'').trim()%3Bif(seenNames.has(cleanName.toLowerCase()))continue%3BseenNames.add(cleanName.toLowerCase())%3Blet%20version%3D''%3Bconst%20versionMatch%3DfigureName.match(%2F%5C(v(%5Cd%2B)%5C)%2Fi)%3Bif(versionMatch)version%3D%60V%24%7BversionMatch%5B1%5D%7D%60%3Blet%20imageUrl%3D''%3Bif(img%3F.src)%7BimageUrl%3Dimg.src.startsWith('http')%3Fimg.src%3A%60https%3A%2F%2Fwww.yojoe.com%24%7Bimg.src%7D%60%7Dfigures.push(%7Bname%3AcleanName%2Cmanufacturer%3A'Hasbro'%2CproductLine%3A'G.I.%20Joe'%2CsubProductLine%3Ayear%3F%60%24%7Byear%7D%60%3A''%2Cyear%3Ayear%7C%7C''%2Cversion%3Aversion%2Ccategory%3A'Action%20Figure'%2Csize%3A'3.75%5C%22'%2Cpackaging%3A'Individual'%2CimageUrl%3AimageUrl%7D)%7Dif(figures.length%3D%3D%3D0)%7Balert('No%20figures%20found%20on%20this%20page.%20Make%20sure%20you%5C're%20on%20a%20YoJoe%20year%20listing%20page%20(e.g.%2C%20%2Faction%2F82%2F)')%3Breturn%7Dconst%20csv%3D%5B%5B'name'%2C'manufacturer'%2C'product%20line'%2C'sub%20product%20line'%2C'year'%2C'version'%2C'category'%2C'size'%2C'packaging'%2C'image'%5D.join('%2C')%2C...figures.map(f%3D%3E%5Bf.name%2Cf.manufacturer%2Cf.productLine%2Cf.subProductLine%2Cf.year%2Cf.version%2Cf.category%2Cf.size%2Cf.packaging%2Cf.imageUrl%5D.map(v%3D%3E%60%5C%22%24%7Bv%7D%5C%22%60).join('%2C'))%5D.join('%5Cn')%3Bconst%20blob%3Dnew%20Blob(%5Bcsv%5D%2C%7Btype%3A'text%2Fcsv'%7D)%3Bconst%20url%3DURL.createObjectURL(blob)%3Bconst%20a%3Ddocument.createElement('a')%3Ba.href%3Durl%3Ba.download%3D%60yojoe-figures-%24%7Byear%7C%7C'export'%7D.csv%60%3Ba.click()%3BURL.revokeObjectURL(url)%3Balert(%60Exported%20%24%7Bfigures.length%7D%20figures!%5CnImport%20the%20CSV%20file%20into%20ShelfLife.%60)%7D)()" class="bookmarklet">
+      🚀 Scrape YoJoe
+    </a>
+  </div>
+
+  <div class="step">
+    <strong>Step 2:</strong> Visit a YoJoe year page<br>
+    Example: <a href="https://www.yojoe.com/action/82/" target="_blank">https://www.yojoe.com/action/82/</a>
+  </div>
+
+  <div class="step">
+    <strong>Step 3:</strong> Click the "Scrape YoJoe" bookmark you just added
+  </div>
+
+  <div class="step">
+    <strong>Step 4:</strong> A CSV file will download automatically
+  </div>
+
+  <div class="step">
+    <strong>Step 5:</strong> Import the CSV into ShelfLife:
+    <ul>
+      <li>Settings → Scrape Figures</li>
+      <li>Select "CSV/TSV Import"</li>
+      <li>Open the downloaded CSV file and copy all contents</li>
+      <li>Paste into ShelfLife scraper</li>
+      <li>Click "Import All"</li>
+    </ul>
+  </div>
+
+  <h2>🎯 What It Does</h2>
+
+  <p>The bookmarklet:</p>
+  <ul>
+    <li>✅ Extracts figure names from the page</li>
+    <li>✅ Detects year from URL</li>
+    <li>✅ Captures version numbers (V1, V2, etc.)</li>
+    <li>✅ Grabs image URLs</li>
+    <li>✅ Removes duplicates</li>
+    <li>✅ Exports as CSV</li>
+  </ul>
+
+  <h2>📋 Example Workflow</h2>
+
+  <div class="success">
+    <strong>Import All Vintage Figures (1982-1994):</strong>
+    <ol>
+      <li>Visit https://www.yojoe.com/action/82/</li>
+      <li>Click bookmarklet → downloads "yojoe-figures-1982.csv"</li>
+      <li>Visit https://www.yojoe.com/action/83/</li>
+      <li>Click bookmarklet → downloads "yojoe-figures-1983.csv"</li>
+      <li>Repeat for each year...</li>
+      <li>Import all CSV files into ShelfLife</li>
+    </ol>
+  </div>
+
+  <h2>🔧 Troubleshooting</h2>
+
+  <p><strong>"No figures found"</strong></p>
+  <ul>
+    <li>Make sure you're on a year listing page (e.g., /action/82/)</li>
+    <li>Don't use on individual figure pages</li>
+  </ul>
+
+  <p><strong>Bookmarklet doesn't work</strong></p>
+  <ul>
+    <li>Try dragging it again to bookmarks bar</li>
+    <li>Make sure JavaScript is enabled</li>
+    <li>Try in a different browser</li>
+  </ul>
+
+  <h2>📝 Manual Code (Advanced)</h2>
+
+  <p>If dragging doesn't work, create a bookmark manually:</p>
+  <ol>
+    <li>Create a new bookmark</li>
+    <li>Name it "Scrape YoJoe"</li>
+    <li>Paste this code in the URL field:</li>
+  </ol>
+
+  <div class="code-block">
+    <code id="bookmarklet-code">javascript:(function(){const figures=[];const links=document.querySelectorAll('a[href*=".shtml"]');const yearMatch=window.location.href.match(/\/action\/(\d+)\//);let year=undefined;if(yearMatch){const shortYear=parseInt(yearMatch[1]);year=shortYear<50?2000+shortYear:1900+shortYear}const seenNames=new Set();for(const link of Array.from(links)){const title=link.title||'';const img=link.querySelector('img');const alt=img?.alt||'';let figureName=title||alt;if(!figureName)continue;const cleanName=figureName.replace(/\s*\(v\d+\)\s*/gi,'').trim();if(seenNames.has(cleanName.toLowerCase()))continue;seenNames.add(cleanName.toLowerCase());let version='';const versionMatch=figureName.match(/\(v(\d+)\)/i);if(versionMatch)version=`V${versionMatch[1]}`;let imageUrl='';if(img?.src){imageUrl=img.src.startsWith('http')?img.src:`https://www.yojoe.com${img.src}`}figures.push({name:cleanName,manufacturer:'Hasbro',productLine:'G.I. Joe',subProductLine:year?`${year}`:'',year:year||'',version:version,category:'Action Figure',size:'3.75"',packaging:'Individual',imageUrl:imageUrl})}if(figures.length===0){alert('No figures found on this page. Make sure you\'re on a YoJoe year listing page (e.g., /action/82/)');return}const csv=[['name','manufacturer','product line','sub product line','year','version','category','size','packaging','image'].join(','),...figures.map(f=>[f.name,f.manufacturer,f.productLine,f.subProductLine,f.year,f.version,f.category,f.size,f.packaging,f.imageUrl].map(v=>`"${v}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`yojoe-figures-${year||'export'}.csv`;a.click();URL.revokeObjectURL(url);alert(`Exported ${figures.length} figures!\nImport the CSV file into ShelfLife.`)})()</code>
+  </div>
+
+  <h2>🎉 Done!</h2>
+
+  <p>You now have a working YoJoe scraper that bypasses CORS restrictions. Happy collecting!</p>
+
+  <hr style="margin: 40px 0;">
+
+  <p style="text-align: center; color: #6b7280;">
+    <small>Part of ShelfLife | Built for collectors, by collectors</small>
+  </p>
+</body>
+</html>

@@ -1,0 +1,252 @@
+import { AdmirersService } from './admirers';
+import { ReactionsService } from './reactions';
+import { Storage } from './storage';
+
+const NOTIFICATIONS_KEY = 'app-notifications-state';
+const MAX_SEEN_IDS = 20;
+
+export interface NotificationState {
+  lastSeenAdmirerRequests: number;
+  lastSeenReactions: number;
+  lastSeenFigures: number;
+  seenNotificationIds: string[]; // For deduplication
+}
+
+export interface NotificationResult {
+  type: 'admirerRequest' | 'reaction' | 'newFigure' | 'reportUpdate';
+  id: string; // Unique ID for this notification
+  message: string;
+  data?: any; // Additional data for the notification
+}
+
+export class NotificationsService {
+  private static getState(userId: string): NotificationState {
+    try {
+      const key = `${NOTIFICATIONS_KEY}-${userId}`;
+      const data = localStorage.getItem(key);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Error reading notification state:', error);
+    }
+
+    // Default state
+    return {
+      lastSeenAdmirerRequests: Date.now(),
+      lastSeenReactions: Date.now(),
+      lastSeenFigures: Date.now(),
+      seenNotificationIds: []
+    };
+  }
+
+  private static saveState(userId: string, state: NotificationState): void {
+    try {
+      const key = `${NOTIFICATIONS_KEY}-${userId}`;
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (error) {
+      console.error('Error saving notification state:', error);
+    }
+  }
+
+  private static hasSeenNotification(userId: string, notificationId: string): boolean {
+    const state = this.getState(userId);
+    return state.seenNotificationIds.includes(notificationId);
+  }
+
+  private static markAsSeen(userId: string, notificationId: string): void {
+    const state = this.getState(userId);
+
+    // Add to seen list (keep only last MAX_SEEN_IDS)
+    if (!state.seenNotificationIds.includes(notificationId)) {
+      state.seenNotificationIds.unshift(notificationId);
+      state.seenNotificationIds = state.seenNotificationIds.slice(0, MAX_SEEN_IDS);
+      this.saveState(userId, state);
+    }
+  }
+
+  // Update last-seen timestamp for a specific notification type
+  static updateLastSeen(userId: string, type: 'admirerRequests' | 'reactions' | 'figures'): void {
+    const state = this.getState(userId);
+    const now = Date.now();
+
+    switch (type) {
+      case 'admirerRequests':
+        state.lastSeenAdmirerRequests = now;
+        break;
+      case 'reactions':
+        state.lastSeenReactions = now;
+        break;
+      case 'figures':
+        state.lastSeenFigures = now;
+        break;
+    }
+
+    this.saveState(userId, state);
+  }
+
+  // Detect new admirer requests
+  static async detectNewAdmirerRequests(userId: string): Promise<NotificationResult[]> {
+    const pendingRequests = await AdmirersService.getPendingRequests(userId);
+    const notifications: NotificationResult[] = [];
+
+    for (const request of pendingRequests) {
+      const notificationId = `admirer-request-${request.id}-${userId}`;
+
+      if (!this.hasSeenNotification(userId, notificationId)) {
+        notifications.push({
+          type: 'admirerRequest',
+          id: notificationId,
+          message: `${request.displayName} wants to admire your collection`,
+          data: request
+        });
+        this.markAsSeen(userId, notificationId);
+      }
+    }
+
+    return notifications;
+  }
+
+  // Detect new reactions on user's figures
+  static detectNewReactions(userId: string): NotificationResult[] {
+    const state = this.getState(userId);
+    const userFigures = Storage.getAll(userId);
+    const figureIds = userFigures.map(f => f.id);
+
+    // Get all reactions for user's figures
+    const reactions = ReactionsService.getReactionsForOwner(userId, figureIds);
+
+    // Filter reactions that happened after last seen and are from other users
+    const newReactions = reactions.filter(r =>
+      r.timestamp > state.lastSeenReactions &&
+      r.userId !== userId // Exclude user's own reactions
+    );
+
+    const notifications: NotificationResult[] = [];
+
+    for (const reaction of newReactions) {
+      const notificationId = `reaction-${reaction.id}`;
+
+      if (!this.hasSeenNotification(userId, notificationId)) {
+        // Get figure name
+        const figure = userFigures.find(f => f.id === reaction.figureId);
+        const figureName = figure?.name || 'your figure';
+
+        const reactionEmoji = {
+          appreciate: '👍',
+          love: '❤️',
+          fire: '🔥'
+        }[reaction.reactionType];
+
+        notifications.push({
+          type: 'reaction',
+          id: notificationId,
+          message: `${reaction.displayName} reacted ${reactionEmoji} to ${figureName}`,
+          data: { reaction, figure }
+        });
+        this.markAsSeen(userId, notificationId);
+      }
+    }
+
+    return notifications;
+  }
+
+  // Detect new public figures from people the current user admires
+  static async detectNewFiguresFromAdmirers(userId: string): Promise<NotificationResult[]> {
+    const admiringUserIds = await AdmirersService.getAdmiring(userId);
+    const notifications: NotificationResult[] = [];
+
+    for (const admireeId of admiringUserIds) {
+      // Get all public figures from this admiree
+      const admireeFigures = Storage.getAll(admireeId).filter(f => f.isPublic);
+
+      // Find figures created/made public after last seen
+      // Note: We don't have a creation timestamp, so we check all figures
+      // This is a limitation - in a real app, figures would have timestamps
+      const newFigures = admireeFigures;
+
+      for (const figure of newFigures) {
+        const notificationId = `new-figure-${figure.id}`;
+
+        if (!this.hasSeenNotification(userId, notificationId)) {
+          const admiringCollections = await AdmirersService.getAdmiringCollections(userId);
+          const admiree = admiringCollections.find(u => u.id === admireeId);
+          const admireeName = admiree?.displayName || 'Someone you admire';
+
+          notifications.push({
+            type: 'newFigure',
+            id: notificationId,
+            message: `${admireeName} added ${figure.name}`,
+            data: { figure, admireeId }
+          });
+          this.markAsSeen(userId, notificationId);
+        }
+      }
+    }
+
+    // Limit to most recent notifications to avoid spam
+    return notifications.slice(0, 5);
+  }
+
+  // Create a notification for a report status update
+  static notifyReportUpdate(
+    reporterId: string,
+    reportedUsername: string,
+    newStatus: string,
+    reviewerUsername?: string
+  ): void {
+    const notificationId = `report-update-${reporterId}-${Date.now()}`;
+
+    let message = '';
+    switch (newStatus) {
+      case 'reviewed':
+        message = `Your report against @${reportedUsername} has been reviewed`;
+        break;
+      case 'dismissed':
+        message = `Your report against @${reportedUsername} was dismissed`;
+        break;
+      case 'action_taken':
+        message = `Action has been taken on your report against @${reportedUsername}`;
+        break;
+      default:
+        message = `Your report against @${reportedUsername} status was updated`;
+    }
+
+    if (reviewerUsername) {
+      message += ` by ${reviewerUsername}`;
+    }
+
+    // Mark as seen immediately (we'll show it as a toast instead)
+    this.markAsSeen(reporterId, notificationId);
+  }
+
+  // Detect all new notifications
+  static async detectAllNewNotifications(userId: string): Promise<NotificationResult[]> {
+    const admirerNotifications = await this.detectNewAdmirerRequests(userId);
+    const reactionNotifications = this.detectNewReactions(userId);
+    const figureNotifications = await this.detectNewFiguresFromAdmirers(userId);
+
+    // Combine and return (most recent first)
+    return [
+      ...admirerNotifications,
+      ...reactionNotifications,
+      ...figureNotifications
+    ];
+  }
+
+  // Get count of pending admirer requests (for badge)
+  static async getPendingAdmirerRequestCount(userId: string): Promise<number> {
+    return await AdmirersService.getPendingRequestCount(userId);
+  }
+
+  // Reset notification state (for testing or user request)
+  static resetNotificationState(userId: string): void {
+    const state: NotificationState = {
+      lastSeenAdmirerRequests: Date.now(),
+      lastSeenReactions: Date.now(),
+      lastSeenFigures: Date.now(),
+      seenNotificationIds: []
+    };
+    this.saveState(userId, state);
+  }
+}
