@@ -56,6 +56,13 @@ export interface TradeCounter {
   timestamp: number;
 }
 
+export interface FigureSettings {
+  figureId: string;
+  isPublic: boolean;
+  forSale: boolean;
+  forTrade: boolean;
+}
+
 export interface TradeProposal {
   id: string;
   status: TradeStatus;
@@ -75,10 +82,16 @@ export interface TradeProposal {
   // Negotiation
   messages: TradeMessage[];
   counterHistory: TradeCounter[];
+  counterCount?: number; // Track number of counters (max 3)
+  lastCounteredBy?: string; // User ID of last person to counter
 
   // Shipping tracking
   fromUserShippingStatus: ShippingStatus;
   toUserShippingStatus: ShippingStatus;
+
+  // Figure settings for received figures
+  fromUserFigureSettings?: FigureSettings[]; // Settings for figures fromUser receives (requestedFigures)
+  toUserFigureSettings?: FigureSettings[]; // Settings for figures toUser receives (offeredFigures)
 
   // Timestamps
   createdAt: number;

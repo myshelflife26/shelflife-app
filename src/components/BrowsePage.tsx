@@ -20,6 +20,7 @@ import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
 import { TradeRequestDialog } from './TradeRequestDialog';
+import { UserRatingBadge } from './UserRatingBadge';
 
 interface BrowsePageProps {
   currentUser: User;
@@ -728,8 +729,11 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{selectedFigure.name}</DialogTitle>
-              <DialogDescription>
-                Owned by {selectedFigure.ownerName} (@{selectedFigure.ownerUsername})
+              <DialogDescription className="flex flex-col gap-2">
+                <span>Owned by {selectedFigure.ownerName} (@{selectedFigure.ownerUsername})</span>
+                {selectedFigure.userId && (
+                  <UserRatingBadge userId={selectedFigure.userId} size="md" />
+                )}
               </DialogDescription>
             </DialogHeader>
 

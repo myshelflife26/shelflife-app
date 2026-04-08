@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ActionFigure, TradeProposal } from '../types/index';
+import type { ActionFigure, TradeProposal, UserRating } from '../types/index';
 import type { User } from '../types/user';
 import { MarketplaceService } from '../utils/marketplaceService';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
@@ -18,12 +18,16 @@ import {
   Check,
   X,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Star
 } from 'lucide-react';
 import { CompletenessBadge } from './CompletenessBadge';
 import { FigureDetailModal } from './FigureDetailModal';
 import { TradeProposalModal } from './TradeProposalModal';
 import { TradeDetailModal } from './TradeDetailModal';
+import { CounterProposalModal } from './CounterProposalModal';
+import { LeaveRatingModal } from './LeaveRatingModal';
+import { UserRatingBadge } from './UserRatingBadge';
 
 interface MarketplacePageProps {
   currentUser: User;
@@ -46,6 +50,9 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
   const [tradeModalFigure, setTradeModalFigure] = useState<ActionFigure | null>(null);
   const [tradeModalTargetUser, setTradeModalTargetUser] = useState<{ displayName: string; username: string } | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<TradeProposal | null>(null);
+  const [counterTrade, setCounterTrade] = useState<TradeProposal | null>(null);
+  const [ratingTrade, setRatingTrade] = useState<TradeProposal | null>(null);
+  const [userRatingsGiven, setUserRatingsGiven] = useState<UserRating[]>([]);
 
   const LISTINGS_PER_PAGE = 24;
 
@@ -58,15 +65,17 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
     setLoading(true);
     try {
       // Load all data in parallel - getAllListings uses caching for performance
-      const [listings, userListings, userTrades] = await Promise.all([
+      const [listings, userListings, userTrades, ratingsGiven] = await Promise.all([
         MarketplaceService.getAllListings(), // Uses 5-minute cache
         MarketplaceService.getUserListings(currentUser.id),
-        MarketplaceService.getUserTrades(currentUser.id)
+        MarketplaceService.getUserTrades(currentUser.id),
+        MarketplaceService.getRatingsGivenByUser(currentUser.id)
       ]);
 
       setAllListings(listings);
       setMyListings(userListings);
       setTrades(userTrades);
+      setUserRatingsGiven(ratingsGiven);
       setHasMore(false); // For future pagination implementation
     } catch (error) {
       console.error('Failed to load marketplace:', error);
@@ -365,9 +374,16 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
                       {figure.name}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       {figure.manufacturer} • {figure.condition}
                     </p>
+
+                    {/* Seller Rating */}
+                    {figure.userId && (
+                      <div className="mb-2">
+                        <UserRatingBadge userId={figure.userId} size="sm" />
+                      </div>
+                    )}
 
                     {/* Price/Trade */}
                     <div className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-3">
@@ -519,14 +535,14 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
           ) : (
             <div className="space-y-4">
               {/* Incoming Trades */}
-              {trades.filter(t => t.toUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').length > 0 && (
+              {trades.filter(t => t.toUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                     <Clock className="h-5 w-5" />
-                    Incoming Trade Offers ({trades.filter(t => t.toUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').length})
+                    Incoming Trade Offers ({trades.filter(t => t.toUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).length})
                   </h3>
                   <div className="space-y-3">
-                    {trades.filter(t => t.toUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').map(trade => (
+                    {trades.filter(t => t.toUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).map(trade => (
                       <div key={trade.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -584,14 +600,14 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
               )}
 
               {/* Outgoing Trades */}
-              {trades.filter(t => t.fromUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').length > 0 && (
+              {trades.filter(t => t.fromUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    Outgoing Trade Offers ({trades.filter(t => t.fromUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').length})
+                    Outgoing Trade Offers ({trades.filter(t => t.fromUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).length})
                   </h3>
                   <div className="space-y-3">
-                    {trades.filter(t => t.fromUserId === currentUser.id && t.status !== 'completed' && t.status !== 'declined' && t.status !== 'cancelled').map(trade => (
+                    {trades.filter(t => t.fromUserId === currentUser.id && (t.status === 'pending' || t.status === 'countered')).map(trade => (
                       <div key={trade.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -654,14 +670,114 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
 
       {/* Completed Transactions Tab */}
       {currentTab === 'completed' && (
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-12 text-center">
-          <Check className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No completed transactions yet
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Your completed sales and trades will appear here once the trade system is active
-          </p>
+        <div className="space-y-6">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 dark:text-gray-400 mt-4">Loading completed trades...</p>
+            </div>
+          ) : trades.filter(t => t.status === 'completed' || t.status === 'accepted').length === 0 ? (
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-12 text-center">
+              <CheckCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No completed transactions yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Your completed sales and trades will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {trades.filter(t => t.status === 'completed' || t.status === 'accepted').map(trade => (
+                <div key={trade.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {trade.fromUserId === currentUser.id ? `To: ${trade.toUserName}` : `From: ${trade.fromUserName}`}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Completed: {trade.completedAt ? new Date(trade.completedAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      COMPLETED
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {trade.fromUserId === currentUser.id ? 'You Offered' : 'They Offered'}:
+                      </p>
+                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        {trade.offeredFigureIds.length > 0 && (
+                          <li>• {trade.offeredFigureIds.length} figure(s)</li>
+                        )}
+                        {trade.offeredCash > 0 && (
+                          <li>• ${trade.offeredCash}</li>
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {trade.fromUserId === currentUser.id ? 'You Received' : 'They Received'}:
+                      </p>
+                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        {trade.requestedFigureIds.length > 0 && (
+                          <li>• {trade.requestedFigureIds.length} figure(s)</li>
+                        )}
+                        {trade.requestedCash > 0 && (
+                          <li>• ${trade.requestedCash}</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setSelectedTrade(trade)}>
+                      View Details
+                    </Button>
+                    {(() => {
+                      // Check if user has already rated this trade
+                      const existingRating = userRatingsGiven.find(r => r.tradeId === trade.id);
+
+                      if (existingRating) {
+                        // Show the rating they gave
+                        return (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                            <div className="flex items-center">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star
+                                  key={star}
+                                  className={`h-4 w-4 ${
+                                    star <= existingRating.rating
+                                      ? 'fill-yellow-400 text-yellow-400'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Your Rating
+                            </span>
+                          </div>
+                        );
+                      } else {
+                        // Show leave rating button
+                        return (
+                          <Button size="sm" onClick={() => setRatingTrade(trade)}>
+                            <Star className="h-4 w-4 mr-1" />
+                            Leave Rating
+                          </Button>
+                        );
+                      }
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -702,9 +818,36 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
           onClose={() => setSelectedTrade(null)}
           onUpdate={() => loadMarketplaceData()}
           onCounter={() => {
-            // TODO: Open counter-proposal modal
+            setCounterTrade(selectedTrade);
             setSelectedTrade(null);
-            alert('Counter-proposal feature coming soon!');
+          }}
+        />
+      )}
+
+      {/* Counter Proposal Modal */}
+      {counterTrade && (
+        <CounterProposalModal
+          trade={counterTrade}
+          currentUserId={currentUser.id}
+          currentUserName={currentUser.displayName}
+          onClose={() => setCounterTrade(null)}
+          onCounterCreated={() => {
+            setCounterTrade(null);
+            loadMarketplaceData();
+          }}
+        />
+      )}
+
+      {/* Leave Rating Modal */}
+      {ratingTrade && (
+        <LeaveRatingModal
+          trade={ratingTrade}
+          currentUserId={currentUser.id}
+          currentUserName={currentUser.displayName}
+          onClose={() => setRatingTrade(null)}
+          onRatingSubmitted={() => {
+            setRatingTrade(null);
+            loadMarketplaceData();
           }}
         />
       )}

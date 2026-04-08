@@ -6,6 +6,7 @@ import { X, Flame, Heart, ThumbsUp, ExternalLink, ChevronLeft, ChevronRight, Shi
 import { WatermarkedImage } from './ImageOverlay';
 import { CompletenessBadge } from './CompletenessBadge';
 import { AdmirersService } from '../utils/admirers';
+import { UserRatingBadge } from './UserRatingBadge';
 
 interface FigureDetailModalProps {
   figure: ActionFigure & { ownerName: string; ownerDisplayName: string; ownerUsername: string };
@@ -92,6 +93,9 @@ export function FigureDetailModal({
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Owned by {figure.ownerDisplayName}
             </p>
+            {figure.userId && (
+              <UserRatingBadge userId={figure.userId} size="md" />
+            )}
           </div>
           <button
             onClick={onClose}

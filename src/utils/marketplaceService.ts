@@ -14,7 +14,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { TradeProposal, TradeStatus, TradeCounter, TradeMessage, UserRating, MarketplaceListing, ActionFigure } from '../types/index';
+import type { TradeProposal, TradeStatus, TradeCounter, TradeMessage, UserRating, MarketplaceListing, ActionFigure, FigureSettings } from '../types/index';
 
 const TRADES_COLLECTION = 'trades';
 const RATINGS_COLLECTION = 'userRatings';
@@ -150,6 +150,8 @@ export class MarketplaceService {
           timestamp: Date.now()
         }] : [],
         counterHistory: [],
+        counterCount: 0,
+        lastCounteredBy: undefined,
         fromUserShippingStatus: 'not-shipped',
         toUserShippingStatus: 'not-shipped',
         createdAt: Date.now(),
@@ -242,6 +244,14 @@ export class MarketplaceService {
 
       const trade = tradeDoc.data() as TradeProposal;
 
+      // Check counter limit (max 3 counters)
+      const currentCount = trade.counterCount || 0;
+      if (currentCount >= 3) {
+        console.error('Counter limit reached (3 max)');
+        return false;
+      }
+
+      // Build counter object, only include message if it exists
       const counter: TradeCounter = {
         userId,
         userName,
@@ -249,13 +259,19 @@ export class MarketplaceService {
         requestedFigureIds,
         offeredCash,
         requestedCash,
-        message,
         timestamp: Date.now()
       };
+
+      // Only add message if provided (Firebase doesn't accept undefined)
+      if (message) {
+        counter.message = message;
+      }
 
       const updates: Partial<TradeProposal> = {
         status: 'countered',
         counterHistory: [...trade.counterHistory, counter],
+        counterCount: currentCount + 1,
+        lastCounteredBy: userId,
         updatedAt: Date.now()
       };
 
@@ -292,7 +308,105 @@ export class MarketplaceService {
   }
 
   /**
-   * Accept a trade proposal
+   * Transfer figures for a trade with settings applied
+   */
+  static async transferTradeProperties(trade: TradeProposal): Promise<{ success: boolean; errors: string[] }> {
+    const figuresRef = collection(db, 'figures');
+    const errors: string[] = [];
+
+    // Update offered figures - they go to the recipient (toUser) with toUser's settings
+    for (const figureId of trade.offeredFigureIds) {
+      const figureDocRef = doc(figuresRef, figureId);
+      try {
+        const settings = trade.toUserFigureSettings?.find(s => s.figureId === figureId);
+
+        const updates: any = {
+          userId: trade.toUserId,
+          updatedAt: Date.now()
+        };
+
+        // Apply user's settings or defaults
+        if (settings) {
+          updates.isPublic = settings.isPublic;
+
+          // Update marketplace listing
+          if (settings.forSale || settings.forTrade) {
+            updates.isListed = true;
+            updates['marketplaceListing.forSale'] = settings.forSale;
+            updates['marketplaceListing.forTrade'] = settings.forTrade;
+            updates['marketplaceListing.listedAt'] = Date.now();
+          } else {
+            updates.isListed = false;
+            updates.marketplaceListing = null;
+          }
+
+          // Clear legacy availability
+          updates.availability = [];
+        } else {
+          // Default: private, not listed
+          updates.isPublic = false;
+          updates.isListed = false;
+          updates.marketplaceListing = null;
+          updates.availability = [];
+        }
+
+        await updateDoc(figureDocRef, updates);
+      } catch (err) {
+        const errorMsg = `Failed to transfer offered figure ${figureId}`;
+        console.error(errorMsg, err);
+        errors.push(errorMsg);
+      }
+    }
+
+    // Update requested figures - they go to the sender (fromUser) with fromUser's settings
+    for (const figureId of trade.requestedFigureIds) {
+      const figureDocRef = doc(figuresRef, figureId);
+      try {
+        const settings = trade.fromUserFigureSettings?.find(s => s.figureId === figureId);
+
+        const updates: any = {
+          userId: trade.fromUserId,
+          updatedAt: Date.now()
+        };
+
+        // Apply user's settings or defaults
+        if (settings) {
+          updates.isPublic = settings.isPublic;
+
+          // Update marketplace listing
+          if (settings.forSale || settings.forTrade) {
+            updates.isListed = true;
+            updates['marketplaceListing.forSale'] = settings.forSale;
+            updates['marketplaceListing.forTrade'] = settings.forTrade;
+            updates['marketplaceListing.listedAt'] = Date.now();
+          } else {
+            updates.isListed = false;
+            updates.marketplaceListing = null;
+          }
+
+          // Clear legacy availability
+          updates.availability = [];
+        } else {
+          // Default: private, not listed
+          updates.isPublic = false;
+          updates.isListed = false;
+          updates.marketplaceListing = null;
+          updates.availability = [];
+        }
+
+        await updateDoc(figureDocRef, updates);
+      } catch (err) {
+        const errorMsg = `Failed to transfer requested figure ${figureId}`;
+        console.error(errorMsg, err);
+        errors.push(errorMsg);
+      }
+    }
+
+    return { success: errors.length === 0, errors };
+  }
+
+  /**
+   * Accept a trade proposal (figures transfer later when both parties confirm receipt)
    */
   static async acceptTradeProposal(tradeId: string, userId: string): Promise<boolean> {
     try {
@@ -305,11 +419,16 @@ export class MarketplaceService {
 
       const trade = tradeDoc.data() as TradeProposal;
 
-      // Only the recipient can accept
-      if (userId !== trade.toUserId) {
+      // Determine who is accepting
+      const isRecipient = userId === trade.toUserId;
+      const isSender = userId === trade.fromUserId;
+
+      // Either party can accept a countered trade
+      if (!isRecipient && !isSender) {
         return false;
       }
 
+      // Mark trade as accepted (figures don't transfer until both parties confirm receipt)
       await updateDoc(tradeRef, {
         status: 'accepted',
         acceptedAt: Date.now(),
@@ -326,12 +445,33 @@ export class MarketplaceService {
   /**
    * Decline a trade proposal
    */
-  static async declineTradeProposal(tradeId: string, userId: string): Promise<boolean> {
+  static async declineTradeProposal(
+    tradeId: string,
+    userId: string,
+    userName: string,
+    reason: string
+  ): Promise<boolean> {
     try {
       const tradeRef = doc(db, TRADES_COLLECTION, tradeId);
+      const tradeDoc = await getDoc(tradeRef);
+
+      if (!tradeDoc.exists()) {
+        return false;
+      }
+
+      const trade = tradeDoc.data() as TradeProposal;
+
+      // Add decline reason as a message
+      const declineMessage: TradeMessage = {
+        userId,
+        userName,
+        message: `Declined trade. Reason: ${reason}`,
+        timestamp: Date.now()
+      };
 
       await updateDoc(tradeRef, {
         status: 'declined',
+        messages: [...trade.messages, declineMessage],
         updatedAt: Date.now()
       });
 
@@ -399,12 +539,13 @@ export class MarketplaceService {
   }
 
   /**
-   * Update shipping status
+   * Update shipping status and transfer figures when both parties confirm
    */
   static async updateShippingStatus(
     tradeId: string,
     userId: string,
-    status: 'shipped' | 'received'
+    status: 'shipped' | 'received',
+    figureSettings?: FigureSettings[]
   ): Promise<boolean> {
     try {
       const tradeRef = doc(db, TRADES_COLLECTION, tradeId);
@@ -422,15 +563,34 @@ export class MarketplaceService {
 
       if (userId === trade.fromUserId) {
         updates.fromUserShippingStatus = status;
+        if (figureSettings) {
+          updates.fromUserFigureSettings = figureSettings;
+        }
       } else {
         updates.toUserShippingStatus = status;
+        if (figureSettings) {
+          updates.toUserFigureSettings = figureSettings;
+        }
       }
 
-      // Check if trade is complete (both shipped and received)
-      if (
+      // Check if trade is complete (both confirmed received)
+      const bothConfirmed =
         (userId === trade.fromUserId && status === 'received' && trade.toUserShippingStatus === 'received') ||
-        (userId === trade.toUserId && status === 'received' && trade.fromUserShippingStatus === 'received')
-      ) {
+        (userId === trade.toUserId && status === 'received' && trade.fromUserShippingStatus === 'received');
+
+      if (bothConfirmed) {
+        // Both parties confirmed receipt - NOW transfer the figures with their settings
+        // Need to get updated trade with both users' settings
+        const updatedTrade = { ...trade, ...updates };
+        const transferResult = await this.transferTradeProperties(updatedTrade);
+
+        if (!transferResult.success) {
+          console.error('Figure transfer failed:', transferResult.errors);
+          alert(`Trade completion failed. Some figures could not be transferred:\n${transferResult.errors.join('\n')}\n\nPlease contact support.`);
+          return false;
+        }
+
+        // Mark trade as completed after successful transfer
         updates.status = 'completed';
         updates.completedAt = Date.now();
       }
@@ -474,7 +634,7 @@ export class MarketplaceService {
   }
 
   /**
-   * Get user ratings
+   * Get user ratings (ratings received by a user)
    */
   static async getUserRatings(userId: string): Promise<UserRating[]> {
     try {
@@ -488,6 +648,25 @@ export class MarketplaceService {
       } as UserRating));
     } catch (error) {
       console.error('Failed to get user ratings:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get ratings given by a user
+   */
+  static async getRatingsGivenByUser(userId: string): Promise<UserRating[]> {
+    try {
+      const ratingsRef = collection(db, RATINGS_COLLECTION);
+      const q = query(ratingsRef, where('fromUserId', '==', userId));
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as UserRating));
+    } catch (error) {
+      console.error('Failed to get ratings given by user:', error);
       return [];
     }
   }

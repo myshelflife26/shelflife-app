@@ -18,6 +18,12 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
     }
 
+    // Helper function to check if this is a simple ownership transfer (trade)
+    function isOwnershipTransfer() {
+      return isSignedIn() &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'updatedAt']);
+    }
+
     // Master Figures collection
     match /masterFigures/{figureId} {
       allow read: if isSignedIn();
@@ -30,9 +36,8 @@ service cloud.firestore {
       allow write: if isOwner(userId) || isManagement();
     }
 
-    // Figures collection - UPDATED for trade modal
+    // Figures collection - FIXED
     match /figures/{figureId} {
-      // Allow read for single documents and queries
       // Users can read their own figures or public/listed figures from others
       allow read: if resource.data.isPublic == true ||
                      resource.data.isListed == true ||
@@ -41,6 +46,9 @@ service cloud.firestore {
 
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isOwner(resource.data.userId) || isManagement();
+
+      // Special rule for trade transfers - allow ownership transfer if ONLY userId and updatedAt are changing
+      allow update: if isOwnershipTransfer();
     }
 
     // Reactions collection

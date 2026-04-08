@@ -36,6 +36,7 @@ import { LoginPage } from './components/LoginPage';
 import { ProfileImageEditor } from './components/ProfileImageEditor';
 import { FirebaseMessagesService } from './utils/firebaseMessages';
 import { BlockingService } from './utils/blocking';
+import { MarketplaceService } from './utils/marketplaceService';
 import { Logo } from './components/Logo';
 import { BrandedFooter } from './components/BrandedFooter';
 import { FeedPage } from './components/FeedPage';
@@ -80,6 +81,7 @@ function App() {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [admirerRequestCount, setAdmirerRequestCount] = useState(0);
   const [blockedUserCount, setBlockedUserCount] = useState(0);
+  const [activeTradeCount, setActiveTradeCount] = useState(0);
   const [paginationPage, setPaginationPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -487,6 +489,28 @@ function App() {
     };
   }, [currentUser]);
 
+  // Check for active trades
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const updateActiveTradeCount = async () => {
+      const trades = await MarketplaceService.getUserTrades(currentUser.id);
+      // Count trades where user needs to respond (pending or countered status)
+      const activeTrades = trades.filter(trade =>
+        trade.status === 'pending' || trade.status === 'countered'
+      );
+      setActiveTradeCount(activeTrades.length);
+    };
+
+    // Update immediately
+    updateActiveTradeCount();
+
+    // Then check every 30 seconds (matching message and notification polling)
+    const interval = setInterval(updateActiveTradeCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   // Selection handlers
   const handleToggleSelect = (figureId: string) => {
     setSelectedFigureIds(prev => {
@@ -748,8 +772,14 @@ function App() {
                 size="icon"
                 onClick={() => setCurrentPage('marketplace')}
                 title="Marketplace"
+                className="relative"
               >
                 <Store className="h-5 w-5" />
+                {activeTradeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                    {activeTradeCount}
+                  </span>
+                )}
               </Button>
               <Button
                 variant={currentPage === 'messages' ? 'default' : 'ghost'}
@@ -875,11 +905,16 @@ function App() {
                 </Button>
                 <Button
                   variant={currentPage === 'marketplace' ? 'default' : 'ghost'}
-                  className="h-7 w-7 p-0"
+                  className="relative h-7 w-7 p-0"
                   onClick={() => setCurrentPage('marketplace')}
                   title="Marketplace"
                 >
                   <Store className="h-3 w-3" />
+                  {activeTradeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1 py-0.5 rounded-full min-w-[1rem] text-center">
+                      {activeTradeCount}
+                    </span>
+                  )}
                 </Button>
                 <Button
                   variant={currentPage === 'messages' ? 'default' : 'ghost'}

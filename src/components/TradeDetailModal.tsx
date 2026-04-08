@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { TradeProposal, ActionFigure } from '../types/index';
+import type { TradeProposal, ActionFigure, FigureSettings } from '../types/index';
 import { Button } from './ui/button';
-import { X, CheckCircle, XCircle, Repeat, Package } from 'lucide-react';
+import { X, CheckCircle, XCircle, Repeat, Package, Clock } from 'lucide-react';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { MarketplaceService } from '../utils/marketplaceService';
+import { ConfigureReceivedFiguresModal } from './ConfigureReceivedFiguresModal';
 
 interface TradeDetailModalProps {
   trade: TradeProposal;
@@ -30,9 +31,21 @@ export function TradeDetailModal({
   const [requestedFigures, setRequestedFigures] = useState<ActionFigure[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [showConfigureModal, setShowConfigureModal] = useState(false);
 
   const isRecipient = trade.toUserId === currentUserId;
   const isSender = trade.fromUserId === currentUserId;
+
+  // Determine whose turn it is
+  const counterCount = trade.counterCount || 0;
+  const lastCounteredBy = trade.lastCounteredBy;
+  const isMyTurn = trade.status === 'pending'
+    ? isRecipient // Initial proposal - recipient's turn
+    : trade.status === 'countered'
+      ? lastCounteredBy !== currentUserId // Counter - other person's turn
+      : false; // Accepted/declined/etc - nobody's turn
+
+  const counterLimitReached = counterCount >= 3;
 
   useEffect(() => {
     loadFigures();
@@ -69,7 +82,7 @@ export function TradeDetailModal({
     if (!trade.id) return;
     setProcessing(true);
     try {
-      await MarketplaceService.acceptTradeProposal(trade.id);
+      await MarketplaceService.acceptTradeProposal(trade.id, currentUserId);
       alert('Trade accepted! Please coordinate shipping with the other party.');
       if (onAccept) onAccept();
       if (onUpdate) onUpdate();
@@ -84,11 +97,19 @@ export function TradeDetailModal({
 
   const handleDecline = async () => {
     if (!trade.id) return;
-    if (!confirm('Are you sure you want to decline this trade?')) return;
+
+    const reason = prompt('Please provide a reason for declining this trade:');
+
+    // User must provide a reason (not null/cancelled and not empty)
+    if (reason === null) return; // User cancelled
+    if (reason.trim() === '') {
+      alert('You must provide a reason for declining the trade.');
+      return;
+    }
 
     setProcessing(true);
     try {
-      await MarketplaceService.declineTradeProposal(trade.id);
+      await MarketplaceService.declineTradeProposal(trade.id, currentUserId, currentUserName, reason);
       alert('Trade declined');
       if (onDecline) onDecline();
       if (onUpdate) onUpdate();
@@ -119,6 +140,33 @@ export function TradeDetailModal({
     }
   };
 
+  const handleConfirmReceived = () => {
+    // Show configure modal to set figure settings
+    setShowConfigureModal(true);
+  };
+
+  const handleConfigureComplete = async (settings: FigureSettings[]) => {
+    if (!trade.id) return;
+
+    setShowConfigureModal(false);
+    setProcessing(true);
+
+    try {
+      await MarketplaceService.updateShippingStatus(trade.id, currentUserId, 'received', settings);
+      alert('Receipt confirmed! The trade will be marked as completed once both parties confirm.');
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Failed to confirm receipt:', error);
+      alert('Failed to confirm receipt');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Get the figures the current user is receiving
+  const figuresReceiving = isRecipient ? offeredFigures : requestedFigures;
+
   return (
     <div
       className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
@@ -130,13 +178,34 @@ export function TradeDetailModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               Trade Proposal Details
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {isRecipient ? `From: ${trade.fromUserName}` : `To: ${trade.toUserName}`}
             </p>
+            {isMyTurn && (trade.status === 'pending' || trade.status === 'countered') && (
+              <div className="mt-2 inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded px-3 py-1">
+                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                  Your turn to respond
+                </p>
+              </div>
+            )}
+            {!isMyTurn && (trade.status === 'pending' || trade.status === 'countered') && (
+              <div className="mt-2 inline-flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1">
+                <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Waiting for {isRecipient ? trade.fromUserName : trade.toUserName} to respond
+                </p>
+              </div>
+            )}
+            {counterCount > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Counter {counterCount}/3 {counterLimitReached && '(Max reached)'}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded text-sm font-semibold ${
@@ -275,7 +344,72 @@ export function TradeDetailModal({
                 Updated: {new Date(trade.updatedAt).toLocaleString()}
               </p>
             )}
+            {trade.acceptedAt && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Accepted: {new Date(trade.acceptedAt).toLocaleString()}
+              </p>
+            )}
           </div>
+
+          {/* Receipt Confirmation Status - Show for accepted trades */}
+          {trade.status === 'accepted' && (
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                Confirmation Status
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {trade.fromUserName}:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {trade.fromUserShippingStatus === 'received' ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Confirmed receipt
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Pending confirmation
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {trade.toUserName}:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {trade.toUserShippingStatus === 'received' ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Confirmed receipt
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Pending confirmation
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {trade.fromUserShippingStatus === 'received' && trade.toUserShippingStatus === 'received' && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">
+                  Both parties confirmed - trade will be marked complete!
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
@@ -284,13 +418,14 @@ export function TradeDetailModal({
             Close
           </Button>
           <div className="flex gap-2">
-            {isRecipient && trade.status === 'pending' && (
+            {/* Recipient's turn (pending or they received a counter) */}
+            {isMyTurn && isRecipient && (trade.status === 'pending' || trade.status === 'countered') && (
               <>
                 <Button
                   variant="outline"
                   onClick={handleDecline}
                   disabled={processing}
-                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
                 >
                   <XCircle className="h-4 w-4 mr-1" />
                   Decline
@@ -298,34 +433,111 @@ export function TradeDetailModal({
                 <Button
                   variant="outline"
                   onClick={onCounter}
-                  disabled={processing}
+                  disabled={processing || counterLimitReached}
+                  title={counterLimitReached ? 'Counter limit reached (3 max)' : 'Send counter-proposal'}
                 >
                   <Repeat className="h-4 w-4 mr-1" />
-                  Counter
+                  Counter {counterLimitReached && '(Max)'}
                 </Button>
                 <Button
                   onClick={handleAccept}
                   disabled={processing}
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
-                  Accept
+                  Accept Trade
                 </Button>
               </>
             )}
-            {isSender && trade.status === 'pending' && (
+
+            {/* Sender's turn (they received a counter) */}
+            {isMyTurn && isSender && trade.status === 'countered' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleDecline}
+                  disabled={processing}
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Decline
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onCounter}
+                  disabled={processing || counterLimitReached}
+                  title={counterLimitReached ? 'Counter limit reached (3 max)' : 'Send counter-proposal'}
+                >
+                  <Repeat className="h-4 w-4 mr-1" />
+                  Counter {counterLimitReached && '(Max)'}
+                </Button>
+                <Button
+                  onClick={handleAccept}
+                  disabled={processing}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Accept Trade
+                </Button>
+              </>
+            )}
+
+            {/* Sender's turn (original pending) - can only cancel */}
+            {!isMyTurn && isSender && trade.status === 'pending' && (
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 disabled={processing}
-                className="text-red-600 border-red-300 hover:bg-red-50"
+                className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
               >
                 <XCircle className="h-4 w-4 mr-1" />
                 Cancel Trade
               </Button>
             )}
+
+            {/* Accepted trade - confirm receipt buttons */}
+            {trade.status === 'accepted' && (
+              <>
+                {/* Show confirmation button if user hasn't confirmed yet */}
+                {((isRecipient && trade.toUserShippingStatus !== 'received') ||
+                  (isSender && trade.fromUserShippingStatus !== 'received')) && (
+                  <Button
+                    onClick={handleConfirmReceived}
+                    disabled={processing}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    I Received the Items
+                  </Button>
+                )}
+
+                {/* Show status if user already confirmed */}
+                {((isRecipient && trade.toUserShippingStatus === 'received') ||
+                  (isSender && trade.fromUserShippingStatus === 'received')) && (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
+                    <CheckCircle className="h-5 w-5" />
+                    You confirmed receipt
+                  </div>
+                )}
+
+                {/* Show waiting message if other party hasn't confirmed */}
+                {((isRecipient && trade.toUserShippingStatus === 'received' && trade.fromUserShippingStatus !== 'received') ||
+                  (isSender && trade.fromUserShippingStatus === 'received' && trade.toUserShippingStatus !== 'received')) && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Waiting for {isRecipient ? trade.fromUserName : trade.toUserName} to confirm receipt
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
+      {/* Configure Received Figures Modal */}
+      {showConfigureModal && (
+        <ConfigureReceivedFiguresModal
+          figures={figuresReceiving}
+          onConfirm={handleConfigureComplete}
+          onCancel={() => setShowConfigureModal(false)}
+        />
+      )}
     </div>
   );
 }
