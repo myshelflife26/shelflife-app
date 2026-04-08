@@ -32,6 +32,7 @@ export function TradeDetailModal({
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showConfigureModal, setShowConfigureModal] = useState(false);
+  const [hasConfirmedReceipt, setHasConfirmedReceipt] = useState(false);
 
   const isRecipient = trade.toUserId === currentUserId;
   const isSender = trade.fromUserId === currentUserId;
@@ -49,6 +50,12 @@ export function TradeDetailModal({
 
   useEffect(() => {
     loadFigures();
+    // Check if user has already confirmed receipt
+    if (isRecipient && trade.toUserShippingStatus === 'received') {
+      setHasConfirmedReceipt(true);
+    } else if (isSender && trade.fromUserShippingStatus === 'received') {
+      setHasConfirmedReceipt(true);
+    }
   }, [trade]);
 
   const loadFigures = async () => {
@@ -141,6 +148,8 @@ export function TradeDetailModal({
   };
 
   const handleConfirmReceived = () => {
+    // Mark as confirmed immediately to prevent double-clicks
+    setHasConfirmedReceipt(true);
     // Show configure modal to set figure settings
     setShowConfigureModal(true);
   };
@@ -497,7 +506,8 @@ export function TradeDetailModal({
             {trade.status === 'accepted' && (
               <>
                 {/* Show confirmation button if user hasn't confirmed yet */}
-                {((isRecipient && trade.toUserShippingStatus !== 'received') ||
+                {!hasConfirmedReceipt &&
+                  ((isRecipient && trade.toUserShippingStatus !== 'received') ||
                   (isSender && trade.fromUserShippingStatus !== 'received')) && (
                   <Button
                     onClick={handleConfirmReceived}
@@ -510,7 +520,8 @@ export function TradeDetailModal({
                 )}
 
                 {/* Show status if user already confirmed */}
-                {((isRecipient && trade.toUserShippingStatus === 'received') ||
+                {(hasConfirmedReceipt ||
+                  (isRecipient && trade.toUserShippingStatus === 'received') ||
                   (isSender && trade.fromUserShippingStatus === 'received')) && (
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
                     <CheckCircle className="h-5 w-5" />
