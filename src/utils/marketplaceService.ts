@@ -151,7 +151,6 @@ export class MarketplaceService {
         }] : [],
         counterHistory: [],
         counterCount: 0,
-        lastCounteredBy: undefined,
         fromUserShippingStatus: 'not-shipped',
         toUserShippingStatus: 'not-shipped',
         createdAt: Date.now(),
