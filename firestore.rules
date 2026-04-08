@@ -18,10 +18,12 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
     }
 
-    // Helper function to check if this is a simple ownership transfer (trade)
-    function isOwnershipTransfer() {
+    // Helper function to check if this is a trade ownership transfer
+    // Allows userId change plus marketplace/visibility settings
+    function isTradeTransfer() {
       return isSignedIn() &&
-             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'updatedAt']);
+             request.resource.data.userId != resource.data.userId &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'updatedAt', 'isPublic', 'isListed', 'marketplaceListing', 'availability']);
     }
 
     // Master Figures collection
@@ -36,7 +38,7 @@ service cloud.firestore {
       allow write: if isOwner(userId) || isManagement();
     }
 
-    // Figures collection - FIXED
+    // Figures collection
     match /figures/{figureId} {
       // Users can read their own figures or public/listed figures from others
       allow read: if resource.data.isPublic == true ||
@@ -47,8 +49,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isOwner(resource.data.userId) || isManagement();
 
-      // Special rule for trade transfers - allow ownership transfer if ONLY userId and updatedAt are changing
-      allow update: if isOwnershipTransfer();
+      // Special rule for trade transfers - allow ownership and settings changes
+      allow update: if isTradeTransfer();
     }
 
     // Reactions collection
