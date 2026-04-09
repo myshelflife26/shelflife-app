@@ -14,6 +14,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { FirebaseStorage } from './firebaseStorage';
 import type { TradeProposal, TradeStatus, TradeCounter, TradeMessage, UserRating, MarketplaceListing, ActionFigure, FigureSettings } from '../types/index';
 
 const TRADES_COLLECTION = 'trades';
@@ -119,6 +120,46 @@ export class MarketplaceService {
   }
 
   /**
+   * Check if any figures are already in active trades
+   */
+  static async checkFiguresInActiveTrades(figureIds: string[]): Promise<{ locked: boolean; lockedFigures: string[] }> {
+    try {
+      const tradesRef = collection(db, TRADES_COLLECTION);
+
+      // Query for active trades (pending, countered, accepted)
+      const q = query(
+        tradesRef,
+        where('status', 'in', ['pending', 'countered', 'accepted'])
+      );
+
+      const snapshot = await getDocs(q);
+      const activeTrades = snapshot.docs.map(doc => doc.data() as TradeProposal);
+
+      // Check which figures are locked in active trades
+      const lockedFigures: string[] = [];
+
+      for (const figureId of figureIds) {
+        const isLocked = activeTrades.some(trade =>
+          trade.offeredFigureIds.includes(figureId) ||
+          trade.requestedFigureIds.includes(figureId)
+        );
+
+        if (isLocked) {
+          lockedFigures.push(figureId);
+        }
+      }
+
+      return {
+        locked: lockedFigures.length > 0,
+        lockedFigures
+      };
+    } catch (error) {
+      console.error('Failed to check figures in active trades:', error);
+      return { locked: false, lockedFigures: [] };
+    }
+  }
+
+  /**
    * Create a trade proposal
    */
   static async createTradeProposal(
@@ -133,6 +174,36 @@ export class MarketplaceService {
     message?: string
   ): Promise<string | null> {
     try {
+      // Check if any figures are already in active trades
+      const allFigureIds = [...offeredFigureIds, ...requestedFigureIds];
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds);
+
+      if (lockCheck.locked) {
+        // Get figure names for better error message
+        const lockedFigureNames: string[] = [];
+        for (const figureId of lockCheck.lockedFigures) {
+          try {
+            // Try to get figure from both users
+            let figure = await FirebaseStorage.getFigure(figureId, fromUserId);
+            if (!figure) {
+              figure = await FirebaseStorage.getFigure(figureId, toUserId);
+            }
+            if (figure) {
+              lockedFigureNames.push(figure.name);
+            }
+          } catch (err) {
+            // Ignore errors, just won't have name
+          }
+        }
+
+        const figureList = lockedFigureNames.length > 0
+          ? lockedFigureNames.join(', ')
+          : 'Some figures';
+
+        alert(`Cannot create trade: ${figureList} ${lockedFigureNames.length === 1 ? 'is' : 'are'} already part of an active trade. Please wait for the other trade to complete or be declined first.`);
+        return null;
+      }
+
       const proposal: Omit<TradeProposal, 'id'> = {
         status: 'pending',
         fromUserId,
