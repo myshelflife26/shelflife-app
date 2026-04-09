@@ -43,12 +43,13 @@ import { BrandedFooter } from './components/BrandedFooter';
 import { FeedPage } from './components/FeedPage';
 import { BetaGuidePage } from './components/BetaGuidePage';
 import { GlobalStatisticsPage } from './components/GlobalStatisticsPage';
+import { WishlistPage } from './components/WishlistPage';
 import { PriceTrend } from './components/PriceTrend';
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics';
+type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist';
 type ViewMode = 'grid' | 'table' | 'stats' | 'images';
 
 function App() {
@@ -741,6 +742,7 @@ function App() {
                 {currentPage === 'browse' && 'Browse Collections'}
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
+                {currentPage === 'wishlist' && 'Wishlist'}
                 {currentPage === 'statistics' && 'Statistics'}
                 {currentPage === 'settings' && 'Settings'}
               </h1>
@@ -797,6 +799,14 @@ function App() {
                     {unreadMessageCount}
                   </span>
                 )}
+              </Button>
+              <Button
+                variant={currentPage === 'wishlist' ? 'default' : 'ghost'}
+                size="icon"
+                onClick={() => setCurrentPage('wishlist')}
+                title="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -934,6 +944,14 @@ function App() {
                       {unreadMessageCount}
                     </span>
                   )}
+                </Button>
+                <Button
+                  variant={currentPage === 'wishlist' ? 'default' : 'ghost'}
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage('wishlist')}
+                  title="Wishlist"
+                >
+                  <Heart className="h-3 w-3" />
                 </Button>
                 <Button
                   variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -1171,6 +1189,8 @@ function App() {
         />
       ) : currentPage === 'messages' ? (
         <MessagesPage currentUser={currentUser} />
+      ) : currentPage === 'wishlist' ? (
+        <WishlistPage currentUser={currentUser} />
       ) : currentPage === 'statistics' ? (
         <GlobalStatisticsPage />
       ) : currentPage === 'marketplace' ? (
