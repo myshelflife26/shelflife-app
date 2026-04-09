@@ -129,10 +129,19 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     const admiredUsersFigures = publicFiguresWithOwners.filter(f => {
       if (!f.userId) return false;
       const isAdmired = admiring.includes(f.userId);
-      // Check if created/made public in last 7 days
-      // Since we don't have creation timestamp, we'll just show all for now
-      // You could add a createdAt field to ActionFigure type
-      return isAdmired && f.userId !== currentUser.id;
+      if (!isAdmired || f.userId === currentUser.id) return false;
+
+      // Check if created or made public in last 7 days
+      const recentlyCreated = f.createdAt && f.createdAt > sevenDaysAgo;
+      const recentlyPublic = f.updatedAt && f.updatedAt > sevenDaysAgo;
+
+      return recentlyCreated || recentlyPublic;
+    })
+    // Sort by most recent first (createdAt or updatedAt)
+    .sort((a, b) => {
+      const aTime = Math.max(a.createdAt || 0, a.updatedAt || 0);
+      const bTime = Math.max(b.createdAt || 0, b.updatedAt || 0);
+      return bTime - aTime;
     });
 
     setAdmiredFigures(admiredUsersFigures);
@@ -141,7 +150,19 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     const recentPublic = publicFiguresWithOwners.filter(f => {
       if (!f.userId) return false;
       const isAdmired = admiring.includes(f.userId);
-      return !isAdmired && f.userId !== currentUser.id;
+      if (isAdmired || f.userId === currentUser.id) return false;
+
+      // Check if created or made public in last 7 days
+      const recentlyCreated = f.createdAt && f.createdAt > sevenDaysAgo;
+      const recentlyPublic = f.updatedAt && f.updatedAt > sevenDaysAgo;
+
+      return recentlyCreated || recentlyPublic;
+    })
+    // Sort by most recent first (createdAt or updatedAt)
+    .sort((a, b) => {
+      const aTime = Math.max(a.createdAt || 0, a.updatedAt || 0);
+      const bTime = Math.max(b.createdAt || 0, b.updatedAt || 0);
+      return bTime - aTime;
     });
 
     setRecentPublicFigures(recentPublic);

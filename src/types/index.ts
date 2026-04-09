@@ -201,6 +201,9 @@ export interface ActionFigure {
   // Marketplace
   marketplaceListing?: MarketplaceListing; // If listed in marketplace
   isListed?: boolean; // Quick flag for marketplace queries (true if forSale or forTrade)
+  // Timestamps
+  createdAt?: number; // When the figure was first added
+  updatedAt?: number; // When the figure was last modified
 }
 
 export type TableColumn =

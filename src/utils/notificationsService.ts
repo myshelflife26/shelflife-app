@@ -153,6 +153,7 @@ export class NotificationsService {
 
   // Detect new public figures from people the current user admires
   static async detectNewFiguresFromAdmirers(userId: string): Promise<NotificationResult[]> {
+    const state = this.getState(userId);
     const admiringUserIds = await AdmirersService.getAdmiring(userId);
     const notifications: NotificationResult[] = [];
 
@@ -160,10 +161,22 @@ export class NotificationsService {
       // Get all public figures from this admiree
       const admireeFigures = Storage.getAll(admireeId).filter(f => f.isPublic);
 
-      // Find figures created/made public after last seen
-      // Note: We don't have a creation timestamp, so we check all figures
-      // This is a limitation - in a real app, figures would have timestamps
-      const newFigures = admireeFigures;
+      // Find figures created or made public after last seen
+      // A figure is "new" if:
+      // 1. It was created after lastSeenFigures (createdAt > lastSeenFigures)
+      // 2. OR it was made public after lastSeenFigures (updatedAt > lastSeenFigures and was private before)
+      const newFigures = admireeFigures.filter(f => {
+        // If no timestamp, don't show (shouldn't happen with Firebase storage)
+        if (!f.createdAt && !f.updatedAt) return false;
+
+        // Show if created recently
+        if (f.createdAt && f.createdAt > state.lastSeenFigures) return true;
+
+        // Show if made public recently (updatedAt > lastSeen and it's now public)
+        if (f.updatedAt && f.updatedAt > state.lastSeenFigures && f.isPublic) return true;
+
+        return false;
+      });
 
       for (const figure of newFigures) {
         const notificationId = `new-figure-${figure.id}`;
@@ -184,8 +197,14 @@ export class NotificationsService {
       }
     }
 
-    // Limit to most recent notifications to avoid spam
-    return notifications.slice(0, 5);
+    // Sort by timestamp (most recent first) and limit to most recent 5
+    return notifications
+      .sort((a, b) => {
+        const aTime = a.data.figure.createdAt || a.data.figure.updatedAt || 0;
+        const bTime = b.data.figure.createdAt || b.data.figure.updatedAt || 0;
+        return bTime - aTime;
+      })
+      .slice(0, 5);
   }
 
   // Create a notification for a report status update
