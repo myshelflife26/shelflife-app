@@ -795,16 +795,6 @@ function App() {
                   </span>
                 )}
               </Button>
-              {currentUser.role === 'management' && (
-                <Button
-                  variant={currentPage === 'users' ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => setCurrentPage('users')}
-                  title="User Management"
-                >
-                  <UserIcon className="h-5 w-5" />
-                </Button>
-              )}
               <Button
                 variant={currentPage === 'settings' ? 'default' : 'ghost'}
                 size="icon"
