@@ -111,10 +111,8 @@ service cloud.firestore {
 
     // Admirers collection
     match /admirers/{relationshipId} {
-      allow read: if isSignedIn() && (
-        resource.data.admirerId == request.auth.uid ||
-        resource.data.targetUserId == request.auth.uid
-      );
+      // Allow all signed-in users to read (for admirer counts, public info)
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && (
         resource.data.admirerId == request.auth.uid ||
