@@ -331,9 +331,11 @@ export class MarketplaceService {
           // Update marketplace listing
           if (settings.forSale || settings.forTrade) {
             updates.isListed = true;
-            updates['marketplaceListing.forSale'] = settings.forSale;
-            updates['marketplaceListing.forTrade'] = settings.forTrade;
-            updates['marketplaceListing.listedAt'] = Date.now();
+            updates.marketplaceListing = {
+              forSale: settings.forSale,
+              forTrade: settings.forTrade,
+              listedAt: Date.now()
+            };
           } else {
             updates.isListed = false;
             updates.marketplaceListing = null;
@@ -375,9 +377,11 @@ export class MarketplaceService {
           // Update marketplace listing
           if (settings.forSale || settings.forTrade) {
             updates.isListed = true;
-            updates['marketplaceListing.forSale'] = settings.forSale;
-            updates['marketplaceListing.forTrade'] = settings.forTrade;
-            updates['marketplaceListing.listedAt'] = Date.now();
+            updates.marketplaceListing = {
+              forSale: settings.forSale,
+              forTrade: settings.forTrade,
+              listedAt: Date.now()
+            };
           } else {
             updates.isListed = false;
             updates.marketplaceListing = null;
