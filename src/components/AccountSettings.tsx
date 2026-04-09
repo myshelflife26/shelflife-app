@@ -15,9 +15,11 @@ interface AccountSettingsProps {
 export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsProps) {
   const [displayName, setDisplayName] = useState(currentUser.displayName);
   const [email, setEmail] = useState(currentUser.email || '');
+  const [emailPassword, setEmailPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -28,6 +30,7 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
   useEffect(() => {
     setDisplayName(currentUser.displayName);
     setEmail(currentUser.email || '');
+    setEmailPassword('');
   }, [currentUser]);
 
   const handleSaveDisplayName = async () => {
@@ -65,14 +68,26 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
       return;
     }
 
+    if (!emailPassword) {
+      toastManager.error('Please enter your current password to change email');
+      return;
+    }
+
     setSavingEmail(true);
     try {
-      await FirebaseAuthService.updateUserEmail(currentUser.id, email.trim());
-      toastManager.success('Email updated');
+      await FirebaseAuthService.updateUserEmail(currentUser.id, email.trim(), emailPassword);
+      toastManager.success('Email updated successfully');
+      setEmailPassword('');
       onUserUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update email:', error);
-      toastManager.error('Failed to update email');
+      if (error.message === 'Current password is incorrect') {
+        toastManager.error('Current password is incorrect');
+      } else if (error.message === 'Email is already in use by another account') {
+        toastManager.error('Email is already in use');
+      } else {
+        toastManager.error('Failed to update email');
+      }
     } finally {
       setSavingEmail(false);
     }
@@ -124,7 +139,7 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-4">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Account Settings</h2>
@@ -134,8 +149,8 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
       </div>
 
       {/* Username (Read-only) */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-3">
           <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Username</h3>
         </div>
@@ -152,13 +167,13 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
       </div>
 
       {/* Display Name */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-3">
           <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Display Name</h3>
         </div>
-        <div className="space-y-4">
-          <div>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
             <Label htmlFor="displayName">Display Name</Label>
             <Input
               id="displayName"
@@ -171,46 +186,73 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
           <Button
             onClick={handleSaveDisplayName}
             disabled={savingDisplayName || displayName === currentUser.displayName}
+            className="whitespace-nowrap"
           >
-            {savingDisplayName ? 'Saving...' : 'Save Display Name'}
+            {savingDisplayName ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
 
       {/* Email */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-3">
           <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Email Address</h3>
         </div>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your.email@example.com"
-            />
+        <div className="space-y-3">
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="emailPassword">Current Password (required to change email)</Label>
+              <div className="relative">
+                <Input
+                  id="emailPassword"
+                  type={showEmailPassword ? 'text' : 'password'}
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="Enter current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEmailPassword(!showEmailPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showEmailPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <Button
+              onClick={handleSaveEmail}
+              disabled={savingEmail || (email === currentUser.email && !emailPassword)}
+              className="whitespace-nowrap"
+            >
+              {savingEmail ? 'Saving...' : 'Save'}
+            </Button>
           </div>
-          <Button
-            onClick={handleSaveEmail}
-            disabled={savingEmail || email === currentUser.email}
-          >
-            {savingEmail ? 'Saving...' : 'Save Email'}
-          </Button>
         </div>
       </div>
 
       {/* Change Password */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-3">
           <Lock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Change Password</h3>
         </div>
-        <div className="space-y-4">
-          <div>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
             <Label htmlFor="currentPassword">Current Password</Label>
             <div className="relative">
               <Input
@@ -234,7 +276,7 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
             </div>
           </div>
 
-          <div>
+          <div className="flex-1">
             <Label htmlFor="newPassword">New Password</Label>
             <div className="relative">
               <Input
@@ -258,7 +300,7 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
             </div>
           </div>
 
-          <div>
+          <div className="flex-1">
             <Label htmlFor="confirmPassword">Confirm New Password</Label>
             <div className="relative">
               <Input
@@ -285,8 +327,9 @@ export function AccountSettings({ currentUser, onUserUpdate }: AccountSettingsPr
           <Button
             onClick={handleChangePassword}
             disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+            className="whitespace-nowrap"
           >
-            {changingPassword ? 'Changing Password...' : 'Change Password'}
+            {changingPassword ? 'Changing...' : 'Change Password'}
           </Button>
         </div>
       </div>

@@ -6,7 +6,8 @@ import {
   User as FirebaseUser,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  updatePassword
+  updatePassword,
+  updateEmail
 } from 'firebase/auth';
 import {
   doc,
@@ -410,10 +411,26 @@ export class FirebaseAuthService {
   }
 
   /**
-   * Update user email
+   * Update user email (requires current password for re-authentication)
    */
-  static async updateUserEmail(userId: string, newEmail: string): Promise<void> {
+  static async updateUserEmail(userId: string, newEmail: string, currentPassword: string): Promise<void> {
     try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        throw new Error('No authenticated user');
+      }
+
+      if (user.uid !== userId) {
+        throw new Error('Can only update email for current user');
+      }
+
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update email in Firebase Auth
+      await updateEmail(user, newEmail);
+
       // Update Firestore
       await updateDoc(doc(db, USERS_COLLECTION, userId), {
         email: newEmail
@@ -423,8 +440,15 @@ export class FirebaseAuthService {
       if (this.currentUserCache?.id === userId) {
         this.currentUserCache.email = newEmail;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update email:', error);
+      if (error.code === 'auth/wrong-password') {
+        throw new Error('Current password is incorrect');
+      } else if (error.code === 'auth/email-already-in-use') {
+        throw new Error('Email is already in use by another account');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address');
+      }
       throw error;
     }
   }
