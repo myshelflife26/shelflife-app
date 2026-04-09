@@ -1134,10 +1134,10 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
-      {/* Admirers Management */}
-      <div className="mb-8">
+      {showSection('privacy') && <div className="mb-8">
+        {/* Admirers Management */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
           <div className="space-y-6">
             <div>
@@ -1321,7 +1321,6 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </div>
           </div>
         </div>
-      </div>
       </div>}
 
       {/* Admin: System Option Requests */}
@@ -1797,12 +1796,14 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </p>
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Admin-only: All Users' Custom Fields */}
-      {currentUser.role === 'management' && (
-        <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-          <AdminCustomFieldsManager onFieldsChange={loadSettings} />
+      {showSection('customFields') && currentUser.role === 'management' && (
+        <div>
+          {/* Admin-only: All Users' Custom Fields */}
+          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <AdminCustomFieldsManager onFieldsChange={loadSettings} />
+          </div>
         </div>
       )}
 
@@ -2547,7 +2548,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
           </div>
         </DialogContent>
       </Dialog>
-      </div>}
+      </div>
     </div>
   );
 }
