@@ -446,6 +446,14 @@ export class MarketplaceService {
     const figuresRef = collection(db, 'figures');
     const errors: string[] = [];
 
+    console.log('=== TRANSFER DEBUG ===');
+    console.log('From User:', trade.fromUserId, trade.fromUserName);
+    console.log('To User:', trade.toUserId, trade.toUserName);
+    console.log('Offered Figure IDs (going to toUser):', trade.offeredFigureIds);
+    console.log('Requested Figure IDs (going to fromUser):', trade.requestedFigureIds);
+    console.log('toUser settings:', trade.toUserFigureSettings);
+    console.log('fromUser settings:', trade.fromUserFigureSettings);
+
     // Update offered figures - they go to the recipient (toUser) with toUser's settings
     for (const figureId of trade.offeredFigureIds) {
       const figureDocRef = doc(figuresRef, figureId);
