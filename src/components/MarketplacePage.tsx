@@ -724,12 +724,12 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                           const fetchedDisplayName = userDisplayNames.get(otherUserId);
 
                           if (otherUsername) {
-                            // New trade with username field
-                            return `${isOutgoing ? 'To' : 'From'}: ${otherUsername} (${otherNameField})`;
+                            // New trade with username field - otherNameField is display name, otherUsername is username
+                            return `${isOutgoing ? 'To' : 'From'}: ${otherNameField} (${otherUsername})`;
                           } else {
                             // Old trade - otherNameField is username, fetchedDisplayName is display name
                             if (fetchedDisplayName) {
-                              return `${isOutgoing ? 'To' : 'From'}: ${otherNameField} (${fetchedDisplayName})`;
+                              return `${isOutgoing ? 'To' : 'From'}: ${fetchedDisplayName} (${otherNameField})`;
                             } else {
                               // Fallback if fetch failed
                               return `${isOutgoing ? 'To' : 'From'}: ${otherNameField}`;
