@@ -54,6 +54,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
   const [ratingTrade, setRatingTrade] = useState<TradeProposal | null>(null);
   const [userRatingsGiven, setUserRatingsGiven] = useState<UserRating[]>([]);
   const [userDisplayNames, setUserDisplayNames] = useState<Map<string, string>>(new Map());
+  const [userUsernames, setUserUsernames] = useState<Map<string, string>>(new Map());
 
   const LISTINGS_PER_PAGE = 24;
 
@@ -73,7 +74,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
         MarketplaceService.getRatingsGivenByUser(currentUser.id)
       ]);
 
-      // Fetch display names for all users in trades (for old trades without username field)
+      // Fetch display names and usernames for all users in trades
       const userIds = new Set<string>();
       userTrades.forEach(trade => {
         userIds.add(trade.fromUserId);
@@ -81,12 +82,14 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
       });
 
       const displayNameMap = new Map<string, string>();
+      const usernameMap = new Map<string, string>();
       await Promise.all(
         Array.from(userIds).map(async (userId) => {
           try {
             const user = await FirebaseAuthService.getUserById(userId);
             if (user) {
               displayNameMap.set(userId, user.displayName);
+              usernameMap.set(userId, user.username);
             }
           } catch (err) {
             console.error(`Failed to fetch user ${userId}:`, err);
@@ -99,6 +102,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
       setTrades(userTrades);
       setUserRatingsGiven(ratingsGiven);
       setUserDisplayNames(displayNameMap);
+      setUserUsernames(usernameMap);
       setHasMore(false); // For future pagination implementation
     } catch (error) {
       console.error('Failed to load marketplace:', error);
@@ -722,14 +726,15 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                           const otherUsername = isOutgoing ? trade.toUserUsername : trade.fromUserUsername;
                           const otherNameField = isOutgoing ? trade.toUserName : trade.fromUserName;
                           const fetchedDisplayName = userDisplayNames.get(otherUserId);
+                          const fetchedUsername = userUsernames.get(otherUserId);
 
                           if (otherUsername) {
                             // New trade with username field - otherNameField is display name, otherUsername is username
                             return `${isOutgoing ? 'To' : 'From'}: ${otherNameField} (${otherUsername})`;
                           } else {
-                            // Old trade - otherNameField is username, fetchedDisplayName is display name
-                            if (fetchedDisplayName) {
-                              return `${isOutgoing ? 'To' : 'From'}: ${fetchedDisplayName} (${otherNameField})`;
+                            // Old trade - otherNameField is display name (old trades stored display names), fetchedUsername is username
+                            if (fetchedUsername) {
+                              return `${isOutgoing ? 'To' : 'From'}: ${otherNameField} (${fetchedUsername})`;
                             } else {
                               // Fallback if fetch failed
                               return `${isOutgoing ? 'To' : 'From'}: ${otherNameField}`;
