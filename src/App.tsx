@@ -16,7 +16,7 @@ import { ShelfLifeValueService } from './utils/shelfLifeValue';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
-import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store } from 'lucide-react';
+import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { TabbedSettingsPage } from './components/TabbedSettingsPage';
@@ -42,11 +42,13 @@ import { UserRatingBadge } from './components/UserRatingBadge';
 import { BrandedFooter } from './components/BrandedFooter';
 import { FeedPage } from './components/FeedPage';
 import { BetaGuidePage } from './components/BetaGuidePage';
+import { GlobalStatisticsPage } from './components/GlobalStatisticsPage';
+import { PriceTrend } from './components/PriceTrend';
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
+type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics';
 type ViewMode = 'grid' | 'table' | 'stats' | 'images';
 
 function App() {
@@ -739,6 +741,7 @@ function App() {
                 {currentPage === 'browse' && 'Browse Collections'}
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
+                {currentPage === 'statistics' && 'Statistics'}
                 {currentPage === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -794,6 +797,14 @@ function App() {
                     {unreadMessageCount}
                   </span>
                 )}
+              </Button>
+              <Button
+                variant={currentPage === 'statistics' ? 'default' : 'ghost'}
+                size="icon"
+                onClick={() => setCurrentPage('statistics')}
+                title="Global Statistics"
+              >
+                <Activity className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'settings' ? 'default' : 'ghost'}
@@ -923,6 +934,14 @@ function App() {
                       {unreadMessageCount}
                     </span>
                   )}
+                </Button>
+                <Button
+                  variant={currentPage === 'statistics' ? 'default' : 'ghost'}
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage('statistics')}
+                  title="Statistics"
+                >
+                  <Activity className="h-3 w-3" />
                 </Button>
                 <Button
                   variant={currentPage === 'settings' ? 'default' : 'ghost'}
@@ -1152,6 +1171,8 @@ function App() {
         />
       ) : currentPage === 'messages' ? (
         <MessagesPage currentUser={currentUser} />
+      ) : currentPage === 'statistics' ? (
+        <GlobalStatisticsPage />
       ) : currentPage === 'marketplace' ? (
         <MarketplacePage currentUser={currentUser} />
       ) : (
@@ -1260,7 +1281,14 @@ function App() {
                         <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-0.5">
                           <p className="flex items-center justify-between">
                             <span className="text-gray-500 dark:text-gray-500">My Value:</span>
-                            <span className="font-medium">${figure.currentValue.toFixed(2)}</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">${figure.currentValue.toFixed(2)}</span>
+                              <PriceTrend
+                                priceHistory={figure.priceHistory}
+                                currentValue={figure.currentValue}
+                                size="sm"
+                              />
+                            </div>
                           </p>
                           {(() => {
                             const slValue = ShelfLifeValueService.calculateShelfLifeValue(figure);
@@ -1483,9 +1511,16 @@ function App() {
                       <div className="text-sm space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 dark:text-gray-500">My Value:</span>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            ${figure.currentValue.toFixed(2)}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              ${figure.currentValue.toFixed(2)}
+                            </p>
+                            <PriceTrend
+                              priceHistory={figure.priceHistory}
+                              currentValue={figure.currentValue}
+                              size="sm"
+                            />
+                          </div>
                         </div>
                         {(() => {
                           const slValue = ShelfLifeValueService.calculateShelfLifeValue(figure);

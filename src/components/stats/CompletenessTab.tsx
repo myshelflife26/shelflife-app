@@ -4,6 +4,7 @@ import { SeriesSetsService } from '../../utils/seriesSets';
 import { AuthService } from '../../utils/auth';
 import { CheckCircle, Circle, ChevronDown, ChevronUp, Target, Plus, Filter } from 'lucide-react';
 import { Select } from '../ui/select';
+import { SeriesCompletionView } from '../SeriesCompletionView';
 
 interface CompletenessTabProps {
   figures: ActionFigure[];
@@ -78,12 +79,17 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Series Completion (from Master Database) */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <SeriesCompletionView userFigures={figures} />
+      </div>
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Collection Completeness
+              Set Completeness
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {completedSetsCount} of {totalSetsCount} sets completed
