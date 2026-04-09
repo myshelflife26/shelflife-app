@@ -122,22 +122,50 @@ export class MarketplaceService {
   /**
    * Check if any figures are already in active trades
    * @param figureIds - Array of figure IDs to check
+   * @param userId1 - First user ID to check trades for
+   * @param userId2 - Second user ID to check trades for
    * @param excludeTradeId - Optional trade ID to exclude from the check (for accept validation)
    */
-  static async checkFiguresInActiveTrades(figureIds: string[], excludeTradeId?: string): Promise<{ locked: boolean; lockedFigures: string[] }> {
+  static async checkFiguresInActiveTrades(figureIds: string[], userId1: string, userId2: string, excludeTradeId?: string): Promise<{ locked: boolean; lockedFigures: string[] }> {
     try {
       const tradesRef = collection(db, TRADES_COLLECTION);
+      const userIds = [userId1, userId2];
 
-      // Query for active trades (pending, countered, accepted)
-      const q = query(
+      // Query for active trades involving either user
+      // We need two queries because Firestore doesn't support OR across different fields
+      const q1 = query(
         tradesRef,
+        where('fromUserId', 'in', userIds),
         where('status', 'in', ['pending', 'countered', 'accepted'])
       );
 
-      const snapshot = await getDocs(q);
-      const activeTrades = snapshot.docs
-        .filter(doc => !excludeTradeId || doc.id !== excludeTradeId) // Exclude current trade if specified
-        .map(doc => doc.data() as TradeProposal);
+      const q2 = query(
+        tradesRef,
+        where('toUserId', 'in', userIds),
+        where('status', 'in', ['pending', 'countered', 'accepted'])
+      );
+
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+
+      // Merge results and deduplicate by trade ID
+      const tradeMap = new Map<string, TradeProposal>();
+
+      snapshot1.docs.forEach(doc => {
+        if (!excludeTradeId || doc.id !== excludeTradeId) {
+          tradeMap.set(doc.id, doc.data() as TradeProposal);
+        }
+      });
+
+      snapshot2.docs.forEach(doc => {
+        if (!excludeTradeId || doc.id !== excludeTradeId) {
+          tradeMap.set(doc.id, doc.data() as TradeProposal);
+        }
+      });
+
+      const activeTrades = Array.from(tradeMap.values());
 
       // Check which figures are locked in active trades
       const lockedFigures: string[] = [];
@@ -180,7 +208,7 @@ export class MarketplaceService {
     try {
       // Check if any figures are already in active trades
       const allFigureIds = [...offeredFigureIds, ...requestedFigureIds];
-      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds);
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, fromUserId, toUserId);
 
       if (lockCheck.locked) {
         // Get figure names for better error message
@@ -320,7 +348,7 @@ export class MarketplaceService {
 
       // Check if any of the new figures are locked in other active trades
       const allFigureIds = [...offeredFigureIds, ...requestedFigureIds];
-      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, trade.fromUserId, trade.toUserId, tradeId);
 
       if (lockCheck.locked) {
         // Get figure names for better error message
@@ -538,7 +566,7 @@ export class MarketplaceService {
 
       // Check if any figures are locked in other active trades
       const allFigureIds = [...trade.offeredFigureIds, ...trade.requestedFigureIds];
-      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, trade.fromUserId, trade.toUserId, tradeId);
 
       if (lockCheck.locked) {
         // Get figure names for better error message
@@ -719,7 +747,7 @@ export class MarketplaceService {
       if (bothConfirmed) {
         // Before transferring, verify figures aren't locked in other trades
         const allFigureIds = [...trade.offeredFigureIds, ...trade.requestedFigureIds];
-        const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+        const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, trade.fromUserId, trade.toUserId, tradeId);
 
         if (lockCheck.locked) {
           // Get figure names for better error message
