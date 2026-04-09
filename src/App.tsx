@@ -20,6 +20,7 @@ import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as User
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { SettingsPage } from './components/SettingsPage';
+import { AccountSettings } from './components/AccountSettings';
 import { BlockedUsersPage } from './components/BlockedUsersPage';
 import { AdminReportsPage } from './components/AdminReportsPage';
 import { UserManagementPage } from './components/UserManagementPage';
@@ -46,7 +47,7 @@ import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'users' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
+type PageType = 'collection' | 'feed' | 'settings' | 'account' | 'users' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type ViewMode = 'grid' | 'table' | 'stats' | 'images';
 
 function App() {
@@ -740,6 +741,7 @@ function App() {
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
                 {currentPage === 'settings' && 'Settings'}
+                {currentPage === 'account' && 'Account'}
                 {currentPage === 'users' && 'User Management'}
               </h1>
             </div>
@@ -824,6 +826,14 @@ function App() {
                     {blockedUserCount}
                   </span>
                 )}
+              </Button>
+              <Button
+                variant={currentPage === 'account' ? 'default' : 'ghost'}
+                size="icon"
+                onClick={() => setCurrentPage('account')}
+                title="Account Settings"
+              >
+                <UserIcon className="h-5 w-5" />
               </Button>
               <div className="border-l border-gray-300 dark:border-gray-600 h-8 mx-2"></div>
               <div className="flex items-center gap-2">
@@ -957,6 +967,14 @@ function App() {
                       {admirerRequestCount + blockedUserCount}
                     </span>
                   )}
+                </Button>
+                <Button
+                  variant={currentPage === 'account' ? 'default' : 'ghost'}
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage('account')}
+                  title="Account"
+                >
+                  <UserIcon className="h-3 w-3" />
                 </Button>
               </div>
             </div>
@@ -1147,6 +1165,18 @@ function App() {
 
       {currentPage === 'settings' ? (
         <SettingsPage currentUser={currentUser} setCurrentPage={setCurrentPage} darkMode={darkMode} setDarkMode={setDarkMode} />
+      ) : currentPage === 'account' ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <AccountSettings
+            currentUser={currentUser}
+            onUserUpdate={async () => {
+              const updatedUser = await FirebaseAuthService.getCurrentUser();
+              if (updatedUser) {
+                setCurrentUser(updatedUser);
+              }
+            }}
+          />
+        </div>
       ) : currentPage === 'blocked' ? (
         <BlockedUsersPage />
       ) : currentPage === 'reports' ? (

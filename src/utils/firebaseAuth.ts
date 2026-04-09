@@ -3,7 +3,10 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User as FirebaseUser
+  User as FirebaseUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from 'firebase/auth';
 import {
   doc,
@@ -384,6 +387,70 @@ export class FirebaseAuthService {
       }
     } catch (error) {
       console.error('Failed to update profile image:', error);
+    }
+  }
+
+  /**
+   * Update user display name
+   */
+  static async updateDisplayName(userId: string, displayName: string): Promise<void> {
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, userId), {
+        displayName
+      });
+
+      // Update cache
+      if (this.currentUserCache?.id === userId) {
+        this.currentUserCache.displayName = displayName;
+      }
+    } catch (error) {
+      console.error('Failed to update display name:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user email
+   */
+  static async updateUserEmail(userId: string, newEmail: string): Promise<void> {
+    try {
+      // Update Firestore
+      await updateDoc(doc(db, USERS_COLLECTION, userId), {
+        email: newEmail
+      });
+
+      // Update cache
+      if (this.currentUserCache?.id === userId) {
+        this.currentUserCache.email = newEmail;
+      }
+    } catch (error) {
+      console.error('Failed to update email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Change user password
+   */
+  static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        throw new Error('No authenticated user');
+      }
+
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password in Firebase Auth
+      await updatePassword(user, newPassword);
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      if (error.code === 'auth/wrong-password') {
+        throw new Error('Current password is incorrect');
+      }
+      throw error;
     }
   }
 }
