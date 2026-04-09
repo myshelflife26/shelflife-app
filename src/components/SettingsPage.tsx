@@ -31,6 +31,7 @@ interface SettingsPageProps {
   setCurrentPage: (page: 'collection' | 'feed' | 'settings' | 'users' | 'gallery' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help') => void;
   darkMode: boolean;
   setDarkMode: (darkMode: boolean) => void;
+  activeSection?: 'general' | 'privacy' | 'customFields' | 'system';
 }
 
 // OptionList component - moved outside to prevent re-creation on each render
@@ -86,7 +87,7 @@ const OptionList = ({
   </div>
 );
 
-export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMode }: SettingsPageProps) {
+export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMode, activeSection }: SettingsPageProps) {
   const [settings, setSettings] = useState<AppSettings>(SettingsService.getSettings());
   const canManageSystem = currentUser.role === 'management'; // Management only
   const isAdminUser = currentUser.role && ['management', 'manager'].includes(currentUser.role); // Management or Manager
@@ -969,11 +970,13 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
     }
   };
 
+  const showSection = (section: string) => !activeSection || activeSection === section;
+
   return (
     <div className="w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Beta Guide */}
-        <div className="mb-8">
+        {showSection('general') && <div className="mb-8">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 shadow-lg">
           <h2 className="text-2xl font-bold mb-2">Beta Testing</h2>
           <p className="mb-4">
@@ -988,10 +991,10 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             Open Beta Guide
           </Button>
         </div>
-      </div>
+      </div>}
 
       {/* Display Settings */}
-      <div className="mb-8">
+      {showSection('general') && <div className="mb-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Display Settings
@@ -1025,10 +1028,10 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             />
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Privacy Settings */}
-      <div className="mb-8">
+      {showSection('privacy') && <div className="mb-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Privacy Settings
@@ -1318,10 +1321,10 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Admin: System Option Requests */}
-      {canManageSystem && systemRequests.length > 0 && (
+      {showSection('system') && canManageSystem && systemRequests.length > 0 && (
         <div className="mb-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -1399,7 +1402,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
         </div>
       )}
 
-      {canManageSystem && (
+      {showSection('system') && canManageSystem && (
         <>
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -1492,7 +1495,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
       )}
 
       {/* Figure Database - Visible to all users */}
-      <div className="mt-8">
+      {showSection('system') && <div className="mt-8">
         <div className="bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg p-6 shadow-lg mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -1763,10 +1766,10 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             {isAdminUser ? 'Figures added here appear in the master database but don\'t automatically add to user collections.' : 'You can view all figures that have been added by users and administrators.'}
           </p>
         </div>
-      </div>
+      </div>}
 
       {/* Custom Fields Management */}
-      <div className={canManageSystem ? 'mt-8 pt-8 border-t border-gray-200 dark:border-gray-700' : ''}>
+      {showSection('customFields') && <div className={canManageSystem ? 'mt-8 pt-8 border-t border-gray-200 dark:border-gray-700' : ''}>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Custom Fields
@@ -2543,7 +2546,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
           </div>
         </DialogContent>
       </Dialog>
-      </div>
+      </div>}
     </div>
   );
 }
