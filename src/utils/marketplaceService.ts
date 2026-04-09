@@ -717,6 +717,35 @@ export class MarketplaceService {
         (userId === trade.toUserId && status === 'received' && trade.fromUserShippingStatus === 'received');
 
       if (bothConfirmed) {
+        // Before transferring, verify figures aren't locked in other trades
+        const allFigureIds = [...trade.offeredFigureIds, ...trade.requestedFigureIds];
+        const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+
+        if (lockCheck.locked) {
+          // Get figure names for better error message
+          const lockedFigureNames: string[] = [];
+          for (const figureId of lockCheck.lockedFigures) {
+            try {
+              let figure = await FirebaseStorage.getFigure(figureId, trade.fromUserId);
+              if (!figure) {
+                figure = await FirebaseStorage.getFigure(figureId, trade.toUserId);
+              }
+              if (figure) {
+                lockedFigureNames.push(figure.name);
+              }
+            } catch (err) {
+              // Ignore errors, just won't have name
+            }
+          }
+
+          const figureList = lockedFigureNames.length > 0
+            ? lockedFigureNames.join(', ')
+            : 'Some figures';
+
+          alert(`Cannot complete trade: ${figureList} ${lockedFigureNames.length === 1 ? 'is' : 'are'} currently in another active trade. Please complete or decline the other trade(s) first before completing this one.`);
+          return false;
+        }
+
         // Both parties confirmed receipt - NOW transfer the figures with their settings
         // Need to get updated trade with both users' settings
         const updatedTrade = { ...trade, ...updates };
