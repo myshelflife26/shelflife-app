@@ -16,7 +16,7 @@ import { ShelfLifeValueService } from './utils/shelfLifeValue';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
-import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity } from 'lucide-react';
+import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2 } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { TabbedSettingsPage } from './components/TabbedSettingsPage';
@@ -44,6 +44,7 @@ import { FeedPage } from './components/FeedPage';
 import { BetaGuidePage } from './components/BetaGuidePage';
 import { GlobalStatisticsPage } from './components/GlobalStatisticsPage';
 import { WishlistPage } from './components/WishlistPage';
+import { ShareCollectionDialog } from './components/ShareCollectionDialog';
 import { PriceTrend } from './components/PriceTrend';
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
@@ -61,6 +62,7 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [profileImageEditorOpen, setProfileImageEditorOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [browseInitialUserId, setBrowseInitialUserId] = useState<string | null>(null);
   const [editingFigure, setEditingFigure] = useState<ActionFigure | undefined>(undefined);
   const [filters, setFilters] = useState<Filters>({
@@ -1125,6 +1127,17 @@ function App() {
                   allFigures={figures}
                 />
 
+                <Button
+                  onClick={() => setShareDialogOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                  title="Share your collection"
+                >
+                  <Share2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Share Collection</span>
+                </Button>
+
                 {selectedFigureIds.size > 0 ? (
                   <>
                     <Button onClick={handleDeselectAll} variant="outline" size="sm" className="whitespace-nowrap">
@@ -1719,6 +1732,33 @@ function App() {
         open={profileImageEditorOpen}
         onClose={() => setProfileImageEditorOpen(false)}
         onSave={handleProfileImageSave}
+      />
+
+      {/* Share Collection Dialog */}
+      <ShareCollectionDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        currentUser={currentUser}
+        collectionStats={{
+          totalFigures: filteredFigures.length,
+          totalValue: filteredFigures.reduce((sum, fig) => sum + fig.currentValue, 0),
+          topManufacturer: (() => {
+            const manufacturerCounts = new Map<string, number>();
+            filteredFigures.forEach(fig => {
+              const count = manufacturerCounts.get(fig.manufacturer) || 0;
+              manufacturerCounts.set(fig.manufacturer, count + 1);
+            });
+            let topManufacturer = '';
+            let maxCount = 0;
+            manufacturerCounts.forEach((count, manufacturer) => {
+              if (count > maxCount) {
+                maxCount = count;
+                topManufacturer = manufacturer;
+              }
+            });
+            return topManufacturer;
+          })()
+        }}
       />
 
       {/* Branded Footer */}
