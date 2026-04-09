@@ -166,9 +166,16 @@ export class FirebaseStorage {
       const figuresRef = collection(db, FIGURES_COLLECTION);
       const newFigureRef = doc(figuresRef);
 
+      // Initialize price history with current value
+      const priceHistory = figure.currentValue ? [{
+        date: Date.now(),
+        value: figure.currentValue
+      }] : [];
+
       const cleanedFigure = cleanUndefinedValues({
         ...figure,
         userId,
+        priceHistory,
         isListed: this.calculateIsListed(figure),
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -195,12 +202,27 @@ export class FirebaseStorage {
     try {
       const figureRef = doc(db, FIGURES_COLLECTION, figureId);
 
+      // Get current figure for price history and isListed calculation
+      const currentDoc = await getDoc(figureRef);
+      let currentFigure: ActionFigure | null = null;
+      if (currentDoc.exists()) {
+        currentFigure = currentDoc.data() as ActionFigure;
+      }
+
+      // If currentValue is being updated, track price history
+      if (updates.currentValue !== undefined && currentFigure && updates.currentValue !== currentFigure.currentValue) {
+        const priceHistory = currentFigure.priceHistory || [];
+        // Add new price entry
+        priceHistory.push({
+          date: Date.now(),
+          value: updates.currentValue
+        });
+        updates.priceHistory = priceHistory;
+      }
+
       // If marketplace or availability fields are being updated, recalculate isListed
       if (updates.marketplaceListing !== undefined || updates.availability !== undefined) {
-        // Get current figure to merge with updates for accurate calculation
-        const currentDoc = await getDoc(figureRef);
-        if (currentDoc.exists()) {
-          const currentFigure = currentDoc.data() as ActionFigure;
+        if (currentFigure) {
           const mergedFigure = { ...currentFigure, ...updates };
           updates.isListed = this.calculateIsListed(mergedFigure);
         } else {

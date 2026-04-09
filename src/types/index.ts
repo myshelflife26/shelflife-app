@@ -153,6 +153,11 @@ export interface AccessorySuggestion {
   reviewedBy?: string;
 }
 
+export interface PriceHistoryEntry {
+  date: number; // timestamp
+  value: number;
+}
+
 export interface ActionFigure {
   id: string;
   name: string;
@@ -163,6 +168,7 @@ export interface ActionFigure {
   category: string;
   condition: string; // MIB, Loose, Custom, or user-defined
   currentValue: number;
+  priceHistory?: PriceHistoryEntry[]; // Track value changes over time
   purchaseDate: string;
   location: string;
   notes: string;

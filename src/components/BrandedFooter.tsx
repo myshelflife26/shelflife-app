@@ -1,3 +1,5 @@
+import packageInfo from '../../package.json';
+
 export function BrandedFooter() {
   return (
     <footer className="mt-auto py-6 border-t border-gray-200 dark:border-gray-700">
@@ -7,6 +9,8 @@ export function BrandedFooter() {
             <span className="font-semibold text-gray-900 dark:text-white">ShelfLife</span>
             <span>·</span>
             <span>Where collections live</span>
+            <span className="text-gray-400">·</span>
+            <span className="text-xs">v{packageInfo.version}</span>
           </div>
           <div className="flex items-center gap-4">
             <a
