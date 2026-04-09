@@ -1321,6 +1321,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </div>
           </div>
         </div>
+      </div>
       </div>}
 
       {/* Admin: System Option Requests */}
