@@ -74,6 +74,9 @@ function App() {
     packaging: [],
     productLines: [],
     locations: [],
+    years: [],
+    versions: [],
+    upc: undefined,
     isComplete: 'all',
     completenessRange: undefined,
     saleTradeStatuses: [],
@@ -621,6 +624,16 @@ function App() {
         return false;
       }
       if (filters.locations.length > 0 && !filters.locations.includes(figure.location || '')) {
+        return false;
+      }
+      // Advanced filters
+      if (filters.years.length > 0 && figure.year && !filters.years.includes(figure.year)) {
+        return false;
+      }
+      if (filters.versions.length > 0 && !filters.versions.includes(figure.version || '')) {
+        return false;
+      }
+      if (filters.upc && figure.upc && !figure.upc.includes(filters.upc)) {
         return false;
       }
       if (filters.isComplete && filters.isComplete !== 'all') {

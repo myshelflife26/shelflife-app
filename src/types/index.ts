@@ -246,6 +246,10 @@ export interface Filters {
   packaging: string[];
   productLines: string[];
   locations: string[];
+  // Advanced search filters
+  years: number[]; // Filter by release year
+  versions: string[]; // Filter by version (V1, V2, etc.)
+  upc?: string; // Search by UPC/EAN barcode
   isComplete?: 'all' | 'yes' | 'no'; // For Loose condition only (legacy)
   completenessRange?: [number, number]; // 0-100 percentage range for accessory completeness
   saleTradeStatuses: SaleTradeStatus[]; // For sale, for trade, or neither

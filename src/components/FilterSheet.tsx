@@ -67,6 +67,28 @@ export function FilterSheet({
     return values;
   }, [figures, customFields]);
 
+  // Extract unique years from figures
+  const uniqueYears = useMemo(() => {
+    const years = new Set<number>();
+    figures.forEach(figure => {
+      if (figure.year) {
+        years.add(figure.year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Descending order (newest first)
+  }, [figures]);
+
+  // Extract unique versions from figures
+  const uniqueVersions = useMemo(() => {
+    const versions = new Set<string>();
+    figures.forEach(figure => {
+      if (figure.version) {
+        versions.add(figure.version);
+      }
+    });
+    return Array.from(versions).sort();
+  }, [figures]);
+
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
@@ -88,6 +110,9 @@ export function FilterSheet({
       packaging: [],
       productLines: [],
       locations: [],
+      years: [],
+      versions: [],
+      upc: undefined,
       isComplete: 'all',
       completenessRange: undefined,
       saleTradeStatuses: [],
@@ -157,6 +182,24 @@ export function FilterSheet({
       locations: prev.locations.includes(loc)
         ? prev.locations.filter(l => l !== loc)
         : [...prev.locations, loc]
+    }));
+  };
+
+  const toggleYear = (year: number) => {
+    setLocalFilters(prev => ({
+      ...prev,
+      years: prev.years.includes(year)
+        ? prev.years.filter(y => y !== year)
+        : [...prev.years, year]
+    }));
+  };
+
+  const toggleVersion = (version: string) => {
+    setLocalFilters(prev => ({
+      ...prev,
+      versions: prev.versions.includes(version)
+        ? prev.versions.filter(v => v !== version)
+        : [...prev.versions, version]
     }));
   };
 
@@ -502,6 +545,75 @@ export function FilterSheet({
                     </Label>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Advanced Filters Section */}
+          {(uniqueYears.length > 0 || uniqueVersions.length > 0) && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Advanced Search</h3>
+
+              {/* Year Filter */}
+              {uniqueYears.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label className="text-base font-semibold">Release Year</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {uniqueYears.map((year) => (
+                      <div key={year} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`year-${year}`}
+                          checked={localFilters.years.includes(year)}
+                          onCheckedChange={() => toggleYear(year)}
+                        />
+                        <Label
+                          htmlFor={`year-${year}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {year}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Version Filter */}
+              {uniqueVersions.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label className="text-base font-semibold">Version</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {uniqueVersions.map((version) => (
+                      <div key={version} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`version-${version}`}
+                          checked={localFilters.versions.includes(version)}
+                          onCheckedChange={() => toggleVersion(version)}
+                        />
+                        <Label
+                          htmlFor={`version-${version}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {version}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* UPC Search */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">UPC / Barcode</Label>
+                <Input
+                  type="text"
+                  placeholder="Search by UPC or EAN..."
+                  value={localFilters.upc || ''}
+                  onChange={(e) => setLocalFilters(prev => ({ ...prev, upc: e.target.value || undefined }))}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Search for figures by their UPC or EAN barcode
+                </p>
               </div>
             </div>
           )}
