@@ -121,8 +121,10 @@ export class MarketplaceService {
 
   /**
    * Check if any figures are already in active trades
+   * @param figureIds - Array of figure IDs to check
+   * @param excludeTradeId - Optional trade ID to exclude from the check (for accept validation)
    */
-  static async checkFiguresInActiveTrades(figureIds: string[]): Promise<{ locked: boolean; lockedFigures: string[] }> {
+  static async checkFiguresInActiveTrades(figureIds: string[], excludeTradeId?: string): Promise<{ locked: boolean; lockedFigures: string[] }> {
     try {
       const tradesRef = collection(db, TRADES_COLLECTION);
 
@@ -133,7 +135,9 @@ export class MarketplaceService {
       );
 
       const snapshot = await getDocs(q);
-      const activeTrades = snapshot.docs.map(doc => doc.data() as TradeProposal);
+      const activeTrades = snapshot.docs
+        .filter(doc => !excludeTradeId || doc.id !== excludeTradeId) // Exclude current trade if specified
+        .map(doc => doc.data() as TradeProposal);
 
       // Check which figures are locked in active trades
       const lockedFigures: string[] = [];
@@ -313,6 +317,36 @@ export class MarketplaceService {
       }
 
       const trade = tradeDoc.data() as TradeProposal;
+
+      // Check if any of the new figures are locked in other active trades
+      const allFigureIds = [...offeredFigureIds, ...requestedFigureIds];
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+
+      if (lockCheck.locked) {
+        // Get figure names for better error message
+        const lockedFigureNames: string[] = [];
+        for (const figureId of lockCheck.lockedFigures) {
+          try {
+            // Try to get figure from both users
+            let figure = await FirebaseStorage.getFigure(figureId, trade.fromUserId);
+            if (!figure) {
+              figure = await FirebaseStorage.getFigure(figureId, trade.toUserId);
+            }
+            if (figure) {
+              lockedFigureNames.push(figure.name);
+            }
+          } catch (err) {
+            // Ignore errors, just won't have name
+          }
+        }
+
+        const figureList = lockedFigureNames.length > 0
+          ? lockedFigureNames.join(', ')
+          : 'Some figures';
+
+        alert(`Cannot counter with these figures: ${figureList} ${lockedFigureNames.length === 1 ? 'is' : 'are'} already part of another active trade. Please remove ${lockedFigureNames.length === 1 ? 'it' : 'them'} from your counter proposal.`);
+        return false;
+      }
 
       // Check counter limit (max 3 counters)
       const currentCount = trade.counterCount || 0;
@@ -499,6 +533,36 @@ export class MarketplaceService {
 
       // Either party can accept a countered trade
       if (!isRecipient && !isSender) {
+        return false;
+      }
+
+      // Check if any figures are locked in other active trades
+      const allFigureIds = [...trade.offeredFigureIds, ...trade.requestedFigureIds];
+      const lockCheck = await this.checkFiguresInActiveTrades(allFigureIds, tradeId);
+
+      if (lockCheck.locked) {
+        // Get figure names for better error message
+        const lockedFigureNames: string[] = [];
+        for (const figureId of lockCheck.lockedFigures) {
+          try {
+            // Try to get figure from both users
+            let figure = await FirebaseStorage.getFigure(figureId, trade.fromUserId);
+            if (!figure) {
+              figure = await FirebaseStorage.getFigure(figureId, trade.toUserId);
+            }
+            if (figure) {
+              lockedFigureNames.push(figure.name);
+            }
+          } catch (err) {
+            // Ignore errors, just won't have name
+          }
+        }
+
+        const figureList = lockedFigureNames.length > 0
+          ? lockedFigureNames.join(', ')
+          : 'Some figures';
+
+        alert(`Cannot accept trade: ${figureList} ${lockedFigureNames.length === 1 ? 'is' : 'are'} already part of another active trade. Please complete or decline the other trade first.`);
         return false;
       }
 
