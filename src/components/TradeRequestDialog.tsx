@@ -8,6 +8,7 @@ import type { ActionFigure } from '../types/index';
 import type { User } from '../types/user';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { MarketplaceService } from '../utils/marketplaceService';
+import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { toastManager } from '../utils/toastManager';
 import { Package, DollarSign, X, Plus } from 'lucide-react';
 
@@ -85,8 +86,10 @@ export function TradeRequestDialog({ open, onClose, requestedFigure, currentUser
       const result = await MarketplaceService.createTradeProposal(
         currentUser.id,
         currentUser.displayName,
+        currentUser.username,
         requestedFigure.userId,
         requestedFigure.ownerDisplayName,
+        requestedFigure.ownerUsername,
         Array.from(selectedFigureIds),
         [requestedFigure.id],
         offeredCash,

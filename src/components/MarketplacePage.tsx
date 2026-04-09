@@ -693,7 +693,10 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        {trade.fromUserId === currentUser.id ? `To: ${trade.toUserName}` : `From: ${trade.fromUserName}`}
+                        {trade.fromUserId === currentUser.id
+                          ? `To: ${trade.toUserUsername ? `${trade.toUserUsername} (${trade.toUserName})` : trade.toUserName}`
+                          : `From: ${trade.fromUserUsername ? `${trade.fromUserUsername} (${trade.fromUserName})` : trade.fromUserName}`
+                        }
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Completed: {trade.completedAt ? new Date(trade.completedAt).toLocaleDateString() : 'N/A'}

@@ -70,12 +70,14 @@ export interface TradeProposal {
   // Initiator (person making the offer)
   fromUserId: string;
   fromUserName: string;
+  fromUserUsername?: string;
   offeredFigureIds: string[];
   offeredCash: number;
 
   // Recipient (person receiving the offer)
   toUserId: string;
   toUserName: string;
+  toUserUsername?: string;
   requestedFigureIds: string[];
   requestedCash: number;
 

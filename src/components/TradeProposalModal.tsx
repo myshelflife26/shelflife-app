@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { X, Search, DollarSign, Check, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { MarketplaceService } from '../utils/marketplaceService';
+import { FirebaseAuthService } from '../utils/firebaseAuth';
 
 interface TradeProposalModalProps {
   targetFigure: ActionFigure; // The figure the user clicked trade on
@@ -218,11 +219,17 @@ export function TradeProposalModal({
 
     setSubmitting(true);
     try {
+      // Fetch users to get usernames
+      const currentUser = await FirebaseAuthService.getUserById(currentUserId);
+      const targetUser = await FirebaseAuthService.getUserById(targetUserId);
+
       const tradeId = await MarketplaceService.createTradeProposal(
         currentUserId,
         currentUserName,
+        currentUser?.username || '',
         targetUserId,
         targetUserName,
+        targetUser?.username || '',
         Array.from(mySelectedFigures),
         Array.from(theirSelectedFigures),
         parseFloat(myMoneyAmount) || 0,
