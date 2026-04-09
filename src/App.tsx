@@ -38,6 +38,7 @@ import { FirebaseMessagesService } from './utils/firebaseMessages';
 import { BlockingService } from './utils/blocking';
 import { MarketplaceService } from './utils/marketplaceService';
 import { Logo } from './components/Logo';
+import { UserRatingBadge } from './components/UserRatingBadge';
 import { BrandedFooter } from './components/BrandedFooter';
 import { FeedPage } from './components/FeedPage';
 import { BetaGuidePage } from './components/BetaGuidePage';
@@ -842,19 +843,24 @@ function App() {
                     <UserIcon className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {currentUser.displayName}
-                  {currentUser.role === 'management' && (
-                    <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
-                      Admin
+                <div className="flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {currentUser.displayName}
                     </span>
-                  )}
-                  {currentUser.role === 'manager' && (
-                    <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded">
-                      Manager
-                    </span>
-                  )}
-                </span>
+                    {currentUser.role === 'management' && (
+                      <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                        Admin
+                      </span>
+                    )}
+                    {currentUser.role === 'manager' && (
+                      <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded">
+                        Manager
+                      </span>
+                    )}
+                  </div>
+                  <UserRatingBadge userId={currentUser.id} size="sm" />
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -972,9 +978,12 @@ function App() {
                     <UserIcon className="w-3 h-3 text-gray-400" />
                   )}
                 </button>
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  {currentUser.displayName}
-                </span>
+                <div className="flex flex-col items-start">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {currentUser.displayName}
+                  </span>
+                  <UserRatingBadge userId={currentUser.id} size="sm" />
+                </div>
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0"
