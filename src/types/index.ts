@@ -198,6 +198,8 @@ export interface ActionFigure {
   // Privacy
   isPublic?: boolean; // Whether this figure is visible to other users (default: false)
   userId?: string; // Owner of this figure (for public browsing)
+  // Organization
+  isFavorite?: boolean; // Star/favorite this figure for quick access (default: false)
   // Marketplace
   marketplaceListing?: MarketplaceListing; // If listed in marketplace
   isListed?: boolean; // Quick flag for marketplace queries (true if forSale or forTrade)
@@ -254,6 +256,7 @@ export interface Filters {
   completenessRange?: [number, number]; // 0-100 percentage range for accessory completeness
   saleTradeStatuses: SaleTradeStatus[]; // For sale, for trade, or neither
   customFields?: Record<string, string[]>; // Custom field filters: { fieldId: [values] }
+  showFavoritesOnly?: boolean; // Show only favorited figures
 }
 
 export type ViewMode = 'gallery' | 'table' | 'stats';

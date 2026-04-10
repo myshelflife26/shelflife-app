@@ -6,7 +6,7 @@ import { AuthService } from '../utils/auth';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
-import { Pencil, Trash2, ChevronUp, ChevronDown, Package, Clock, Eye, Flame, Heart, ThumbsUp, Check, X as XIcon, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, ChevronDown, Package, Clock, Eye, Flame, Heart, ThumbsUp, Check, X as XIcon, AlertCircle, Star } from 'lucide-react';
 
 interface TableViewProps {
   figures: ActionFigure[];
@@ -17,12 +17,13 @@ interface TableViewProps {
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  onToggleFavorite?: (figureId: string) => void;
 }
 
 type SortField = 'name' | 'manufacturer' | 'category' | 'condition' | 'currentValue' | 'purchaseDate';
 type SortDirection = 'asc' | 'desc';
 
-export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selectedIds, onToggleSelect, onSelectAll, onDeselectAll }: TableViewProps) {
+export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onToggleFavorite }: TableViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
@@ -111,6 +112,11 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
                 aria-label="Select all"
               />
             </th>
+            {onToggleFavorite && (
+              <th className="px-0.5 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-10">
+                <Star className="h-3.5 w-3.5 inline" />
+              </th>
+            )}
             {visibleColumns.image !== false && (
               <th className="px-0.5 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-16">
                 Image
@@ -233,6 +239,21 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
                     aria-label={`Select ${figure.name}`}
                   />
                 </td>
+                {onToggleFavorite && (
+                  <td className="px-0.5 py-2 text-center">
+                    <button
+                      onClick={() => onToggleFavorite(figure.id)}
+                      className={`p-1 rounded transition-colors ${
+                        figure.isFavorite
+                          ? 'text-yellow-500 hover:text-yellow-600'
+                          : 'text-gray-400 hover:text-yellow-500'
+                      }`}
+                      title={figure.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <Star className={`h-4 w-4 ${figure.isFavorite ? 'fill-current' : ''}`} />
+                    </button>
+                  </td>
+                )}
                 {visibleColumns.image !== false && (
                   <td className="px-2 py-2">
                     <div className="w-12 h-12 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">

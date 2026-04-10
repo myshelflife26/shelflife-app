@@ -16,7 +16,7 @@ import { ShelfLifeValueService } from './utils/shelfLifeValue';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
-import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2 } from 'lucide-react';
+import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { TabbedSettingsPage } from './components/TabbedSettingsPage';
@@ -84,6 +84,7 @@ function App() {
     completenessRange: undefined,
     saleTradeStatuses: [],
     customFields: {},
+    showFavoritesOnly: false,
   });
   const [selectedFigureIds, setSelectedFigureIds] = useState<Set<string>>(new Set());
   const [adminViewingUserId, setAdminViewingUserId] = useState<string>(''); // Admin can view other users' collections
@@ -576,6 +577,16 @@ function App() {
     }
   };
 
+  const handleToggleFavorite = async (figureId: string) => {
+    const figure = figures.find(f => f.id === figureId);
+    if (!figure) return;
+
+    await FirebaseStorage.updateFigure(figureId, {
+      isFavorite: !figure.isFavorite
+    });
+    loadFigures();
+  };
+
   // Apply dark mode
   useEffect(() => {
     if (darkMode) {
@@ -681,6 +692,10 @@ function App() {
             }
           }
         }
+      }
+      // Favorites filter
+      if (filters.showFavoritesOnly && !figure.isFavorite) {
+        return false;
       }
 
       return true;
@@ -1147,6 +1162,17 @@ function App() {
                   figures={figures}
                 />
 
+                <Button
+                  variant={filters.showFavoritesOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilters(prev => ({ ...prev, showFavoritesOnly: !prev.showFavoritesOnly }))}
+                  title={filters.showFavoritesOnly ? 'Show all figures' : 'Show only favorites'}
+                  className={filters.showFavoritesOnly ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+                >
+                  <Star className={`h-4 w-4 sm:mr-2 ${filters.showFavoritesOnly ? 'fill-current' : ''}`} />
+                  <span className="hidden sm:inline">{filters.showFavoritesOnly ? 'Favorites' : 'Favorites'}</span>
+                </Button>
+
                 <ExportImportMenu
                   onImport={handleImportComplete}
                   selectedFigures={selectedFigures}
@@ -1460,6 +1486,7 @@ function App() {
             packaging={uniquePackaging}
             productLines={uniqueProductLines}
             locations={uniqueLocations}
+            onToggleFavorite={handleToggleFavorite}
           />
         ) : viewMode === 'grid' ? (
           <>
@@ -1731,6 +1758,7 @@ function App() {
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
             onDeselectAll={handleDeselectAll}
+            onToggleFavorite={handleToggleFavorite}
           />
             </div>
             <Pagination

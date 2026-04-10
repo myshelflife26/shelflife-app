@@ -3,7 +3,7 @@ import type { ActionFigure, Filters } from '../types/index';
 import { FilterSheet } from './FilterSheet';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
-import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X, Star } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { AuthService } from '../utils/auth';
 
@@ -18,6 +18,7 @@ interface GalleryPageProps {
   packaging: string[];
   productLines: string[];
   locations: string[];
+  onToggleFavorite?: (figureId: string) => void;
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'value-asc' | 'value-desc';
@@ -33,6 +34,7 @@ export function GalleryPage({
   packaging,
   productLines,
   locations,
+  onToggleFavorite,
 }: GalleryPageProps) {
   const currentUser = AuthService.getCurrentUser();
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
@@ -220,6 +222,26 @@ export function GalleryPage({
                       </span>
                     )}
                   </div>
+                )}
+
+                {/* Favorite Star Button */}
+                {onToggleFavorite && (
+                  <button
+                    className={`absolute top-2 right-2 p-1.5 rounded-full transition-all ${
+                      hasMultipleImages ? 'right-20' : 'right-2'
+                    } ${
+                      item.figure.isFavorite
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-black bg-opacity-50 text-white hover:bg-opacity-70'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(item.figure.id);
+                    }}
+                    title={item.figure.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Star className={`h-4 w-4 ${item.figure.isFavorite ? 'fill-current' : ''}`} />
+                  </button>
                 )}
 
                 {/* Multiple images indicator */}
