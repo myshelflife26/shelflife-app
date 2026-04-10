@@ -45,6 +45,12 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'sale' | 'trade'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'priceLow' | 'priceHigh' | 'name'>('newest');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedFigure, setSelectedFigure] = useState<(ActionFigure & { ownerName: string; ownerDisplayName: string; ownerUsername: string }) | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [tradeModalFigure, setTradeModalFigure] = useState<ActionFigure | null>(null);
@@ -111,39 +117,84 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
     }
   };
 
-  // Filter listings
-  const filteredListings = allListings.filter(figure => {
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      if (
-        !figure.name.toLowerCase().includes(term) &&
-        !figure.manufacturer.toLowerCase().includes(term) &&
-        !(figure.productLine || '').toLowerCase().includes(term)
-      ) {
+  // Get unique manufacturers and conditions from all listings
+  const uniqueManufacturers = Array.from(new Set(allListings.map(f => f.manufacturer))).sort();
+  const uniqueConditions = Array.from(new Set(allListings.map(f => f.condition))).sort();
+
+  // Filter and sort listings
+  const filteredListings = allListings
+    .filter(figure => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        if (
+          !figure.name.toLowerCase().includes(term) &&
+          !figure.manufacturer.toLowerCase().includes(term) &&
+          !(figure.productLine || '').toLowerCase().includes(term)
+        ) {
+          return false;
+        }
+      }
+
+      // Check if for sale (new way or legacy way)
+      const isForSale = figure.marketplaceListing?.forSale || figure.availability?.includes('for-sale');
+      const isForTrade = figure.marketplaceListing?.forTrade || figure.availability?.includes('for-trade');
+
+      // Mode filter
+      if (filterMode === 'sale' && !isForSale) {
         return false;
       }
-    }
+      if (filterMode === 'trade' && !isForTrade) {
+        return false;
+      }
 
-    // Check if for sale (new way or legacy way)
-    const isForSale = figure.marketplaceListing?.forSale || figure.availability?.includes('for-sale');
-    const isForTrade = figure.marketplaceListing?.forTrade || figure.availability?.includes('for-trade');
+      // Price range filter
+      if (priceMin || priceMax) {
+        const price = figure.marketplaceListing?.askingPrice || figure.currentValue || 0;
+        const min = priceMin ? parseFloat(priceMin) : 0;
+        const max = priceMax ? parseFloat(priceMax) : Infinity;
+        if (price < min || price > max) {
+          return false;
+        }
+      }
 
-    // Mode filter
-    if (filterMode === 'sale' && !isForSale) {
-      return false;
-    }
-    if (filterMode === 'trade' && !isForTrade) {
-      return false;
-    }
+      // Manufacturer filter
+      if (selectedManufacturers.length > 0 && !selectedManufacturers.includes(figure.manufacturer)) {
+        return false;
+      }
 
-    // Don't show own listings in browse
-    if (figure.userId === currentUser.id) {
-      return false;
-    }
+      // Condition filter
+      if (selectedConditions.length > 0 && !selectedConditions.includes(figure.condition)) {
+        return false;
+      }
 
-    return true;
-  });
+      // Don't show own listings in browse
+      if (figure.userId === currentUser.id) {
+        return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return (b.marketplaceListing?.listedAt || b.createdAt || 0) - (a.marketplaceListing?.listedAt || a.createdAt || 0);
+        case 'priceLow': {
+          const priceA = a.marketplaceListing?.askingPrice || a.currentValue || 0;
+          const priceB = b.marketplaceListing?.askingPrice || b.currentValue || 0;
+          return priceA - priceB;
+        }
+        case 'priceHigh': {
+          const priceA = a.marketplaceListing?.askingPrice || a.currentValue || 0;
+          const priceB = b.marketplaceListing?.askingPrice || b.currentValue || 0;
+          return priceB - priceA;
+        }
+        case 'name':
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
 
   const getFigureValue = (figure: ActionFigure): string => {
     const listing = figure.marketplaceListing;
@@ -289,46 +340,231 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
       {/* Browse Tab */}
       {currentTab === 'browse' && (
         <div className="space-y-6">
-          {/* Filters */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex-1 min-w-[200px]">
-                <Label htmlFor="search">Search</Label>
-                <Input
-                  id="search"
-                  placeholder="Search figures..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          {/* Marketplace Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <Package className="h-8 w-8 text-blue-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{allListings.length}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Total Listings</p>
+                </div>
               </div>
+            </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant={filterMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterMode('all')}
-                >
-                  All
-                </Button>
-                <Button
-                  variant={filterMode === 'sale' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterMode('sale')}
-                >
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  For Sale
-                </Button>
-                <Button
-                  variant={filterMode === 'trade' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterMode('trade')}
-                >
-                  <Repeat className="h-4 w-4 mr-1" />
-                  For Trade
-                </Button>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {allListings.filter(f => f.marketplaceListing?.forSale || f.availability?.includes('for-sale')).length}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">For Sale</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <Repeat className="h-8 w-8 text-purple-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {allListings.filter(f => f.marketplaceListing?.forTrade || f.availability?.includes('for-trade')).length}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">For Trade</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="h-8 w-8 text-orange-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {trades.filter(t => t.status === 'pending' || t.status === 'countered').length}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Active Trades</p>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Filters */}
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="space-y-4">
+              {/* Search and Mode Filter Row */}
+              <div className="flex flex-wrap gap-4 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <Label htmlFor="search">Search</Label>
+                  <Input
+                    id="search"
+                    placeholder="Search figures..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant={filterMode === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilterMode('all')}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={filterMode === 'sale' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilterMode('sale')}
+                  >
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    For Sale
+                  </Button>
+                  <Button
+                    variant={filterMode === 'trade' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilterMode('trade')}
+                  >
+                    <Repeat className="h-4 w-4 mr-1" />
+                    For Trade
+                  </Button>
+                </div>
+              </div>
+
+              {/* Sort Row */}
+              <div className="flex flex-wrap gap-4 items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Sort by:</Label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="priceLow">Price: Low to High</option>
+                      <option value="priceHigh">Price: High to Low</option>
+                      <option value="name">Name (A-Z)</option>
+                    </select>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {filteredListings.length} {filteredListings.length === 1 ? 'result' : 'results'}
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
+                </Button>
+              </div>
+
+              {/* Advanced Filters */}
+              {showAdvancedFilters && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+                  {/* Price Range */}
+                  <div>
+                    <Label className="text-sm mb-2 block">Price Range</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={priceMin}
+                        onChange={(e) => setPriceMin(e.target.value)}
+                        className="w-24"
+                      />
+                      <span className="text-gray-500">to</span>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={priceMax}
+                        onChange={(e) => setPriceMax(e.target.value)}
+                        className="w-24"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Manufacturer Filter */}
+                  <div>
+                    <Label className="text-sm mb-2 block">Manufacturer</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueManufacturers.slice(0, 6).map(manufacturer => (
+                        <Button
+                          key={manufacturer}
+                          variant={selectedManufacturers.includes(manufacturer) ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => {
+                            setSelectedManufacturers(prev =>
+                              prev.includes(manufacturer)
+                                ? prev.filter(m => m !== manufacturer)
+                                : [...prev, manufacturer]
+                            );
+                          }}
+                        >
+                          {manufacturer}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Condition Filter */}
+                  <div>
+                    <Label className="text-sm mb-2 block">Condition</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueConditions.map(condition => (
+                        <Button
+                          key={condition}
+                          variant={selectedConditions.includes(condition) ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => {
+                            setSelectedConditions(prev =>
+                              prev.includes(condition)
+                                ? prev.filter(c => c !== condition)
+                                : [...prev, condition]
+                            );
+                          }}
+                        >
+                          {condition}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Clear Filters */}
+                  {(priceMin || priceMax || selectedManufacturers.length > 0 || selectedConditions.length > 0) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPriceMin('');
+                        setPriceMax('');
+                        setSelectedManufacturers([]);
+                        setSelectedConditions([]);
+                      }}
+                      className="text-red-600"
+                    >
+                      Clear Advanced Filters
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Results Count */}
+          {!loading && filteredListings.length > 0 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredListings.length}</span> {filteredListings.length === 1 ? 'listing' : 'listings'}
+                {(searchTerm || filterMode !== 'all' || priceMin || priceMax || selectedManufacturers.length > 0 || selectedConditions.length > 0) && (
+                  <span> matching your filters</span>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Listings Grid */}
           {loading ? (
@@ -343,7 +579,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                 No listings found
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                {searchTerm || filterMode !== 'all'
+                {searchTerm || filterMode !== 'all' || priceMin || priceMax || selectedManufacturers.length > 0 || selectedConditions.length > 0
                   ? 'Try adjusting your filters'
                   : 'Be the first to list a figure for sale or trade!'}
               </p>
@@ -405,6 +641,21 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
                       {figure.manufacturer} • {figure.condition}
                     </p>
 
+                    {/* Listing Date */}
+                    {figure.marketplaceListing?.listedAt && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
+                        Listed {(() => {
+                          const diffMs = Date.now() - figure.marketplaceListing.listedAt;
+                          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                          if (diffDays === 0) return 'today';
+                          if (diffDays === 1) return 'yesterday';
+                          if (diffDays < 7) return `${diffDays} days ago`;
+                          if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+                          return new Date(figure.marketplaceListing.listedAt).toLocaleDateString();
+                        })()}
+                      </p>
+                    )}
+
                     {/* Seller Rating */}
                     {figure.userId && (
                       <div className="mb-2">
@@ -444,12 +695,25 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
 
                     {/* Action Buttons - pinned to bottom */}
                     <div className="flex gap-2 mt-auto">
-                      <Button size="sm" className="flex-1" onClick={() => handleViewDetails(figure)}>
-                        View Details
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleViewDetails(figure)}
+                        title="View full details"
+                      >
+                        <Search className="h-4 w-4 mr-1" />
+                        View
                       </Button>
                       {(figure.marketplaceListing?.forTrade || figure.availability?.includes('for-trade')) && (
-                        <Button size="sm" variant="outline" onClick={() => handleOpenTrade(figure)}>
-                          <Repeat className="h-4 w-4" />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenTrade(figure)}
+                          title="Propose a trade"
+                          className="flex-1"
+                        >
+                          <Repeat className="h-4 w-4 mr-1" />
+                          Trade
                         </Button>
                       )}
                     </div>
