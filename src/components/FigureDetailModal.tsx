@@ -7,10 +7,13 @@ import { WatermarkedImage } from './ImageOverlay';
 import { CompletenessBadge } from './CompletenessBadge';
 import { AdmirersService } from '../utils/admirers';
 import { UserRatingBadge } from './UserRatingBadge';
+import { CommentsSection } from './CommentsSection';
+import type { User } from '../types/user';
 
 interface FigureDetailModalProps {
   figure: ActionFigure & { ownerName: string; ownerDisplayName: string; ownerUsername: string };
   currentUserId: string;
+  currentUser?: User; // Optional for backwards compatibility
   onClose: () => void;
   onViewOwnerCollection: (ownerId: string) => void;
   onReactionChange?: () => void;
@@ -21,6 +24,7 @@ interface FigureDetailModalProps {
 export function FigureDetailModal({
   figure,
   currentUserId,
+  currentUser,
   onClose,
   onViewOwnerCollection,
   onReactionChange,
@@ -413,6 +417,17 @@ export function FigureDetailModal({
               )}
             </div>
           </div>
+
+          {/* Comments Section */}
+          {currentUser && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <CommentsSection
+                figureId={figure.id}
+                currentUser={currentUser}
+                figureOwnerId={figure.userId!}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

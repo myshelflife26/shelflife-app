@@ -1097,6 +1097,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
         <FigureDetailModal
           figure={selectedFigure}
           currentUserId={currentUser.id}
+          currentUser={currentUser}
           onClose={handleCloseDetailModal}
           onViewOwnerCollection={(ownerId) => {
             // Could navigate to owner's collection, for now just close

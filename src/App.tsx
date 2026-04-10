@@ -50,9 +50,14 @@ import { PriceAlertsPage } from './components/PriceAlertsPage';
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
+import { ShelvesPage } from './components/ShelvesPage';
+import { ShelfViewPage } from './components/ShelfViewPage';
+import { CollectionGrowthPage } from './components/CollectionGrowthPage';
+import { TopJealousFigures } from './components/TopJealousFigures';
+import { Grid3x3 } from 'lucide-react';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist' | 'priceAlerts';
-type ViewMode = 'grid' | 'table' | 'stats' | 'images';
+type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist' | 'shelves' | 'growth';
+type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -60,7 +65,7 @@ function App() {
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [darkMode, setDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('collection');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [collectionTab, setCollectionTab] = useState<CollectionTab>('collection');
   const [profileImageEditorOpen, setProfileImageEditorOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -96,6 +101,7 @@ function App() {
   const [activeTradeCount, setActiveTradeCount] = useState(0);
   const [paginationPage, setPaginationPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [viewingShelfId, setViewingShelfId] = useState<string | null>(null);
 
   // Check authentication on mount with Firebase
   useEffect(() => {
@@ -792,8 +798,9 @@ function App() {
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
                 {currentPage === 'wishlist' && 'Wishlist'}
-                {currentPage === 'priceAlerts' && 'Price Alerts'}
                 {currentPage === 'statistics' && 'Statistics'}
+                {currentPage === 'shelves' && 'My Shelves'}
+                {currentPage === 'growth' && 'Collection Growth'}
                 {currentPage === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -859,12 +866,12 @@ function App() {
                 <Heart className="h-5 w-5" />
               </Button>
               <Button
-                variant={currentPage === 'priceAlerts' ? 'default' : 'ghost'}
+                variant={currentPage === 'shelves' ? 'default' : 'ghost'}
                 size="icon"
-                onClick={() => setCurrentPage('priceAlerts')}
-                title="Price Alerts"
+                onClick={() => setCurrentPage('shelves')}
+                title="My Shelves"
               >
-                <TrendingUp className="h-5 w-5" />
+                <Grid3x3 className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -873,6 +880,14 @@ function App() {
                 title="Global Statistics"
               >
                 <Activity className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={currentPage === 'growth' ? 'default' : 'ghost'}
+                size="icon"
+                onClick={() => setCurrentPage('growth')}
+                title="Collection Growth"
+              >
+                <BarChart3 className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'settings' ? 'default' : 'ghost'}
@@ -1012,12 +1027,12 @@ function App() {
                   <Heart className="h-3 w-3" />
                 </Button>
                 <Button
-                  variant={currentPage === 'priceAlerts' ? 'default' : 'ghost'}
+                  variant={currentPage === 'shelves' ? 'default' : 'ghost'}
                   className="h-7 w-7 p-0"
-                  onClick={() => setCurrentPage('priceAlerts')}
-                  title="Price Alerts"
+                  onClick={() => setCurrentPage('shelves')}
+                  title="My Shelves"
                 >
-                  <TrendingUp className="h-3 w-3" />
+                  <Grid3x3 className="h-3 w-3" />
                 </Button>
                 <Button
                   variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -1026,6 +1041,14 @@ function App() {
                   title="Statistics"
                 >
                   <Activity className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant={currentPage === 'growth' ? 'default' : 'ghost'}
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage('growth')}
+                  title="Collection Growth"
+                >
+                  <BarChart3 className="h-3 w-3" />
                 </Button>
                 <Button
                   variant={currentPage === 'settings' ? 'default' : 'ghost'}
@@ -1108,45 +1131,6 @@ function App() {
                   />
                 </div>
 
-                <div className="flex gap-1 border border-gray-300 dark:border-gray-600 rounded-md">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-r-none"
-                    title="Grid View"
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'table' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('table')}
-                    className="rounded-none"
-                    title="Table View"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'stats' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('stats')}
-                    className="rounded-none"
-                    title="Statistics View"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'images' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('images')}
-                    className="rounded-l-none"
-                    title="Image Gallery"
-                  >
-                    <Images className="h-4 w-4" />
-                  </Button>
-                </div>
-
                 <Button
                   onClick={handleAddFigure}
                   disabled={currentUser.role === 'management' && !!adminViewingUserId}
@@ -1155,6 +1139,72 @@ function App() {
                 >
                   + Figure
                 </Button>
+              </div>
+
+              {/* Top Jealous Figures */}
+              <TopJealousFigures
+                figures={filteredFigures}
+                userId={currentUser.id}
+                onFigureClick={handleEditFigure}
+              />
+
+              {/* Collection Tabs */}
+              <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto mb-4">
+                <button
+                  onClick={() => setCollectionTab('collection')}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'collection'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Grid className="h-4 w-4 inline mr-2" />
+                  My Collection
+                </button>
+                <button
+                  onClick={() => setCollectionTab('table')}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'table'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <List className="h-4 w-4 inline mr-2" />
+                  Table View
+                </button>
+                <button
+                  onClick={() => setCollectionTab('stats')}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'stats'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4 inline mr-2" />
+                  Statistics
+                </button>
+                <button
+                  onClick={() => setCollectionTab('gallery')}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'gallery'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Images className="h-4 w-4 inline mr-2" />
+                  Gallery
+                </button>
+                <button
+                  onClick={() => setCollectionTab('alerts')}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'alerts'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <TrendingUp className="h-4 w-4 inline mr-2" />
+                  Price Alerts
+                </button>
               </div>
 
               {/* Row 2: Filter, Export, and Selection Controls */}
@@ -1279,12 +1329,28 @@ function App() {
         <MessagesPage currentUser={currentUser} />
       ) : currentPage === 'wishlist' ? (
         <WishlistPage currentUser={currentUser} />
-      ) : currentPage === 'priceAlerts' ? (
-        <PriceAlertsPage currentUser={currentUser} />
       ) : currentPage === 'statistics' ? (
         <GlobalStatisticsPage />
+      ) : currentPage === 'growth' ? (
+        <CollectionGrowthPage figures={figures} />
       ) : currentPage === 'marketplace' ? (
         <MarketplacePage currentUser={currentUser} />
+      ) : currentPage === 'shelves' ? (
+        viewingShelfId ? (
+          <ShelfViewPage
+            shelfId={viewingShelfId}
+            userId={currentUser.id}
+            currentUserId={currentUser.id}
+            figures={figures}
+            onBack={() => setViewingShelfId(null)}
+          />
+        ) : (
+          <ShelvesPage
+            userId={currentUser.id}
+            figures={figures}
+            onNavigateToShelf={(shelfId) => setViewingShelfId(shelfId)}
+          />
+        )
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Admin viewing another user's collection notification */}
@@ -1482,9 +1548,9 @@ function App() {
               </Button>
             </div>
           </div>
-        ) : viewMode === 'stats' ? (
+        ) : collectionTab === 'stats' ? (
           <StatsView figures={filteredFigures} />
-        ) : viewMode === 'images' ? (
+        ) : collectionTab === 'gallery' ? (
           <GalleryPage
             figures={filteredFigures}
             filters={filters}
@@ -1498,7 +1564,9 @@ function App() {
             locations={uniqueLocations}
             onToggleFavorite={handleToggleFavorite}
           />
-        ) : viewMode === 'grid' ? (
+        ) : collectionTab === 'alerts' ? (
+          <PriceAlertsPage currentUser={currentUser} />
+        ) : collectionTab === 'collection' ? (
           <>
             <Pagination
               currentPage={paginationPage}
@@ -1749,7 +1817,7 @@ function App() {
               onPageSizeChange={setPageSize}
             />
           </>
-        ) : (
+        ) : collectionTab === 'table' ? (
           <>
             <Pagination
               currentPage={paginationPage}
@@ -1779,7 +1847,7 @@ function App() {
               onPageSizeChange={setPageSize}
             />
           </>
-        )}
+        ) : null}
         </main>
       )}
 

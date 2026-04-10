@@ -936,6 +936,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         <FigureDetailModal
           figure={selectedFigure}
           currentUserId={currentUser.id}
+          currentUser={currentUser}
           onClose={() => setSelectedFigure(null)}
           onViewOwnerCollection={(ownerId) => {
             if (onNavigateToBrowse) {
