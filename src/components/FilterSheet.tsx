@@ -89,6 +89,17 @@ export function FilterSheet({
     return Array.from(versions).sort();
   }, [figures]);
 
+  // Extract unique tags from figures
+  const uniqueTags = useMemo(() => {
+    const tags = new Set<string>();
+    figures.forEach(figure => {
+      if (figure.tags) {
+        figure.tags.forEach(tag => tags.add(tag));
+      }
+    });
+    return Array.from(tags).sort();
+  }, [figures]);
+
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
@@ -117,6 +128,8 @@ export function FilterSheet({
       completenessRange: undefined,
       saleTradeStatuses: [],
       customFields: {},
+      showFavoritesOnly: false,
+      tags: [],
     };
     setLocalFilters(cleared);
     onFilterChange(cleared);
@@ -200,6 +213,15 @@ export function FilterSheet({
       versions: prev.versions.includes(version)
         ? prev.versions.filter(v => v !== version)
         : [...prev.versions, version]
+    }));
+  };
+
+  const toggleTag = (tag: string) => {
+    setLocalFilters(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter(t => t !== tag)
+        : [...prev.tags, tag]
     }));
   };
 
@@ -595,6 +617,30 @@ export function FilterSheet({
                           className="text-sm font-normal cursor-pointer"
                         >
                           {version}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags Filter */}
+              {uniqueTags.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label className="text-base font-semibold">Tags</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {uniqueTags.map((tag) => (
+                      <div key={tag} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`tag-${tag}`}
+                          checked={localFilters.tags.includes(tag)}
+                          onCheckedChange={() => toggleTag(tag)}
+                        />
+                        <Label
+                          htmlFor={`tag-${tag}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {tag}
                         </Label>
                       </div>
                     ))}

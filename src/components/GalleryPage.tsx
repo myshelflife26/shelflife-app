@@ -3,7 +3,7 @@ import type { ActionFigure, Filters } from '../types/index';
 import { FilterSheet } from './FilterSheet';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
-import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X, Star } from 'lucide-react';
+import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X, Star, Tag } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { AuthService } from '../utils/auth';
 
@@ -279,6 +279,22 @@ export function GalleryPage({
                         </span>
                       )}
                     </div>
+                    {item.figure.tags && item.figure.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.figure.tags.slice(0, 3).map(tag => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/80 text-white"
+                          >
+                            <Tag className="h-2.5 w-2.5" />
+                            {tag}
+                          </span>
+                        ))}
+                        {item.figure.tags.length > 3 && (
+                          <span className="text-xs text-white/70">+{item.figure.tags.length - 3}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

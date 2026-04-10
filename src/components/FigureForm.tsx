@@ -25,7 +25,7 @@ import { MasterFiguresService } from '../utils/masterFigures';
 import { AccessoryService } from '../utils/accessoryService';
 import type { User } from '../types/user';
 import type { UserAccessory } from '../types/index';
-import { Search, X, Scan } from 'lucide-react';
+import { Search, X, Scan, Tag, Plus } from 'lucide-react';
 
 interface FigureFormProps {
   open: boolean;
@@ -42,6 +42,8 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
   const [masterFigureAccessories, setMasterFigureAccessories] = useState<any[]>([]);
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [figureNames, setFigureNames] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [formData, setFormData] = useState<Omit<ActionFigure, 'id'>>({
     name: '',
     series: '',
@@ -52,6 +54,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
     purchaseDate: new Date().toISOString().split('T')[0],
     location: '',
     notes: '',
+    tags: [],
     imageUrl: '',
     size: '',
     productLine: '',
@@ -113,6 +116,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
         purchaseDate: new Date().toISOString().split('T')[0],
         location: '',
         notes: '',
+        tags: [],
         imageUrl: '',
         size: '',
         productLine: '',
@@ -191,6 +195,31 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       images,
       mainImageIndex
     }));
+  };
+
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !formData.tags?.includes(trimmedTag)) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...(prev.tags || []), trimmedTag]
+      }));
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: (prev.tags || []).filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   const handleImagePositionChange = (position: string) => {
@@ -834,6 +863,52 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                 placeholder="Additional details, condition notes, accessories, etc."
                 rows={4}
               />
+            </div>
+
+            {/* Tags */}
+            <div className="md:col-span-2">
+              <Label htmlFor="tags">Tags</Label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    id="tags"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Add tags (press Enter)"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddTag}
+                    variant="outline"
+                    size="sm"
+                    disabled={!tagInput.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {formData.tags && formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      >
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 hover:text-blue-600 dark:hover:text-blue-400"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Dynamic Custom Fields */}

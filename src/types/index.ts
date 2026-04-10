@@ -200,6 +200,7 @@ export interface ActionFigure {
   userId?: string; // Owner of this figure (for public browsing)
   // Organization
   isFavorite?: boolean; // Star/favorite this figure for quick access (default: false)
+  tags?: string[]; // User-defined tags for flexible organization
   // Marketplace
   marketplaceListing?: MarketplaceListing; // If listed in marketplace
   isListed?: boolean; // Quick flag for marketplace queries (true if forSale or forTrade)
@@ -257,6 +258,7 @@ export interface Filters {
   saleTradeStatuses: SaleTradeStatus[]; // For sale, for trade, or neither
   customFields?: Record<string, string[]>; // Custom field filters: { fieldId: [values] }
   showFavoritesOnly?: boolean; // Show only favorited figures
+  tags: string[]; // Filter by tags
 }
 
 export type ViewMode = 'gallery' | 'table' | 'stats';

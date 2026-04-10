@@ -85,6 +85,7 @@ function App() {
     saleTradeStatuses: [],
     customFields: {},
     showFavoritesOnly: false,
+    tags: [],
   });
   const [selectedFigureIds, setSelectedFigureIds] = useState<Set<string>>(new Set());
   const [adminViewingUserId, setAdminViewingUserId] = useState<string>(''); // Admin can view other users' collections
@@ -696,6 +697,15 @@ function App() {
       // Favorites filter
       if (filters.showFavoritesOnly && !figure.isFavorite) {
         return false;
+      }
+      // Tags filter
+      if (filters.tags.length > 0) {
+        const figureTags = figure.tags || [];
+        // Figure must have at least one of the selected tags
+        const hasMatchingTag = filters.tags.some(tag => figureTags.includes(tag));
+        if (!hasMatchingTag) {
+          return false;
+        }
       }
 
       return true;
