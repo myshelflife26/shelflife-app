@@ -1,6 +1,7 @@
 import { AdmirersService } from './admirers';
 import { ReactionsService } from './reactions';
 import { Storage } from './storage';
+import { PriceAlertsService } from './priceAlertsService';
 
 const NOTIFICATIONS_KEY = 'app-notifications-state';
 const MAX_SEEN_IDS = 20;
@@ -13,7 +14,7 @@ export interface NotificationState {
 }
 
 export interface NotificationResult {
-  type: 'admirerRequest' | 'reaction' | 'newFigure' | 'reportUpdate';
+  type: 'admirerRequest' | 'reaction' | 'newFigure' | 'reportUpdate' | 'priceAlert';
   id: string; // Unique ID for this notification
   message: string;
   data?: any; // Additional data for the notification
@@ -239,17 +240,44 @@ export class NotificationsService {
     this.markAsSeen(reporterId, notificationId);
   }
 
+  // Detect price alerts
+  static detectPriceAlerts(userId: string): NotificationResult[] {
+    const alerts = PriceAlertsService.getUnseenAlerts(userId);
+    const notifications: NotificationResult[] = [];
+
+    for (const alert of alerts) {
+      const notificationId = `price-alert-${alert.id}`;
+
+      if (!this.hasSeenNotification(userId, notificationId)) {
+        const message = PriceAlertsService.formatChangeMessage(alert);
+
+        notifications.push({
+          type: 'priceAlert',
+          id: notificationId,
+          message,
+          data: alert
+        });
+        this.markAsSeen(userId, notificationId);
+        PriceAlertsService.markAsSeen(userId, alert.id);
+      }
+    }
+
+    return notifications;
+  }
+
   // Detect all new notifications
   static async detectAllNewNotifications(userId: string): Promise<NotificationResult[]> {
     const admirerNotifications = await this.detectNewAdmirerRequests(userId);
     const reactionNotifications = this.detectNewReactions(userId);
     const figureNotifications = await this.detectNewFiguresFromAdmirers(userId);
+    const priceAlertNotifications = this.detectPriceAlerts(userId);
 
     // Combine and return (most recent first)
     return [
       ...admirerNotifications,
       ...reactionNotifications,
-      ...figureNotifications
+      ...figureNotifications,
+      ...priceAlertNotifications
     ];
   }
 

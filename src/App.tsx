@@ -46,11 +46,12 @@ import { GlobalStatisticsPage } from './components/GlobalStatisticsPage';
 import { WishlistPage } from './components/WishlistPage';
 import { ShareCollectionDialog } from './components/ShareCollectionDialog';
 import { PriceTrend } from './components/PriceTrend';
+import { PriceAlertsPage } from './components/PriceAlertsPage';
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist';
+type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist' | 'priceAlerts';
 type ViewMode = 'grid' | 'table' | 'stats' | 'images';
 
 function App() {
@@ -465,6 +466,14 @@ function App() {
           case 'newFigure':
             toastManager.info(notification.message);
             break;
+          case 'priceAlert':
+            // Show green for price increase, red for decrease
+            if (notification.data?.changeAmount > 0) {
+              toastManager.success(`📈 ${notification.message}`);
+            } else {
+              toastManager.error(`📉 ${notification.message}`);
+            }
+            break;
         }
       });
     };
@@ -758,6 +767,7 @@ function App() {
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
                 {currentPage === 'wishlist' && 'Wishlist'}
+                {currentPage === 'priceAlerts' && 'Price Alerts'}
                 {currentPage === 'statistics' && 'Statistics'}
                 {currentPage === 'settings' && 'Settings'}
               </h1>
@@ -822,6 +832,14 @@ function App() {
                 title="Wishlist"
               >
                 <Heart className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={currentPage === 'priceAlerts' ? 'default' : 'ghost'}
+                size="icon"
+                onClick={() => setCurrentPage('priceAlerts')}
+                title="Price Alerts"
+              >
+                <TrendingUp className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -967,6 +985,14 @@ function App() {
                   title="Wishlist"
                 >
                   <Heart className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant={currentPage === 'priceAlerts' ? 'default' : 'ghost'}
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage('priceAlerts')}
+                  title="Price Alerts"
+                >
+                  <TrendingUp className="h-3 w-3" />
                 </Button>
                 <Button
                   variant={currentPage === 'statistics' ? 'default' : 'ghost'}
@@ -1217,6 +1243,8 @@ function App() {
         <MessagesPage currentUser={currentUser} />
       ) : currentPage === 'wishlist' ? (
         <WishlistPage currentUser={currentUser} />
+      ) : currentPage === 'priceAlerts' ? (
+        <PriceAlertsPage currentUser={currentUser} />
       ) : currentPage === 'statistics' ? (
         <GlobalStatisticsPage />
       ) : currentPage === 'marketplace' ? (

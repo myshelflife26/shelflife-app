@@ -209,7 +209,7 @@ export class FirebaseStorage {
         currentFigure = currentDoc.data() as ActionFigure;
       }
 
-      // If currentValue is being updated, track price history
+      // If currentValue is being updated, track price history and detect price alerts
       if (updates.currentValue !== undefined && currentFigure && updates.currentValue !== currentFigure.currentValue) {
         const priceHistory = currentFigure.priceHistory || [];
         // Add new price entry
@@ -218,6 +218,18 @@ export class FirebaseStorage {
           value: updates.currentValue
         });
         updates.priceHistory = priceHistory;
+
+        // Detect significant price change and create alert
+        if (currentFigure.userId) {
+          const { PriceAlertsService } = await import('./priceAlertsService');
+          PriceAlertsService.detectPriceChange(
+            currentFigure.userId,
+            figureId,
+            currentFigure.name,
+            currentFigure.currentValue,
+            updates.currentValue
+          );
+        }
       }
 
       // If marketplace or availability fields are being updated, recalculate isListed
