@@ -777,7 +777,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col w-full max-w-full overflow-x-hidden">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Desktop Header - Single Row */}
@@ -1038,7 +1038,7 @@ function App() {
               <div className="flex flex-wrap gap-3 items-center">
                 {/* Admin: View other users' collections */}
                 {currentUser.role === 'management' && (
-                  <div className="w-32 sm:min-w-[200px]">
+                  <div className="w-full sm:w-auto sm:min-w-[200px]">
                     <select
                       value={adminViewingUserId}
                       onChange={(e) => setAdminViewingUserId(e.target.value)}
@@ -1054,12 +1054,12 @@ function App() {
                   </div>
                 )}
 
-                <div className="relative flex-1 min-w-[150px] sm:min-w-[200px]">
+                <div className="relative flex-1 min-w-0">
                   <Input
                     placeholder="Search..."
                     value={filters.search}
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    className="text-xs sm:text-sm"
+                    className="text-xs sm:text-sm w-full"
                   />
                 </div>
               </div>
