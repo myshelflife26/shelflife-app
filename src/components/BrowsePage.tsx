@@ -356,7 +356,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 text-left">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -573,7 +573,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
         </div>
       ) : (
         // Figures Grid View
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredFigures.length === 0 ? (
             <div className="col-span-full py-12">
               <div className="flex flex-col items-start gap-3">
