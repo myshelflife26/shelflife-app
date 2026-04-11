@@ -973,8 +973,8 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
   const showSection = (section: string) => !activeSection || activeSection === section;
 
   return (
-    <div className="w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full box-border">
         {/* Beta Guide */}
         {showSection('general') && <div className="mb-8">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 shadow-lg">
