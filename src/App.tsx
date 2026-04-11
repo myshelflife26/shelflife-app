@@ -777,7 +777,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col overflow-x-hidden">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Desktop Header - Single Row */}
@@ -1286,7 +1286,7 @@ function App() {
       ) : currentPage === 'marketplace' ? (
         <MarketplacePage currentUser={currentUser} />
       ) : (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
         {/* Admin viewing another user's collection notification */}
         {currentUser.role === 'management' && adminViewingUserId && (
           <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
