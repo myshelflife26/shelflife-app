@@ -470,7 +470,7 @@ export function StatsView({ figures }: StatsViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Tab Navigation */}
       <StatsTabNavigation
         activeTab={activeTab}

@@ -101,7 +101,7 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
         <ColumnVisibilityMenu onVisibilityChange={refreshColumnVisibility} />
       </div>
 
-      <div ref={scrollContainerRef} className="overflow-x-scroll overflow-y-auto border-2 border-gray-300 dark:border-gray-600 sm:border sm:border-gray-200 sm:dark:border-gray-700 sm:rounded-lg sm:mx-4 lg:mx-8 bg-white dark:bg-gray-800 sm:relative" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain', touchAction: 'pan-x' }}>
+      <div ref={scrollContainerRef} className="overflow-x-auto overflow-y-auto border-2 border-gray-300 dark:border-gray-600 sm:border sm:border-gray-200 sm:dark:border-gray-700 sm:rounded-lg sm:mx-4 lg:mx-8 bg-white dark:bg-gray-800 sm:relative" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain', touchAction: 'pan-x' }}>
             <table className="border-collapse bg-white dark:bg-gray-800" style={{ width: 'max-content', minWidth: '100%' }}>
         <thead className="bg-gray-100 dark:bg-gray-700">
           <tr>

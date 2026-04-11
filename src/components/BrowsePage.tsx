@@ -368,35 +368,51 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
       </div>
 
       {/* View Mode Toggle */}
-      <div className="flex gap-2 mb-4 flex-wrap justify-start">
-        <Button
-          variant={viewMode === 'all' ? 'default' : 'outline'}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto mb-6">
+        <button
           onClick={() => setViewMode('all')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'all'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
         >
-          <Search className="h-4 w-4 mr-2" />
+          <Search className="h-4 w-4 inline mr-2" />
           All Figures ({allPublicFigures.length})
-        </Button>
-        <Button
-          variant={viewMode === 'users' ? 'default' : 'outline'}
+        </button>
+        <button
           onClick={() => setViewMode('users')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'users'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
         >
-          <UserIcon className="h-4 w-4 mr-2" />
+          <UserIcon className="h-4 w-4 inline mr-2" />
           Public Collections ({publicUsers.length})
-        </Button>
-        <Button
-          variant={viewMode === 'admiring' ? 'default' : 'outline'}
+        </button>
+        <button
           onClick={() => setViewMode('admiring')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'admiring'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
         >
-          <Star className="h-4 w-4 mr-2" />
+          <Star className="h-4 w-4 inline mr-2" />
           Admiring ({admiringCollections.length})
-        </Button>
-        <Button
-          variant={viewMode === 'recent' ? 'default' : 'outline'}
+        </button>
+        <button
           onClick={() => setViewMode('recent')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'recent'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
         >
-          <Eye className="h-4 w-4 mr-2" />
+          <Eye className="h-4 w-4 inline mr-2" />
           Recently Added
-        </Button>
+        </button>
       </div>
 
       {/* Search */}

@@ -30,14 +30,14 @@ export function TopJealousFigures({ figures, userId, onFigureClick }: TopJealous
   }
 
   return (
-    <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+    <div className="mt-3 mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-2">
+      <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
         🔥 Most Jealous Figures
       </h3>
 
       {/* Horizontal scrolling container for mobile */}
-      <div className="overflow-x-auto -mx-2 px-2">
-        <div className="flex gap-3 min-w-min">
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="flex gap-2 min-w-min">
           {topJealousFigures.map(item => {
             const mainImageIndex = item.figure.mainImageIndex ?? 0;
             const imageUrl = item.figure.images?.[mainImageIndex];
@@ -45,7 +45,7 @@ export function TopJealousFigures({ figures, userId, onFigureClick }: TopJealous
             return (
               <div
                 key={item.figure.id}
-                className="flex-shrink-0 w-32 sm:w-40 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+                className="flex-shrink-0 w-16 sm:w-20 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => onFigureClick?.(item.figure)}
               >
                 {/* Image */}
@@ -58,38 +58,38 @@ export function TopJealousFigures({ figures, userId, onFigureClick }: TopJealous
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No Image
+                      <span className="text-xs">No Image</span>
                     </div>
                   )}
                   {/* Jealousy Score Badge */}
-                  <div className="absolute top-2 right-2 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow">
+                  <div className="absolute top-1 right-1 bg-purple-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold shadow">
                     {item.jealousyScore}
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="p-2">
-                  <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate mb-1">
+                <div className="p-1">
+                  <h4 className="text-[10px] font-semibold text-gray-900 dark:text-white truncate mb-0.5">
                     {item.figure.name}
                   </h4>
 
                   {/* Reaction stats */}
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-0.5 text-[10px]">
                     {item.stats.fire > 0 && (
                       <span className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400">
-                        <Flame className="h-3 w-3" />
+                        <Flame className="h-2 w-2" />
                         {item.stats.fire}
                       </span>
                     )}
                     {item.stats.love > 0 && (
                       <span className="flex items-center gap-0.5 text-pink-600 dark:text-pink-400">
-                        <Heart className="h-3 w-3" />
+                        <Heart className="h-2 w-2" />
                         {item.stats.love}
                       </span>
                     )}
                     {item.stats.appreciate > 0 && (
                       <span className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400">
-                        <ThumbsUp className="h-3 w-3" />
+                        <ThumbsUp className="h-2 w-2" />
                         {item.stats.appreciate}
                       </span>
                     )}

@@ -56,8 +56,8 @@ import { CollectionGrowthPage } from './components/CollectionGrowthPage';
 import { TopJealousFigures } from './components/TopJealousFigures';
 import { Grid3x3 } from 'lucide-react';
 
-type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace' | 'statistics' | 'wishlist' | 'shelves' | 'growth';
-type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts';
+type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
+type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -797,10 +797,6 @@ function App() {
                 {currentPage === 'browse' && 'Browse Collections'}
                 {currentPage === 'marketplace' && 'Marketplace'}
                 {currentPage === 'messages' && 'Messages'}
-                {currentPage === 'wishlist' && 'Wishlist'}
-                {currentPage === 'statistics' && 'Statistics'}
-                {currentPage === 'shelves' && 'My Shelves'}
-                {currentPage === 'growth' && 'Collection Growth'}
                 {currentPage === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -856,38 +852,6 @@ function App() {
                     {unreadMessageCount}
                   </span>
                 )}
-              </Button>
-              <Button
-                variant={currentPage === 'wishlist' ? 'default' : 'ghost'}
-                size="icon"
-                onClick={() => setCurrentPage('wishlist')}
-                title="Wishlist"
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={currentPage === 'shelves' ? 'default' : 'ghost'}
-                size="icon"
-                onClick={() => setCurrentPage('shelves')}
-                title="My Shelves"
-              >
-                <Grid3x3 className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={currentPage === 'statistics' ? 'default' : 'ghost'}
-                size="icon"
-                onClick={() => setCurrentPage('statistics')}
-                title="Global Statistics"
-              >
-                <Activity className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={currentPage === 'growth' ? 'default' : 'ghost'}
-                size="icon"
-                onClick={() => setCurrentPage('growth')}
-                title="Collection Growth"
-              >
-                <BarChart3 className="h-5 w-5" />
               </Button>
               <Button
                 variant={currentPage === 'settings' ? 'default' : 'ghost'}
@@ -1019,38 +983,6 @@ function App() {
                   )}
                 </Button>
                 <Button
-                  variant={currentPage === 'wishlist' ? 'default' : 'ghost'}
-                  className="h-7 w-7 p-0"
-                  onClick={() => setCurrentPage('wishlist')}
-                  title="Wishlist"
-                >
-                  <Heart className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant={currentPage === 'shelves' ? 'default' : 'ghost'}
-                  className="h-7 w-7 p-0"
-                  onClick={() => setCurrentPage('shelves')}
-                  title="My Shelves"
-                >
-                  <Grid3x3 className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant={currentPage === 'statistics' ? 'default' : 'ghost'}
-                  className="h-7 w-7 p-0"
-                  onClick={() => setCurrentPage('statistics')}
-                  title="Statistics"
-                >
-                  <Activity className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant={currentPage === 'growth' ? 'default' : 'ghost'}
-                  className="h-7 w-7 p-0"
-                  onClick={() => setCurrentPage('growth')}
-                  title="Collection Growth"
-                >
-                  <BarChart3 className="h-3 w-3" />
-                </Button>
-                <Button
                   variant={currentPage === 'settings' ? 'default' : 'ghost'}
                   className="relative h-7 w-7 p-0"
                   onClick={() => setCurrentPage('settings')}
@@ -1130,15 +1062,6 @@ function App() {
                     className="text-xs sm:text-sm"
                   />
                 </div>
-
-                <Button
-                  onClick={handleAddFigure}
-                  disabled={currentUser.role === 'management' && !!adminViewingUserId}
-                  title={currentUser.role === 'management' && adminViewingUserId ? "Cannot add figures to another user's collection" : "Add a new figure"}
-                  className="whitespace-nowrap"
-                >
-                  + Figure
-                </Button>
               </div>
 
               {/* Top Jealous Figures */}
@@ -1149,61 +1072,94 @@ function App() {
               />
 
               {/* Collection Tabs */}
-              <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto mb-4">
+              <div className="flex gap-1 sm:gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto mb-4">
                 <button
                   onClick={() => setCollectionTab('collection')}
-                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'collection'
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
                   }`}
                 >
-                  <Grid className="h-4 w-4 inline mr-2" />
-                  My Collection
+                  <Grid className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Collection
                 </button>
                 <button
                   onClick={() => setCollectionTab('table')}
-                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'table'
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
                   }`}
                 >
-                  <List className="h-4 w-4 inline mr-2" />
-                  Table View
+                  <List className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Table
                 </button>
                 <button
                   onClick={() => setCollectionTab('stats')}
-                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'stats'
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
                   }`}
                 >
-                  <BarChart3 className="h-4 w-4 inline mr-2" />
-                  Statistics
+                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Stats
                 </button>
                 <button
                   onClick={() => setCollectionTab('gallery')}
-                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'gallery'
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
                   }`}
                 >
-                  <Images className="h-4 w-4 inline mr-2" />
+                  <Images className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
                   Gallery
                 </button>
                 <button
                   onClick={() => setCollectionTab('alerts')}
-                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'alerts'
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
                   }`}
                 >
-                  <TrendingUp className="h-4 w-4 inline mr-2" />
-                  Price Alerts
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Alerts
+                </button>
+                <button
+                  onClick={() => setCollectionTab('growth')}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'growth'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Growth
+                </button>
+                <button
+                  onClick={() => setCollectionTab('wishlist')}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'wishlist'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Star className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Wishlist
+                </button>
+                <button
+                  onClick={() => setCollectionTab('shelves')}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    collectionTab === 'shelves'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Grid3x3 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
+                  Shelves
                 </button>
               </div>
 
@@ -1327,30 +1283,8 @@ function App() {
         />
       ) : currentPage === 'messages' ? (
         <MessagesPage currentUser={currentUser} />
-      ) : currentPage === 'wishlist' ? (
-        <WishlistPage currentUser={currentUser} />
-      ) : currentPage === 'statistics' ? (
-        <GlobalStatisticsPage />
-      ) : currentPage === 'growth' ? (
-        <CollectionGrowthPage figures={figures} />
       ) : currentPage === 'marketplace' ? (
         <MarketplacePage currentUser={currentUser} />
-      ) : currentPage === 'shelves' ? (
-        viewingShelfId ? (
-          <ShelfViewPage
-            shelfId={viewingShelfId}
-            userId={currentUser.id}
-            currentUserId={currentUser.id}
-            figures={figures}
-            onBack={() => setViewingShelfId(null)}
-          />
-        ) : (
-          <ShelvesPage
-            userId={currentUser.id}
-            figures={figures}
-            onNavigateToShelf={(shelfId) => setViewingShelfId(shelfId)}
-          />
-        )
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Admin viewing another user's collection notification */}
@@ -1369,155 +1303,6 @@ function App() {
             </div>
           </div>
         )}
-
-        {/* Top 5 Jealousy Section - Only show if user has figures with jealousy scores */}
-        {figures.length > 0 && (() => {
-          const topJealousyFigures = figures
-            .filter(f => f.isPublic)
-            .map(figure => {
-              const userId = currentUser.role === 'management' && adminViewingUserId ? adminViewingUserId : currentUser.id;
-              const score = ReactionsService.getJealousyScore(figure.id, userId);
-              return { figure, score };
-            })
-            .filter(item => item.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5);
-
-          if (topJealousyFigures.length === 0) return null;
-
-          return (
-            <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-6 border-2 border-purple-200 dark:border-purple-800">
-              <div className="flex items-center gap-2 mb-4">
-                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500 flex-shrink-0" />
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white whitespace-nowrap">Your Top 5 Most Jealous Figures</h2>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                These are your most envied figures based on community reactions
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {topJealousyFigures.map(({ figure, score }, index) => {
-                  const mainImage = figure.images && figure.images.length > 0
-                    ? figure.images[figure.mainImageIndex ?? 0]
-                    : null;
-
-                  return (
-                    <div
-                      key={figure.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative"
-                      onClick={() => {
-                        setEditingFigure(figure);
-                        setFormOpen(true);
-                      }}
-                    >
-                      {/* Image */}
-                      {mainImage ? (
-                        <div className="relative h-36 bg-gray-100 dark:bg-gray-700">
-                          <img
-                            src={mainImage}
-                            alt={figure.name}
-                            className="w-full h-full object-cover"
-                            style={{ objectPosition: figure.imagePosition || 'center center' }}
-                          />
-                          {/* Rank badge */}
-                          <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                            #{index + 1}
-                          </div>
-                          {/* Jealousy badge */}
-                          <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                            <Flame className="h-3 w-3" />
-                            {score}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="relative h-36 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                          <Package className="h-12 w-12 text-gray-400" />
-                          {/* Rank badge */}
-                          <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                            #{index + 1}
-                          </div>
-                          {/* Jealousy badge */}
-                          <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                            <Flame className="h-3 w-3" />
-                            {score}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="p-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-                          {figure.name}
-                        </h3>
-                        {figure.year && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                            {figure.year}
-                          </p>
-                        )}
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-0.5">
-                          <p className="flex items-center justify-between">
-                            <span className="text-gray-500 dark:text-gray-500">My Value:</span>
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">${figure.currentValue.toFixed(2)}</span>
-                              <PriceTrend
-                                priceHistory={figure.priceHistory}
-                                currentValue={figure.currentValue}
-                                size="sm"
-                              />
-                            </div>
-                          </p>
-                          {(() => {
-                            const slValue = ShelfLifeValueService.calculateShelfLifeValue(figure);
-                            if (slValue !== null) {
-                              return (
-                                <p className="flex items-center justify-between">
-                                  <span className="text-blue-600 dark:text-blue-400">SL Value:</span>
-                                  <span className="font-medium text-blue-600 dark:text-blue-400">${slValue.toFixed(2)}</span>
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <span className="text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                            {score} jealousy pts
-                          </span>
-                          {(() => {
-                            const userId = currentUser.role === 'management' && adminViewingUserId ? adminViewingUserId : currentUser.id;
-                            const stats = ReactionsService.getJealousyStats(figure.id, userId);
-                            return (
-                              <div className="flex items-center gap-1">
-                                {stats.fire > 0 && (
-                                  <span className="flex items-center gap-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                    <Flame className="h-3 w-3" />
-                                    {stats.fire}
-                                  </span>
-                                )}
-                                {stats.love > 0 && (
-                                  <span className="flex items-center gap-0.5 text-xs text-pink-600 dark:text-pink-400">
-                                    <Heart className="h-3 w-3" />
-                                    {stats.love}
-                                  </span>
-                                )}
-                                {stats.appreciate > 0 && (
-                                  <span className="flex items-center gap-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                    <ThumbsUp className="h-3 w-3" />
-                                    {stats.appreciate}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
 
         {figures.length === 0 ? (
           <div className="text-center py-12">
@@ -1566,6 +1351,26 @@ function App() {
           />
         ) : collectionTab === 'alerts' ? (
           <PriceAlertsPage currentUser={currentUser} />
+        ) : collectionTab === 'growth' ? (
+          <CollectionGrowthPage figures={filteredFigures} />
+        ) : collectionTab === 'wishlist' ? (
+          <WishlistPage currentUser={currentUser} />
+        ) : collectionTab === 'shelves' ? (
+          viewingShelfId ? (
+            <ShelfViewPage
+              shelfId={viewingShelfId}
+              userId={currentUser.id}
+              currentUserId={currentUser.id}
+              figures={figures}
+              onBack={() => setViewingShelfId(null)}
+            />
+          ) : (
+            <ShelvesPage
+              userId={currentUser.id}
+              figures={figures}
+              onNavigateToShelf={(shelfId) => setViewingShelfId(shelfId)}
+            />
+          )
         ) : collectionTab === 'collection' ? (
           <>
             <Pagination
@@ -1897,6 +1702,19 @@ function App() {
 
       {/* Branded Footer */}
       <BrandedFooter />
+
+      {/* Floating Action Button - Add Figure */}
+      {currentPage === 'collection' && (
+        <button
+          onClick={handleAddFigure}
+          disabled={currentUser.role === 'management' && !!adminViewingUserId}
+          title={currentUser.role === 'management' && adminViewingUserId ? "Cannot add figures to another user's collection" : "Add a new figure"}
+          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-50 flex items-center justify-center group"
+        >
+          <Plus className="h-6 w-6" />
+          <span className="hidden group-hover:inline-block ml-2 whitespace-nowrap">Add Figure</span>
+        </button>
+      )}
 
       {/* Toast Notifications */}
       <ToastContainer />

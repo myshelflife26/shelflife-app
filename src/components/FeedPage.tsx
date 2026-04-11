@@ -10,13 +10,17 @@ import type { ReportCategory } from '../utils/reporting';
 import { toastManager } from '../utils/toastManager';
 import type { ActionFigure } from '../types/index';
 import type { User } from '../types/user';
-import { TrendingUp, Users, Sparkles, Flame, Heart, ThumbsUp, UserPlus, ShieldOff, Flag, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { TrendingUp, Users, Sparkles, Flame, Heart, ThumbsUp, UserPlus, ShieldOff, Flag, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Activity, Clock } from 'lucide-react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { FigureDetailModal } from './FigureDetailModal';
 import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
 import { Pagination } from './Pagination';
+import { GlobalStatisticsPage } from './GlobalStatisticsPage';
+
+type FeedTab = 'rising' | 'jealous' | 'collectors' | 'recent' | 'stats';
 
 interface FeedPageProps {
   currentUser: User;
@@ -32,8 +36,12 @@ interface FigureWithOwner extends ActionFigure {
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
+  const [feedTab, setFeedTab] = useState<FeedTab>('rising');
   const [topJealousyFigures, setTopJealousyFigures] = useState<Array<FigureWithOwner & { jealousyScore: number }>>([]);
-  const [risingStars, setRisingStars] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
+  const [risingStars7Days, setRisingStars7Days] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
+  const [risingStars30Days, setRisingStars30Days] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
+  const [risingStarsCustom, setRisingStarsCustom] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
+  const [customDaysBack, setCustomDaysBack] = useState(365);
   const [admiredFigures, setAdmiredFigures] = useState<FigureWithOwner[]>([]);
   const [recentPublicFigures, setRecentPublicFigures] = useState<FigureWithOwner[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
@@ -44,8 +52,12 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [userToReport, setUserToReport] = useState<{ id: string; username: string } | null>(null);
   const [topJealousyPage, setTopJealousyPage] = useState(1);
-  const [risingStarsPage, setRisingStarsPage] = useState(1);
-  const [risingStarsPageSize, setRisingStarsPageSize] = useState(25);
+  const [rising7DaysPage, setRising7DaysPage] = useState(1);
+  const [rising7DaysPageSize, setRising7DaysPageSize] = useState(25);
+  const [rising30DaysPage, setRising30DaysPage] = useState(1);
+  const [rising30DaysPageSize, setRising30DaysPageSize] = useState(25);
+  const [risingCustomPage, setRisingCustomPage] = useState(1);
+  const [risingCustomPageSize, setRisingCustomPageSize] = useState(25);
   const [admiredFiguresPage, setAdmiredFiguresPage] = useState(1);
   const [admiredFiguresPageSize, setAdmiredFiguresPageSize] = useState(25);
   const [suggestedUsersPage, setSuggestedUsersPage] = useState(1);
@@ -104,13 +116,14 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
     setTopJealousyFigures(topJealousy);
 
-    // Get rising stars (top 10 with biggest jealousy increases)
-    const rises = JealousyTrackingService.getRisingStars(
+    // Get rising stars for 7 days
+    const rises7Days = JealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      10
+      100,
+      7
     );
 
-    const risingFigures = rises
+    const risingFigures7Days = rises7Days
       .map(rise => {
         const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
         if (!figure) return null;
@@ -122,7 +135,49 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
 
-    setRisingStars(risingFigures);
+    setRisingStars7Days(risingFigures7Days);
+
+    // Get rising stars for 30 days
+    const rises30Days = JealousyTrackingService.getRisingStars(
+      publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
+      100,
+      30
+    );
+
+    const risingFigures30Days = rises30Days
+      .map(rise => {
+        const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
+        if (!figure) return null;
+        return {
+          ...figure,
+          increase: rise.increase,
+          previousScore: rise.previousScore
+        };
+      })
+      .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
+
+    setRisingStars30Days(risingFigures30Days);
+
+    // Get rising stars for custom period (default 365 days)
+    const risesCustom = JealousyTrackingService.getRisingStars(
+      publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
+      100,
+      customDaysBack
+    );
+
+    const risingFiguresCustom = risesCustom
+      .map(rise => {
+        const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
+        if (!figure) return null;
+        return {
+          ...figure,
+          increase: rise.increase,
+          previousScore: rise.previousScore
+        };
+      })
+      .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
+
+    setRisingStarsCustom(risingFiguresCustom);
 
     // Get figures from admired users (last 7 days)
     const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS;
@@ -236,11 +291,23 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     return topJealousyFigures.slice(startIndex, endIndex);
   }, [topJealousyFigures, topJealousyPage]);
 
-  const paginatedRisingStars = useMemo(() => {
-    const startIndex = (risingStarsPage - 1) * risingStarsPageSize;
-    const endIndex = startIndex + risingStarsPageSize;
-    return risingStars.slice(startIndex, endIndex);
-  }, [risingStars, risingStarsPage, risingStarsPageSize]);
+  const paginatedRising7Days = useMemo(() => {
+    const startIndex = (rising7DaysPage - 1) * rising7DaysPageSize;
+    const endIndex = startIndex + rising7DaysPageSize;
+    return risingStars7Days.slice(startIndex, endIndex);
+  }, [risingStars7Days, rising7DaysPage, rising7DaysPageSize]);
+
+  const paginatedRising30Days = useMemo(() => {
+    const startIndex = (rising30DaysPage - 1) * rising30DaysPageSize;
+    const endIndex = startIndex + rising30DaysPageSize;
+    return risingStars30Days.slice(startIndex, endIndex);
+  }, [risingStars30Days, rising30DaysPage, rising30DaysPageSize]);
+
+  const paginatedRisingCustom = useMemo(() => {
+    const startIndex = (risingCustomPage - 1) * risingCustomPageSize;
+    const endIndex = startIndex + risingCustomPageSize;
+    return risingStarsCustom.slice(startIndex, endIndex);
+  }, [risingStarsCustom, risingCustomPage, risingCustomPageSize]);
 
   const paginatedAdmiredFigures = useMemo(() => {
     const startIndex = (admiredFiguresPage - 1) * admiredFiguresPageSize;
@@ -342,8 +409,67 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         </p>
       </div>
 
-      {/* Top Jealousy Section */}
-      {topJealousyFigures.length > 0 && (
+      {/* Feed Tabs */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto mb-6">
+        <button
+          onClick={() => setFeedTab('rising')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'rising'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <TrendingUp className="h-4 w-4 inline mr-2" />
+          Rising Jealous
+        </button>
+        <button
+          onClick={() => setFeedTab('jealous')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'jealous'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Flame className="h-4 w-4 inline mr-2" />
+          Most Jealous
+        </button>
+        <button
+          onClick={() => setFeedTab('collectors')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'collectors'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Users className="h-4 w-4 inline mr-2" />
+          Suggested Collectors
+        </button>
+        <button
+          onClick={() => setFeedTab('recent')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'recent'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Clock className="h-4 w-4 inline mr-2" />
+          Recently Added
+        </button>
+        <button
+          onClick={() => setFeedTab('stats')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'stats'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Activity className="h-4 w-4 inline mr-2" />
+          Global Statistics
+        </button>
+      </div>
+
+      {/* Most Jealous Tab */}
+      {feedTab === 'jealous' && topJealousyFigures.length > 0 && (
         <div className="mb-8 bg-orange-100/70 dark:bg-orange-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="h-6 w-6 text-orange-500" />
@@ -510,28 +636,31 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         </div>
       )}
 
-      {/* Rising Stars Section */}
-      {risingStars.length > 0 && (
+      {/* Rising Stars Tab */}
+      {feedTab === 'rising' && (
+        <>
+        {/* 7 Days Section */}
+        {risingStars7Days.length > 0 && (
         <div className="mb-8 bg-pink-100/70 dark:bg-pink-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-6 w-6 text-orange-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Rising Stars</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">({risingStars.length})</span>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Rising Stars - Last 7 Days</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">({risingStars7Days.length})</span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Figures with the biggest jealousy score increases
+            Figures with the biggest jealousy score increases over the past week
           </p>
 
           <Pagination
-            currentPage={risingStarsPage}
-            totalItems={risingStars.length}
-            pageSize={risingStarsPageSize}
-            onPageChange={setRisingStarsPage}
-            onPageSizeChange={setRisingStarsPageSize}
+            currentPage={rising7DaysPage}
+            totalItems={risingStars7Days.length}
+            pageSize={rising7DaysPageSize}
+            onPageChange={setRising7DaysPage}
+            onPageSizeChange={setRising7DaysPageSize}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
-            {paginatedRisingStars.map(figure => {
+            {paginatedRising7Days.map(figure => {
               const mainImage = getMainImage(figure);
               const currentScore = ReactionsService.getJealousyScore(figure.id, figure.userId!);
 
@@ -635,35 +764,39 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           </div>
 
           <Pagination
-            currentPage={risingStarsPage}
-            totalItems={risingStars.length}
-            pageSize={risingStarsPageSize}
-            onPageChange={setRisingStarsPage}
-            onPageSizeChange={setRisingStarsPageSize}
+            currentPage={rising7DaysPage}
+            totalItems={risingStars7Days.length}
+            pageSize={rising7DaysPageSize}
+            onPageChange={setRising7DaysPage}
+            onPageSizeChange={setRising7DaysPageSize}
           />
         </div>
-      )}
+        )}
 
-      {/* From People You Admire Section */}
-      {admiringUsers.length > 0 && admiredFigures.length > 0 && (
+        {/* 30 Days Section */}
+        {risingStars30Days.length > 0 && (
         <div className="mb-8 bg-blue-100/70 dark:bg-blue-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="h-6 w-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">From People You Admire</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">({admiredFigures.length})</span>
+            <TrendingUp className="h-6 w-6 text-blue-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Rising Stars - Last Month</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">({risingStars30Days.length})</span>
           </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Figures with the biggest jealousy score increases over the past 30 days
+          </p>
 
           <Pagination
-            currentPage={admiredFiguresPage}
-            totalItems={admiredFigures.length}
-            pageSize={admiredFiguresPageSize}
-            onPageChange={setAdmiredFiguresPage}
-            onPageSizeChange={setAdmiredFiguresPageSize}
+            currentPage={rising30DaysPage}
+            totalItems={risingStars30Days.length}
+            pageSize={rising30DaysPageSize}
+            onPageChange={setRising30DaysPage}
+            onPageSizeChange={setRising30DaysPageSize}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
-            {paginatedAdmiredFigures.map(figure => {
+            {paginatedRising30Days.map(figure => {
               const mainImage = getMainImage(figure);
+              const currentScore = ReactionsService.getJealousyScore(figure.id, figure.userId!);
 
               return (
                 <div
@@ -671,7 +804,6 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
                   onClick={() => setSelectedFigure(figure)}
                 >
-                  {/* Image */}
                   <div className="relative h-36 bg-gray-100 dark:bg-gray-700">
                     {mainImage ? (
                       <WatermarkedImage
@@ -688,7 +820,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                       </div>
                     )}
 
-                    {/* Version badge */}
+                    <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +{figure.increase}
+                    </div>
+
                     {figure.version && (
                       <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-semibold">
                         {figure.version}
@@ -696,16 +832,30 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     )}
                   </div>
 
-                  {/* Content */}
                   <div className="p-3">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 truncate">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1 truncate">
                       {figure.name}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       by {figure.ownerDisplayName}
                     </p>
 
-                    {/* Quick reactions */}
+                    <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <Flame className="h-3 w-3 text-orange-500" />
+                          Jealousy
+                        </span>
+                        <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                          {currentScore}
+                        </span>
+                      </div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400">
+                        <TrendingUp className="h-3 w-3 inline mr-1" />
+                        Was {figure.previousScore}
+                      </div>
+                    </div>
+
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
@@ -742,17 +892,167 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           </div>
 
           <Pagination
-            currentPage={admiredFiguresPage}
-            totalItems={admiredFigures.length}
-            pageSize={admiredFiguresPageSize}
-            onPageChange={setAdmiredFiguresPage}
-            onPageSizeChange={setAdmiredFiguresPageSize}
+            currentPage={rising30DaysPage}
+            totalItems={risingStars30Days.length}
+            pageSize={rising30DaysPageSize}
+            onPageChange={setRising30DaysPage}
+            onPageSizeChange={setRising30DaysPageSize}
           />
         </div>
+        )}
+
+        {/* Custom Period Section */}
+        {risingStarsCustom.length > 0 && (
+        <div className="mb-8 bg-green-100/70 dark:bg-green-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Rising Stars - Custom Period</h2>
+              <span className="text-sm text-gray-500 dark:text-gray-400">({risingStarsCustom.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="custom-days" className="text-sm text-gray-700 dark:text-gray-300">Days back:</label>
+              <Input
+                id="custom-days"
+                type="number"
+                min="1"
+                max="365"
+                value={customDaysBack}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (value > 0 && value <= 365) {
+                    setCustomDaysBack(value);
+                  }
+                }}
+                onBlur={loadFeedData}
+                className="w-20"
+              />
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Figures with the biggest jealousy score increases over the past {customDaysBack} days
+          </p>
+
+          <Pagination
+            currentPage={risingCustomPage}
+            totalItems={risingStarsCustom.length}
+            pageSize={risingCustomPageSize}
+            onPageChange={setRisingCustomPage}
+            onPageSizeChange={setRisingCustomPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+            {paginatedRisingCustom.map(figure => {
+              const mainImage = getMainImage(figure);
+              const currentScore = ReactionsService.getJealousyScore(figure.id, figure.userId!);
+
+              return (
+                <div
+                  key={figure.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => setSelectedFigure(figure)}
+                >
+                  <div className="relative h-36 bg-gray-100 dark:bg-gray-700">
+                    {mainImage ? (
+                      <WatermarkedImage
+                        src={mainImage}
+                        alt={figure.name}
+                        watermarkText="SAMPLE"
+                        ownerId={figure.userId}
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: figure.imagePosition || 'center center' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+
+                    <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +{figure.increase}
+                    </div>
+
+                    {figure.version && (
+                      <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-semibold">
+                        {figure.version}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1 truncate">
+                      {figure.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      by {figure.ownerDisplayName}
+                    </p>
+
+                    <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <Flame className="h-3 w-3 text-orange-500" />
+                          Jealousy
+                        </span>
+                        <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                          {currentScore}
+                        </span>
+                      </div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400">
+                        <TrendingUp className="h-3 w-3 inline mr-1" />
+                        Was {figure.previousScore}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'fire') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'fire')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Flame className="h-3 w-3 mr-0.5" />
+                        Fire
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'love') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'love')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Heart className="h-3 w-3 mr-0.5" />
+                        Love
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'appreciate') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'appreciate')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <ThumbsUp className="h-3 w-3 mr-0.5" />
+                        Like
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={risingCustomPage}
+            totalItems={risingStarsCustom.length}
+            pageSize={risingCustomPageSize}
+            onPageChange={setRisingCustomPage}
+            onPageSizeChange={setRisingCustomPageSize}
+          />
+        </div>
+        )}
+        </>
       )}
 
-      {/* Suggested Users (if not admiring anyone) */}
-      {admiringUsers.length === 0 && suggestedUsers.length > 0 && (
+      {/* Suggested Collectors Tab */}
+      {feedTab === 'collectors' && suggestedUsers.length > 0 && (
         <div className="mb-8 bg-purple-100/70 dark:bg-purple-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <UserPlus className="h-6 w-6 text-purple-600" />
@@ -811,8 +1111,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         </div>
       )}
 
-      {/* Recently Made Public Section */}
-      {recentPublicFigures.length > 0 && (
+      {/* Recently Added Tab */}
+      {feedTab === 'recent' && recentPublicFigures.length > 0 && (
         <div className="mb-8 bg-indigo-100/70 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-6 w-6 text-purple-600" />
@@ -918,8 +1218,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         </div>
       )}
 
+      {/* Global Statistics Tab */}
+      {feedTab === 'stats' && (
+        <GlobalStatisticsPage />
+      )}
+
       {/* Empty state */}
-      {risingStars.length === 0 && admiredFigures.length === 0 && recentPublicFigures.length === 0 && suggestedUsers.length === 0 && (
+      {risingStars7Days.length === 0 && risingStars30Days.length === 0 && risingStarsCustom.length === 0 && recentPublicFigures.length === 0 && suggestedUsers.length === 0 && topJealousyFigures.length === 0 && (
         <div className="text-center py-12">
           <Sparkles className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">

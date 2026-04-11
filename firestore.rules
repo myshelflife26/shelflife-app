@@ -109,5 +109,30 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.fromUserId == request.auth.uid;
     }
+
+    match /shelves/{shelfId} {
+      allow read: if isSignedIn() && (
+        resource.data.isPublic == true ||
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+    }
+
+    match /wishlist/{itemId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+    }
   }
 }

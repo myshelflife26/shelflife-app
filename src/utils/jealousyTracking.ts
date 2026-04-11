@@ -63,7 +63,11 @@ export class JealousyTrackingService {
   }
 
   // Get figures with biggest jealousy increases
-  static getRisingStars(currentFigures: Array<{ id: string; userId: string }>, limit: number = 10): Array<{
+  static getRisingStars(
+    currentFigures: Array<{ id: string; userId: string }>,
+    limit: number = 10,
+    daysBack: number = 7
+  ): Array<{
     figureId: string;
     ownerId: string;
     currentScore: number;
@@ -71,6 +75,7 @@ export class JealousyTrackingService {
     increase: number;
   }> {
     const snapshots = this.getSnapshots();
+    const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
     const rises: Array<{
       figureId: string;
       ownerId: string;
@@ -84,13 +89,17 @@ export class JealousyTrackingService {
 
       if (currentScore === 0) return;
 
-      // Find oldest snapshot for this figure within retention period
+      // Find oldest snapshot for this figure within the specified time period
       const figureSnapshots = snapshots
-        .filter(s => s.figureId === figure.id && s.ownerId === figure.userId)
+        .filter(s =>
+          s.figureId === figure.id &&
+          s.ownerId === figure.userId &&
+          s.timestamp >= cutoffTime
+        )
         .sort((a, b) => a.timestamp - b.timestamp);
 
       if (figureSnapshots.length === 0) {
-        // No history, treat as new with full score as increase
+        // No history in this time period, treat as new with full score as increase
         rises.push({
           figureId: figure.id,
           ownerId: figure.userId,

@@ -134,7 +134,7 @@ export function ShelvesPage({ userId, figures, onNavigateToShelf }: ShelvesPageP
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             My Shelves
@@ -143,7 +143,7 @@ export function ShelvesPage({ userId, figures, onNavigateToShelf }: ShelvesPageP
             Organize your collection into virtual display shelves
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} className="flex-shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           New Shelf
         </Button>
