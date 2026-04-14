@@ -25,11 +25,12 @@ export function ShareCollectionDialog({
 
   if (!open) return null;
 
-  // Generate shareable URL (would point to a public profile view)
-  const shareUrl = `${window.location.origin}/profile/${currentUser.username}`;
+  // Generate shareable URL - points to browse page
+  // Note: Users can view public figures on the browse page by searching for the username
+  const shareUrl = `${window.location.origin}`;
 
   // Generate share text
-  const shareText = `Check out my action figure collection! ${collectionStats.totalFigures} figures worth $${collectionStats.totalValue.toFixed(0)} on ShelfLife`;
+  const shareText = `Check out my action figure collection on ShelfLife! ${collectionStats.totalFigures} figures worth $${collectionStats.totalValue.toFixed(0)}. Search for @${currentUser.username} in the app.`;
 
   const handleCopyLink = async () => {
     try {
@@ -120,7 +121,7 @@ export function ShareCollectionDialog({
               </Button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Anyone with this link can view your public collection
+              Share this link and tell them to search for "@{currentUser.username}" on the Browse page
             </p>
           </div>
 
