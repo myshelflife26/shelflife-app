@@ -15,6 +15,32 @@ import type { WishlistItem, WishlistStats, WishlistPriority, WishlistStatus } fr
 
 const WISHLIST_COLLECTION = 'wishlist';
 
+/**
+ * Recursively remove undefined values from an object
+ * Firebase doesn't accept undefined values in documents
+ */
+function cleanUndefinedValues(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanUndefinedValues(item)).filter(item => item !== undefined);
+  }
+
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanUndefinedValues(value);
+      }
+    }
+    return cleaned;
+  }
+
+  return obj;
+}
+
 export class FirebaseWishlistService {
   /**
    * Add item to wishlist
@@ -31,7 +57,10 @@ export class FirebaseWishlistService {
         lastUpdated: Date.now()
       };
 
-      const docRef = await addDoc(collection(db, WISHLIST_COLLECTION), wishlistItem);
+      // Clean undefined values before saving
+      const cleanedItem = cleanUndefinedValues(wishlistItem);
+
+      const docRef = await addDoc(collection(db, WISHLIST_COLLECTION), cleanedItem);
       return docRef.id;
     } catch (error) {
       console.error('Failed to add wishlist item:', error);
@@ -67,10 +96,15 @@ export class FirebaseWishlistService {
   static async updateItem(itemId: string, updates: Partial<WishlistItem>): Promise<void> {
     try {
       const itemRef = doc(db, WISHLIST_COLLECTION, itemId);
-      await updateDoc(itemRef, {
+      const updateData = {
         ...updates,
         lastUpdated: Date.now()
-      });
+      };
+
+      // Clean undefined values before saving
+      const cleanedData = cleanUndefinedValues(updateData);
+
+      await updateDoc(itemRef, cleanedData);
     } catch (error) {
       console.error('Failed to update wishlist item:', error);
       throw error;

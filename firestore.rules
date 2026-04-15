@@ -32,9 +32,10 @@ service cloud.firestore {
     }
 
     match /figures/{figureId} {
+      // UPDATED: Allow unauthenticated users to read public/listed figures
       allow read: if resource.data.isPublic == true ||
                      resource.data.isListed == true ||
-                     resource.data.userId == request.auth.uid ||
+                     (isSignedIn() && resource.data.userId == request.auth.uid) ||
                      isManagement();
 
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;

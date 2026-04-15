@@ -46,6 +46,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
   const [allTags, setAllTags] = useState<string[]>([]);
   const [formData, setFormData] = useState<Omit<ActionFigure, 'id'>>({
     name: '',
+    franchise: '',
     series: '',
     manufacturer: '',
     category: '',
@@ -108,6 +109,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       // Reset form when adding new
       setFormData({
         name: '',
+        franchise: '',
         series: '',
         manufacturer: '',
         category: '',
@@ -398,6 +400,20 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
+            {/* Franchise/IP */}
+            <div>
+              <Label htmlFor="franchise">Franchise/IP</Label>
+              <Combobox
+                id="franchise"
+                name="franchise"
+                value={formData.franchise || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, franchise: value }))}
+                options={ensureValueInOptions(settings.franchiseOptions, formData.franchise)}
+                placeholder="Type or select franchise..."
+                emptyMessage="No franchise found. Type to add new."
+              />
+            </div>
+
             {/* Version */}
             <div>
               <Label htmlFor="version">Version</Label>
@@ -427,6 +443,20 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
+            {/* Action Figure Product Line */}
+            <div>
+              <Label htmlFor="series">Action Figure Product Line</Label>
+              <Combobox
+                id="series"
+                name="series"
+                value={formData.series}
+                onChange={(value) => setFormData(prev => ({ ...prev, series: value }))}
+                options={ensureValueInOptions(settings.seriesOptions, formData.series)}
+                placeholder="Type or select product line..."
+                emptyMessage="No product line found. Type to add new."
+              />
+            </div>
+
             {/* Manufacturer */}
             <div>
               <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -438,30 +468,6 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                 options={ensureValueInOptions(settings.manufacturerOptions, formData.manufacturer)}
                 placeholder="Type or select manufacturer..."
                 emptyMessage="No manufacturer found. Type to add new."
-              />
-            </div>
-
-            {/* Product Line */}
-            <div className="md:col-span-2">
-              <Label htmlFor="productLine">Action Figure Product Line</Label>
-              <Input
-                id="productLine"
-                name="productLine"
-                value={formData.productLine}
-                onChange={handleChange}
-                placeholder="e.g., G.I. Joe Classic Collection"
-              />
-            </div>
-
-            {/* Sub-Product Line */}
-            <div className="md:col-span-2">
-              <Label htmlFor="subProductLine">Action Figure Sub-Product Line</Label>
-              <Input
-                id="subProductLine"
-                name="subProductLine"
-                value={formData.subProductLine}
-                onChange={handleChange}
-                placeholder="e.g., Original 13"
               />
             </div>
 

@@ -10,9 +10,11 @@ import { toastManager } from '../utils/toastManager';
 
 interface WishlistPageProps {
   currentUser: User;
+  addItemTrigger?: number; // Trigger from parent FAB
+  onDialogStateChange?: (isOpen: boolean) => void; // Notify parent when dialog opens/closes
 }
 
-export function WishlistPage({ currentUser }: WishlistPageProps) {
+export function WishlistPage({ currentUser, addItemTrigger, onDialogStateChange }: WishlistPageProps) {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +27,13 @@ export function WishlistPage({ currentUser }: WishlistPageProps) {
   useEffect(() => {
     loadWishlist();
   }, [currentUser.id]);
+
+  // Listen for add item trigger from parent FAB
+  useEffect(() => {
+    if (addItemTrigger && addItemTrigger > 0) {
+      handleAddItem();
+    }
+  }, [addItemTrigger]);
 
   const loadWishlist = async () => {
     setLoading(true);
@@ -42,11 +51,13 @@ export function WishlistPage({ currentUser }: WishlistPageProps) {
   const handleAddItem = () => {
     setEditingItem(undefined);
     setDialogOpen(true);
+    onDialogStateChange?.(true);
   };
 
   const handleEditItem = (item: WishlistItem) => {
     setEditingItem(item);
     setDialogOpen(true);
+    onDialogStateChange?.(true);
   };
 
   const handleDeleteItem = async (item: WishlistItem) => {
@@ -76,7 +87,13 @@ export function WishlistPage({ currentUser }: WishlistPageProps) {
   const handleSaveItem = async () => {
     await loadWishlist();
     setDialogOpen(false);
+    onDialogStateChange?.(false);
     setEditingItem(undefined);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    onDialogStateChange?.(false);
   };
 
   // Apply filters and sorting
@@ -141,15 +158,9 @@ export function WishlistPage({ currentUser }: WishlistPageProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <Heart className="h-8 w-8 text-pink-600" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Wishlist</h1>
-          </div>
-          <Button onClick={handleAddItem}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add to Wishlist
-          </Button>
+        <div className="flex items-center gap-3 mb-2">
+          <Heart className="h-8 w-8 text-pink-600" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Wishlist</h1>
         </div>
         <p className="text-gray-600 dark:text-gray-400">Track figures you want to acquire</p>
       </div>
@@ -386,10 +397,7 @@ export function WishlistPage({ currentUser }: WishlistPageProps) {
       {/* Wishlist Item Dialog */}
       <WishlistItemDialog
         open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setEditingItem(undefined);
-        }}
+        onClose={handleCloseDialog}
         onSave={handleSaveItem}
         currentUser={currentUser}
         editingItem={editingItem}

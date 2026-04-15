@@ -17,7 +17,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Textarea } from './ui/textarea';
-import { X, Plus, RotateCcw, Shield, ShieldOff, Eye, EyeOff, Star, UserPlus, UserMinus, Check, User as UserIcon, Flag, Moon, Sun, BookOpen, Database, Mail, Upload, Save, Trash2, Pencil, Download, ExternalLink } from 'lucide-react';
+import { X, Plus, RotateCcw, Shield, ShieldOff, Eye, EyeOff, Star, UserPlus, UserMinus, Check, User as UserIcon, Flag, Moon, Sun, BookOpen, Database, Mail, Upload, Save, Trash2, Pencil, Download, ExternalLink, Edit, ChevronDown } from 'lucide-react';
 import { CustomFieldsManager } from './CustomFieldsManager';
 import { AdminCustomFieldsManager } from './AdminCustomFieldsManager';
 import { ValueMigrationDialog } from './ValueMigrationDialog';
@@ -49,43 +49,64 @@ const OptionList = ({
   newValue: string;
   onNewValueChange: (value: string) => void;
   onAdd: () => void;
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
-    <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{title}</h3>
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-    <div className="space-y-2 mb-4">
-      {options.map((option) => (
-        <div
-          key={option}
-          className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
-        >
-          <span className="text-gray-900 dark:text-white">{option}</span>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-            onClick={() => onRemove(option)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">{title}</h3>
+          <span className="text-xs text-gray-500 dark:text-gray-400">({options.length} items)</span>
         </div>
-      ))}
-    </div>
+        <div className="flex items-center gap-2">
+          <Edit className="h-4 w-4 text-blue-600" />
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
 
-    <div className="flex gap-2">
-      <Input
-        placeholder={`Add new ${title.toLowerCase()}`}
-        value={newValue}
-        onChange={(e) => onNewValueChange(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && onAdd()}
-      />
-      <Button onClick={onAdd}>
-        <Plus className="h-4 w-4 mr-2" />
-        Add
-      </Button>
+      {isExpanded && (
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+          <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+            {options.map((option) => (
+              <div
+                key={option}
+                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm"
+              >
+                <span className="text-gray-900 dark:text-white">{option}</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                  onClick={() => onRemove(option)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              placeholder={`Add new ${title.toLowerCase()}`}
+              value={newValue}
+              onChange={(e) => onNewValueChange(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && onAdd()}
+              className="text-sm"
+            />
+            <Button onClick={onAdd} size="sm">
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMode, activeSection }: SettingsPageProps) {
   const [settings, setSettings] = useState<AppSettings>(SettingsService.getSettings());
@@ -100,6 +121,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
     condition: '',
     category: '',
     manufacturer: '',
+    franchise: '',
     series: '',
     version: '',
     size: '',
@@ -427,6 +449,32 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
 
     if (confirm(`Remove "${option}" from packaging options?`)) {
       SettingsService.removePackagingOption(option);
+      loadSettings();
+    }
+  };
+
+  const handleAddFranchise = () => {
+    if (newValues.franchise.trim()) {
+      SettingsService.addFranchiseOption(newValues.franchise.trim());
+      setNewValues({ ...newValues, franchise: '' });
+      loadSettings();
+    }
+  };
+
+  const handleRemoveFranchise = (option: string) => {
+    // Check if value is in use
+    if (FieldUsageService.isValueInUse('franchise', option)) {
+      setMigrationDialog({
+        field: 'franchise',
+        fieldLabel: 'Franchise/IP',
+        value: option,
+        availableValues: settings.franchiseOptions.filter(v => v !== option)
+      });
+      return;
+    }
+
+    if (confirm(`Remove "${option}" from franchise options?`)) {
+      SettingsService.removeFranchiseOption(option);
       loadSettings();
     }
   };
@@ -1420,7 +1468,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <OptionList
           title="Condition Options"
           options={settings.conditionOptions}
@@ -1449,7 +1497,16 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
         />
 
         <OptionList
-          title="Series Options"
+          title="Franchise/IP Options"
+          options={settings.franchiseOptions}
+          onRemove={handleRemoveFranchise}
+          newValue={newValues.franchise}
+          onNewValueChange={(value) => setNewValues({ ...newValues, franchise: value })}
+          onAdd={handleAddFranchise}
+        />
+
+        <OptionList
+          title="Action Figure Product Line Options"
           options={settings.seriesOptions}
           onRemove={handleRemoveSeries}
           newValue={newValues.series}

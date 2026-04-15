@@ -1,6 +1,24 @@
 {
   "indexes": [
     {
+      "collectionGroup": "figures",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isPublic",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "shelves",
       "queryScope": "COLLECTION",
       "fields": [

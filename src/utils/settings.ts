@@ -8,6 +8,7 @@ const DEFAULT_SYSTEM_SETTINGS = {
   conditionOptions: ['MIB', 'Loose', 'Custom'],
   categoryOptions: ['Action Figure', 'Vehicle', 'Playset', 'Accessory Pack'],
   manufacturerOptions: ['Hasbro', 'Mattel', 'Kenner', 'Toy Biz', 'McFarlane Toys'],
+  franchiseOptions: ['G.I. Joe', 'Star Wars', 'Masters of the Universe', 'Transformers', 'Marvel', 'DC Comics'],
   seriesOptions: ['A Real American Hero', 'Sigma 6', 'Classified', '25th Anniversary', 'Vintage Collection'],
   versionOptions: ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'V29', 'V30'],
   sizeOptions: ['3.75"', '6"', '7"', '12"'],
@@ -137,6 +138,20 @@ export class SettingsService {
   static removeManufacturerOption(option: string): void {
     const settings = this.getSystemSettings();
     settings.manufacturerOptions = settings.manufacturerOptions.filter(o => o !== option);
+    this.saveSystemSettings(settings);
+  }
+
+  static addFranchiseOption(option: string): void {
+    const settings = this.getSystemSettings();
+    if (!settings.franchiseOptions.includes(option)) {
+      settings.franchiseOptions.push(option);
+      this.saveSystemSettings(settings);
+    }
+  }
+
+  static removeFranchiseOption(option: string): void {
+    const settings = this.getSystemSettings();
+    settings.franchiseOptions = settings.franchiseOptions.filter(o => o !== option);
     this.saveSystemSettings(settings);
   }
 
@@ -281,6 +296,7 @@ export class SettingsService {
     conditionOptions: string[];
     categoryOptions: string[];
     manufacturerOptions: string[];
+    franchiseOptions: string[];
     seriesOptions: string[];
     versionOptions: string[];
     sizeOptions: string[];
@@ -290,6 +306,7 @@ export class SettingsService {
     if (settings.conditionOptions.length === 0) throw new Error('Condition options cannot be empty');
     if (settings.categoryOptions.length === 0) throw new Error('Category options cannot be empty');
     if (settings.manufacturerOptions.length === 0) throw new Error('Manufacturer options cannot be empty');
+    if (settings.franchiseOptions.length === 0) throw new Error('Franchise options cannot be empty');
     if (settings.seriesOptions.length === 0) throw new Error('Series options cannot be empty');
     if (settings.versionOptions.length === 0) throw new Error('Version options cannot be empty');
     if (settings.sizeOptions.length === 0) throw new Error('Size options cannot be empty');
@@ -329,6 +346,7 @@ export class SettingsService {
         conditionOptions: parsed.conditionOptions || DEFAULT_SYSTEM_SETTINGS.conditionOptions,
         categoryOptions: parsed.categoryOptions || DEFAULT_SYSTEM_SETTINGS.categoryOptions,
         manufacturerOptions: parsed.manufacturerOptions || DEFAULT_SYSTEM_SETTINGS.manufacturerOptions,
+        franchiseOptions: parsed.franchiseOptions || DEFAULT_SYSTEM_SETTINGS.franchiseOptions,
         seriesOptions: parsed.seriesOptions || DEFAULT_SYSTEM_SETTINGS.seriesOptions,
         versionOptions: parsed.versionOptions || DEFAULT_SYSTEM_SETTINGS.versionOptions,
         sizeOptions: parsed.sizeOptions || DEFAULT_SYSTEM_SETTINGS.sizeOptions,

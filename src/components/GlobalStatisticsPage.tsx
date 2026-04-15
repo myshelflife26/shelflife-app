@@ -105,7 +105,9 @@ export function GlobalStatisticsPage() {
               <div key={index} className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{fig.series}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {fig.series || <span className="italic">No Series</span>}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900 dark:text-white">{fig.count}</p>
@@ -127,7 +129,9 @@ export function GlobalStatisticsPage() {
               <div key={index} className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{fig.series}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {fig.series || <span className="italic">No Series</span>}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900 dark:text-white">{fig.count}</p>
@@ -149,7 +153,9 @@ export function GlobalStatisticsPage() {
               <div key={index} className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{fig.series}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {fig.series || <span className="italic">No Series</span>}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-purple-600 dark:text-purple-400">{fig.count}</p>
@@ -169,7 +175,9 @@ export function GlobalStatisticsPage() {
           <div className="space-y-3">
             {stats.topSeries.slice(0, 5).map((series, index) => (
               <div key={index} className="flex items-center justify-between">
-                <p className="font-medium text-gray-900 dark:text-white flex-1">{series.series}</p>
+                <p className="font-medium text-gray-900 dark:text-white flex-1">
+                  {series.series || <span className="text-gray-500 dark:text-gray-400 italic">No Series</span>}
+                </p>
                 <p className="font-bold text-gray-900 dark:text-white">{series.count}</p>
               </div>
             ))}

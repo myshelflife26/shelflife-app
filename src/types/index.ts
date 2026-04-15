@@ -163,6 +163,7 @@ export interface ActionFigure {
   name: string;
   version?: string; // Version of the figure (e.g., "V1", "V2", "25th Anniversary", etc.)
   year?: number; // Release year of the figure
+  franchise?: string; // Franchise/IP (e.g., "G.I. Joe", "Star Wars", "Masters of the Universe")
   series: string;
   manufacturer: string;
   category: string;
@@ -230,6 +231,7 @@ export interface AppSettings {
   conditionOptions: string[];
   categoryOptions: string[];
   manufacturerOptions: string[];
+  franchiseOptions: string[];
   seriesOptions: string[];
   versionOptions: string[];
   sizeOptions: string[];

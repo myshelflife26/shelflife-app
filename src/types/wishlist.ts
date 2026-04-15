@@ -7,6 +7,7 @@ export interface WishlistItem {
 
   // Figure details (can be from master DB or user-defined)
   figureName: string;
+  franchise?: string;
   series?: string;
   manufacturer?: string;
   version?: string;

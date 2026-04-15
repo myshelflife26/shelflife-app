@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import type { ActionFigure, Filters } from './types/index';
 import type { User } from './types/user';
 import { Storage } from './utils/storage';
@@ -54,12 +55,13 @@ import { ShelvesPage } from './components/ShelvesPage';
 import { ShelfViewPage } from './components/ShelfViewPage';
 import { CollectionGrowthPage } from './components/CollectionGrowthPage';
 import { TopJealousFigures } from './components/TopJealousFigures';
+import { PublicProfilePage } from './components/PublicProfilePage';
 import { Grid3x3 } from 'lucide-react';
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves';
 
-function App() {
+function MainApp() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [figures, setFigures] = useState<ActionFigure[]>([]);
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
@@ -102,6 +104,8 @@ function App() {
   const [paginationPage, setPaginationPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [viewingShelfId, setViewingShelfId] = useState<string | null>(null);
+  const [wishlistDialogTrigger, setWishlistDialogTrigger] = useState(0);
+  const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
 
   // Check authentication on mount with Firebase
   useEffect(() => {
@@ -294,6 +298,23 @@ function App() {
   const handleAddFigure = () => {
     setEditingFigure(undefined);
     setFormOpen(true);
+  };
+
+  // Handle context-aware FAB click
+  const handleFABClick = () => {
+    if (collectionTab === 'wishlist') {
+      // Trigger wishlist dialog
+      setWishlistDialogTrigger(prev => prev + 1);
+    } else {
+      // Default: add figure
+      handleAddFigure();
+    }
+  };
+
+  // Get FAB button text based on context
+  const getFABText = () => {
+    if (collectionTab === 'wishlist') return 'Add to Wishlist';
+    return 'Add Figure';
   };
 
   // Open edit figure form
@@ -1354,7 +1375,11 @@ function App() {
         ) : collectionTab === 'growth' ? (
           <CollectionGrowthPage figures={filteredFigures} />
         ) : collectionTab === 'wishlist' ? (
-          <WishlistPage currentUser={currentUser} />
+          <WishlistPage
+            currentUser={currentUser}
+            addItemTrigger={wishlistDialogTrigger}
+            onDialogStateChange={setWishlistDialogOpen}
+          />
         ) : collectionTab === 'shelves' ? (
           viewingShelfId ? (
             <ShelfViewPage
@@ -1678,47 +1703,61 @@ function App() {
         open={shareDialogOpen}
         onClose={() => setShareDialogOpen(false)}
         currentUser={currentUser}
-        collectionStats={{
-          totalFigures: filteredFigures.length,
-          totalValue: filteredFigures.reduce((sum, fig) => sum + fig.currentValue, 0),
-          topManufacturer: (() => {
-            const manufacturerCounts = new Map<string, number>();
-            filteredFigures.forEach(fig => {
-              const count = manufacturerCounts.get(fig.manufacturer) || 0;
-              manufacturerCounts.set(fig.manufacturer, count + 1);
-            });
-            let topManufacturer = '';
-            let maxCount = 0;
-            manufacturerCounts.forEach((count, manufacturer) => {
-              if (count > maxCount) {
-                maxCount = count;
-                topManufacturer = manufacturer;
-              }
-            });
-            return topManufacturer;
-          })()
-        }}
+        collectionStats={(() => {
+          // Only count public figures that visitors will actually see
+          const publicFigures = figures.filter(f => f.isPublic || currentUser.collectionPublic);
+          const manufacturerCounts = new Map<string, number>();
+          publicFigures.forEach(fig => {
+            const count = manufacturerCounts.get(fig.manufacturer) || 0;
+            manufacturerCounts.set(fig.manufacturer, count + 1);
+          });
+          let topManufacturer = '';
+          let maxCount = 0;
+          manufacturerCounts.forEach((count, manufacturer) => {
+            if (count > maxCount) {
+              maxCount = count;
+              topManufacturer = manufacturer;
+            }
+          });
+          return {
+            totalFigures: publicFigures.length,
+            totalValue: publicFigures.reduce((sum, fig) => sum + fig.currentValue, 0),
+            topManufacturer
+          };
+        })()}
       />
 
       {/* Branded Footer */}
       <BrandedFooter />
 
-      {/* Floating Action Button - Add Figure */}
-      {currentPage === 'collection' && (
+      {/* Floating Action Button - Context-Aware */}
+      {currentPage === 'collection' && !formOpen && !wishlistDialogOpen && (
         <button
-          onClick={handleAddFigure}
-          disabled={currentUser.role === 'management' && !!adminViewingUserId}
-          title={currentUser.role === 'management' && adminViewingUserId ? "Cannot add figures to another user's collection" : "Add a new figure"}
+          onClick={handleFABClick}
+          disabled={currentUser.role === 'management' && !!adminViewingUserId && collectionTab !== 'wishlist'}
+          title={collectionTab === 'wishlist' ? 'Add to Wishlist' : (currentUser.role === 'management' && adminViewingUserId ? "Cannot add figures to another user's collection" : "Add a new figure")}
           className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-50 flex items-center justify-center group"
         >
           <Plus className="h-6 w-6" />
-          <span className="hidden group-hover:inline-block ml-2 whitespace-nowrap">Add Figure</span>
+          <span className="hidden group-hover:inline-block ml-2 whitespace-nowrap">{getFABText()}</span>
         </button>
       )}
 
       {/* Toast Notifications */}
       <ToastContainer />
     </div>
+  );
+}
+
+// Routing wrapper
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/profile/:username" element={<PublicProfilePage />} />
+        <Route path="*" element={<MainApp />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

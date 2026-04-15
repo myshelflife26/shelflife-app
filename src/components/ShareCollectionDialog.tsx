@@ -25,12 +25,11 @@ export function ShareCollectionDialog({
 
   if (!open) return null;
 
-  // Generate shareable URL - points to browse page
-  // Note: Users can view public figures on the browse page by searching for the username
-  const shareUrl = `${window.location.origin}`;
+  // Generate shareable URL - points to public profile page
+  const shareUrl = `${window.location.origin}/profile/${currentUser.username}`;
 
   // Generate share text
-  const shareText = `Check out my action figure collection on ShelfLife! ${collectionStats.totalFigures} figures worth $${collectionStats.totalValue.toFixed(0)}. Search for @${currentUser.username} in the app.`;
+  const shareText = `Check out my action figure collection on ShelfLife! ${collectionStats.totalFigures} figures worth $${collectionStats.totalValue.toFixed(0)}.`;
 
   const handleCopyLink = async () => {
     try {
@@ -121,7 +120,7 @@ export function ShareCollectionDialog({
               </Button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Share this link and tell them to search for "@{currentUser.username}" on the Browse page
+              Share this link to show your public collection
             </p>
           </div>
 
@@ -168,13 +167,23 @@ export function ShareCollectionDialog({
             </p>
           </div>
 
-          {/* Privacy Note */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-            <p className="text-xs text-yellow-800 dark:text-yellow-200">
-              <strong>Privacy:</strong> Only figures marked as "Public" will be visible to others.
-              Update your figure privacy settings in your collection.
-            </p>
-          </div>
+          {/* Privacy Note / Warning */}
+          {collectionStats.totalFigures === 0 ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-xs text-red-800 dark:text-red-200">
+                <strong>No Public Figures:</strong> You don't have any figures marked as "Public" yet.
+                Visitors won't see any figures when they view this link. Go to your collection, select figures,
+                and click "Make Public" to share them.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                <strong>Privacy:</strong> Only figures marked as "Public" will be visible to others.
+                Currently sharing {collectionStats.totalFigures} public figure{collectionStats.totalFigures !== 1 ? 's' : ''}.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FirebaseWishlistService } from '../utils/firebaseWishlist';
+import { MasterFiguresService } from '../utils/masterFigures';
 import type { WishlistItem, WishlistPriority, WishlistStatus } from '../types/wishlist';
 import type { User } from '../types/user';
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { toastManager } from '../utils/toastManager';
@@ -23,6 +24,7 @@ export function WishlistItemDialog({
   editingItem
 }: WishlistItemDialogProps) {
   const [figureName, setFigureName] = useState('');
+  const [franchise, setFranchise] = useState('');
   const [series, setSeries] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [version, setVersion] = useState('');
@@ -32,10 +34,27 @@ export function WishlistItemDialog({
   const [targetPrice, setTargetPrice] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [masterFigures, setMasterFigures] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Load master figures database
+  useEffect(() => {
+    const loadMasterFigures = async () => {
+      try {
+        const figures = await MasterFiguresService.getAll();
+        setMasterFigures(figures);
+      } catch (error) {
+        console.error('Failed to load master figures:', error);
+      }
+    };
+    loadMasterFigures();
+  }, []);
 
   useEffect(() => {
     if (editingItem) {
       setFigureName(editingItem.figureName);
+      setFranchise(editingItem.franchise || '');
       setSeries(editingItem.series || '');
       setManufacturer(editingItem.manufacturer || '');
       setVersion(editingItem.version || '');
@@ -47,6 +66,7 @@ export function WishlistItemDialog({
     } else {
       // Reset form for new item
       setFigureName('');
+      setFranchise('');
       setSeries('');
       setManufacturer('');
       setVersion('');
@@ -55,8 +75,49 @@ export function WishlistItemDialog({
       setStatus('wanted');
       setTargetPrice('');
       setNotes('');
+      setSearchTerm('');
     }
   }, [editingItem, open]);
+
+  // Filter search results
+  const searchResults = useMemo(() => {
+    if (!searchTerm.trim() || searchTerm.length < 2) return [];
+
+    const term = searchTerm.toLowerCase();
+    return masterFigures
+      .filter(fig =>
+        fig.name?.toLowerCase().includes(term) ||
+        fig.series?.toLowerCase().includes(term) ||
+        fig.manufacturer?.toLowerCase().includes(term)
+      )
+      .slice(0, 10); // Limit to 10 results
+  }, [searchTerm, masterFigures]);
+
+  // Get unique options for dropdowns
+  const uniqueSeries = useMemo(() => {
+    const series = masterFigures
+      .map(f => f.series)
+      .filter(Boolean);
+    return [...new Set(series)].sort();
+  }, [masterFigures]);
+
+  const uniqueManufacturers = useMemo(() => {
+    const manufacturers = masterFigures
+      .map(f => f.manufacturer)
+      .filter(Boolean);
+    return [...new Set(manufacturers)].sort();
+  }, [masterFigures]);
+
+  const handleSelectFigure = (figure: any) => {
+    setFigureName(figure.name || '');
+    setFranchise(figure.franchise || '');
+    setSeries(figure.series || '');
+    setManufacturer(figure.manufacturer || '');
+    setVersion(figure.version || '');
+    setYear(figure.year?.toString() || '');
+    setSearchTerm('');
+    setShowSearchResults(false);
+  };
 
   const handleSave = async () => {
     if (!figureName.trim()) {
@@ -68,6 +129,7 @@ export function WishlistItemDialog({
     try {
       const itemData = {
         figureName: figureName.trim(),
+        franchise: franchise.trim() || undefined,
         series: series.trim() || undefined,
         manufacturer: manufacturer.trim() || undefined,
         version: version.trim() || undefined,
@@ -115,6 +177,46 @@ export function WishlistItemDialog({
 
         {/* Form */}
         <div className="p-6 space-y-4">
+          {/* Search for Figure in Database */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <Search className="h-4 w-4 inline mr-1" />
+              Search Figure Database
+            </label>
+            <div className="relative">
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                placeholder="Search for a figure to auto-fill fields..."
+              />
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {searchResults.map((fig, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelectFigure(fig)}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                    >
+                      <div className="font-medium text-gray-900 dark:text-white">{fig.name}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {fig.series && `${fig.series} • `}{fig.manufacturer} {fig.year && `• ${fig.year}`}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Start typing to search our database and auto-fill fields
+            </p>
+          </div>
+
           {/* Figure Name (Required) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -128,28 +230,54 @@ export function WishlistItemDialog({
             />
           </div>
 
-          {/* Series and Manufacturer */}
+          {/* Franchise/IP */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Franchise/IP
+            </label>
+            <Input
+              value={franchise}
+              onChange={(e) => setFranchise(e.target.value)}
+              placeholder="e.g., G.I. Joe, Star Wars, Masters of the Universe"
+            />
+          </div>
+
+          {/* Action Figure Product Line and Manufacturer */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Series
+                Action Figure Product Line
               </label>
-              <Input
+              <input
+                list="series-options"
                 value={series}
                 onChange={(e) => setSeries(e.target.value)}
-                placeholder="e.g., A Real American Hero"
+                placeholder="Select or type..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
+              <datalist id="series-options">
+                {uniqueSeries.map((s, i) => (
+                  <option key={i} value={s} />
+                ))}
+              </datalist>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Manufacturer
               </label>
-              <Input
+              <input
+                list="manufacturer-options"
                 value={manufacturer}
                 onChange={(e) => setManufacturer(e.target.value)}
-                placeholder="e.g., Hasbro"
+                placeholder="Select or type..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
+              <datalist id="manufacturer-options">
+                {uniqueManufacturers.map((m, i) => (
+                  <option key={i} value={m} />
+                ))}
+              </datalist>
             </div>
           </div>
 

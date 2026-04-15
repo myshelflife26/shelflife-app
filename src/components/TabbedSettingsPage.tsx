@@ -3,8 +3,9 @@ import type { User } from '../types/user';
 import { SettingsPage } from './SettingsPage';
 import { AccountSettings } from './AccountSettings';
 import { UserManagementPage } from './UserManagementPage';
+import { MasterFiguresDatabasePage } from './MasterFiguresDatabasePage';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
-import { Settings, User as UserIcon, Shield, Wrench, Lock, Eye } from 'lucide-react';
+import { Settings, User as UserIcon, Shield, Wrench, Lock, Eye, Database } from 'lucide-react';
 
 interface TabbedSettingsPageProps {
   currentUser: User;
@@ -13,7 +14,7 @@ interface TabbedSettingsPageProps {
   setDarkMode: (darkMode: boolean) => void;
 }
 
-type TabType = 'general' | 'privacy' | 'account' | 'customFields' | 'system' | 'users';
+type TabType = 'general' | 'privacy' | 'account' | 'customFields' | 'database' | 'system' | 'users';
 
 export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMode }: TabbedSettingsPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -24,6 +25,7 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     { id: 'privacy' as TabType, label: 'Privacy', icon: Eye, adminOnly: false },
     { id: 'account' as TabType, label: 'Account', icon: UserIcon, adminOnly: false },
     { id: 'customFields' as TabType, label: 'Custom Fields', icon: Wrench, adminOnly: false },
+    { id: 'database' as TabType, label: 'Database', icon: Database, adminOnly: true },
     { id: 'system' as TabType, label: 'System', icon: Shield, adminOnly: true },
     { id: 'users' as TabType, label: 'User Management', icon: Lock, adminOnly: true },
   ];
@@ -102,6 +104,9 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
             setDarkMode={setDarkMode}
             activeSection="customFields"
           />
+        )}
+        {activeTab === 'database' && isAdmin && (
+          <MasterFiguresDatabasePage currentUser={currentUser} />
         )}
         {activeTab === 'system' && isAdmin && (
           <SettingsPage
