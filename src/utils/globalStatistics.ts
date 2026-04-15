@@ -1,4 +1,4 @@
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, or } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { ActionFigure } from '../types';
 
@@ -38,8 +38,15 @@ export class GlobalStatisticsService {
     }
 
     try {
-      // Get all figures from all users
-      const figuresSnapshot = await getDocs(collection(db, 'figures'));
+      // Get all public or listed figures (respects security rules)
+      const figuresQuery = query(
+        collection(db, 'figures'),
+        or(
+          where('isPublic', '==', true),
+          where('isListed', '==', true)
+        )
+      );
+      const figuresSnapshot = await getDocs(figuresQuery);
       const allFigures = figuresSnapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
