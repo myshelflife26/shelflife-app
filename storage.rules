@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read all images
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Allow users to upload/update/delete their own figure images
+    match /figures/{userId}/{figureId}/{imageFile} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

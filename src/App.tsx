@@ -6,6 +6,7 @@ import { Storage } from './utils/storage';
 import { SettingsService } from './utils/settings';
 import { FirebaseAuthService } from './utils/firebaseAuth';
 import { FirebaseStorage } from './utils/firebaseStorage';
+import { ImageUploadService } from './utils/imageUploadService';
 import { ReactionsService } from './utils/reactions';
 import { MasterFiguresService } from './utils/masterFigures';
 import { PendingDeletionsService } from './utils/pendingDeletions';
@@ -258,10 +259,36 @@ function MainApp() {
     if (!currentUser) return;
 
     try {
+      // Upload images to Firebase Storage if they are base64 strings
+      let imageUrls = figure.images || [];
+      const figureId = editingFigure?.id || `temp_${Date.now()}`;
+
+      if (imageUrls.length > 0) {
+        // Check if any images are base64 (not already URLs)
+        const hasBase64Images = imageUrls.some(img => !ImageUploadService.isStorageUrl(img));
+
+        if (hasBase64Images) {
+          console.log('Uploading images to Firebase Storage...');
+          // Upload base64 images and get URLs
+          imageUrls = await ImageUploadService.migrateImagesToStorage(
+            imageUrls,
+            currentUser.id,
+            figureId
+          );
+          console.log('Images uploaded successfully');
+        }
+      }
+
+      // Create figure object with URLs instead of base64
+      const figureWithUrls = {
+        ...figure,
+        images: imageUrls
+      };
+
       if (editingFigure) {
-        await FirebaseStorage.updateFigure(editingFigure.id, figure);
+        await FirebaseStorage.updateFigure(editingFigure.id, figureWithUrls);
       } else {
-        await FirebaseStorage.addFigure(currentUser.id, figure);
+        await FirebaseStorage.addFigure(currentUser.id, figureWithUrls);
 
         // Add to master database (only when creating new figure, not editing)
         await MasterFiguresService.addFromUserFigure(
@@ -276,7 +303,7 @@ function MainApp() {
             category: figure.category,
             size: figure.size,
             packaging: figure.packaging,
-            imageUrl: figure.images?.[figure.mainImageIndex || 0]
+            imageUrl: imageUrls[figure.mainImageIndex || 0]
           },
           currentUser.id,
           currentUser.displayName,
