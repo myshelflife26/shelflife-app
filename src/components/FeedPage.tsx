@@ -201,11 +201,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
     setAdmiredFigures(admiredUsersFigures);
 
-    // Get recently made public (last 7 days, not from admired users)
+    // Get recently added figures (last 7 days, excluding blocked users)
+    const blockedUserIds = BlockingService.getBlockedUserIds(currentUser.id);
     const recentPublic = publicFiguresWithOwners.filter(f => {
       if (!f.userId) return false;
-      const isAdmired = admiring.includes(f.userId);
-      if (isAdmired || f.userId === currentUser.id) return false;
+
+      // Exclude figures from users that current user has blocked
+      if (blockedUserIds.includes(f.userId)) return false;
 
       // Check if created or made public in last 7 days
       const recentlyCreated = f.createdAt && f.createdAt > sevenDaysAgo;
@@ -1116,7 +1118,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         <div className="mb-8 bg-indigo-100/70 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-6 w-6 text-purple-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Made Public</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Added (Past Week)</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400">({recentPublicFigures.length})</span>
           </div>
 
