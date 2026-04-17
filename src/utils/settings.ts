@@ -1,5 +1,5 @@
 import type { AppSettings, CustomField } from '../types/index';
-import { AuthService } from './auth';
+import { FirebaseAuthService } from './firebaseAuth';
 
 const SYSTEM_SETTINGS_KEY = 'app-settings-system';
 const USER_SETTINGS_KEY_PREFIX = 'app-settings-user';
@@ -35,7 +35,7 @@ const DEFAULT_USER_SETTINGS = {
 
 export class SettingsService {
   private static getUserSettingsKey(userId?: string): string {
-    const id = userId || AuthService.getCurrentUser()?.id || 'default';
+    const id = userId || FirebaseAuthService.getCurrentUserId() || 'default';
     return `${USER_SETTINGS_KEY_PREFIX}-${id}`;
   }
 
@@ -339,7 +339,7 @@ export class SettingsService {
       }
 
       const parsed = JSON.parse(oldSettings);
-      const currentUser = AuthService.getCurrentUser();
+      const currentUserId = FirebaseAuthService.getCurrentUserId();
 
       // Migrate system settings
       const systemSettings = {
@@ -356,18 +356,19 @@ export class SettingsService {
       this.saveSystemSettings(systemSettings);
       console.log('Migrated system settings');
 
-      // Migrate custom fields to user settings (for ackpack34)
-      if (currentUser && currentUser.id === 'user-1' && parsed.customFields) {
+      // Migrate custom fields to user settings for current user
+      if (currentUserId && parsed.customFields) {
         const userSettings = {
-          customFields: parsed.customFields
+          customFields: parsed.customFields,
+          visibleColumns: DEFAULT_USER_SETTINGS.visibleColumns
         };
 
-        const userKey = this.getUserSettingsKey('user-1');
+        const userKey = this.getUserSettingsKey(currentUserId);
         const existingUserSettings = localStorage.getItem(userKey);
 
         if (!existingUserSettings) {
-          this.saveUserSettings(userSettings, 'user-1');
-          console.log('Migrated custom fields to user settings');
+          this.saveUserSettings(userSettings, currentUserId);
+          console.log('Migrated custom fields to user settings for user:', currentUserId);
         }
       }
 

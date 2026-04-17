@@ -161,6 +161,20 @@ export class FirebaseAuthService {
   }
 
   /**
+   * Get current user ID synchronously (from cache or Firebase auth)
+   */
+  static getCurrentUserId(): string | null {
+    // Try cache first
+    if (this.currentUserCache) {
+      return this.currentUserCache.id;
+    }
+
+    // Fall back to Firebase auth current user
+    const firebaseUser = auth.currentUser;
+    return firebaseUser ? firebaseUser.uid : null;
+  }
+
+  /**
    * Get user by ID from Firestore
    */
   static async getUserById(userId: string): Promise<User | null> {
