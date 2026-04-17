@@ -4,6 +4,10 @@ import type { User } from '../types/user';
 import { Database, Plus, Search, Edit, Trash2, Package, ArrowUpDown, ImageOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Combobox } from './ui/combobox';
+import { Select } from './ui/select';
+import { Label } from './ui/label';
+import { SettingsService } from '../utils/settings';
 import { toastManager } from '../utils/toastManager';
 
 interface MasterFiguresDatabasePageProps {
@@ -14,6 +18,7 @@ type SortField = 'name' | 'series' | 'manufacturer' | 'year';
 type SortDirection = 'asc' | 'desc';
 
 export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabasePageProps) {
+  const settings = SettingsService.getSettings();
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,6 +38,14 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
     packaging: '',
     imageUrl: ''
   });
+
+  // Helper function to ensure current value is in options list
+  const ensureValueInOptions = (options: string[], currentValue?: string): string[] => {
+    if (!currentValue || options.includes(currentValue)) {
+      return options;
+    }
+    return [...options, currentValue].sort();
+  };
 
   useEffect(() => {
     loadMasterFigures();
@@ -375,9 +388,9 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
             {/* Form */}
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Figure Name *
-                </label>
+                </Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -387,20 +400,22 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Version
-                  </label>
-                  <Input
-                    value={formData.version}
-                    onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                    placeholder="e.g., V1, 25th Anniversary"
+                  </Label>
+                  <Combobox
+                    value={formData.version || ''}
+                    onChange={(value) => setFormData({ ...formData, version: value })}
+                    options={ensureValueInOptions(settings.versionOptions, formData.version)}
+                    placeholder="Type or select..."
+                    emptyMessage="No version found. Type to add new."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Year
-                  </label>
+                  </Label>
                   <Input
                     type="number"
                     value={formData.year}
@@ -411,79 +426,99 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Franchise/IP
-                </label>
-                <Input
-                  value={formData.franchise}
-                  onChange={(e) => setFormData({ ...formData, franchise: e.target.value })}
-                  placeholder="e.g., G.I. Joe, Star Wars, Masters of the Universe"
+                </Label>
+                <Combobox
+                  value={formData.franchise || ''}
+                  onChange={(value) => setFormData({ ...formData, franchise: value })}
+                  options={ensureValueInOptions(settings.franchiseOptions, formData.franchise)}
+                  placeholder="Type or select franchise..."
+                  emptyMessage="No franchise found. Type to add new."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Action Figure Product Line
-                  </label>
-                  <Input
-                    value={formData.series}
-                    onChange={(e) => setFormData({ ...formData, series: e.target.value })}
-                    placeholder="e.g., A Real American Hero"
+                  </Label>
+                  <Combobox
+                    value={formData.series || ''}
+                    onChange={(value) => setFormData({ ...formData, series: value })}
+                    options={ensureValueInOptions(settings.seriesOptions, formData.series)}
+                    placeholder="Type or select product line..."
+                    emptyMessage="No product line found. Type to add new."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Manufacturer
-                  </label>
-                  <Input
-                    value={formData.manufacturer}
-                    onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                    placeholder="e.g., Hasbro"
+                  </Label>
+                  <Combobox
+                    value={formData.manufacturer || ''}
+                    onChange={(value) => setFormData({ ...formData, manufacturer: value })}
+                    options={ensureValueInOptions(settings.manufacturerOptions, formData.manufacturer)}
+                    placeholder="Type or select manufacturer..."
+                    emptyMessage="No manufacturer found. Type to add new."
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Category
-                  </label>
-                  <Input
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g., Hero, Villain"
+                  </Label>
+                  <Combobox
+                    value={formData.category || ''}
+                    onChange={(value) => setFormData({ ...formData, category: value })}
+                    options={ensureValueInOptions(settings.categoryOptions, formData.category)}
+                    placeholder="Type or select category..."
+                    emptyMessage="No category found. Type to add new."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Size
-                  </label>
-                  <Input
+                  </Label>
+                  <Select
                     value={formData.size}
                     onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                    placeholder="e.g., 3.75 inch"
-                  />
+                  >
+                    <option value="">Select size...</option>
+                    {ensureValueInOptions(settings.sizeOptions, formData.size).map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Packaging
-                </label>
-                <Input
+                </Label>
+                <Select
                   value={formData.packaging}
                   onChange={(e) => setFormData({ ...formData, packaging: e.target.value })}
-                  placeholder="e.g., Carded, Boxed"
-                />
+                >
+                  <option value="">Select packaging...</option>
+                  {ensureValueInOptions(settings.packagingOptions, formData.packaging).map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Image URL
-                </label>
+                </Label>
                 <Input
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
