@@ -241,6 +241,13 @@ export class MasterFiguresService {
   }
 
   /**
+   * Update a master figure (alias for update)
+   */
+  static async updateFigure(id: string, updates: Partial<MasterFigure>): Promise<boolean> {
+    return this.update(id, updates);
+  }
+
+  /**
    * Delete a master figure
    */
   static async delete(id: string): Promise<boolean> {
@@ -251,6 +258,13 @@ export class MasterFiguresService {
       console.error('Failed to delete master figure:', error);
       return false;
     }
+  }
+
+  /**
+   * Delete a master figure (alias for delete)
+   */
+  static async deleteFigure(id: string): Promise<boolean> {
+    return this.delete(id);
   }
 
   /**
