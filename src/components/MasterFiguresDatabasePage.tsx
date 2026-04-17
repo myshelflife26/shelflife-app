@@ -32,10 +32,9 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
     year: '',
     franchise: '',
     series: '',
+    subProductLine: '',
     manufacturer: '',
-    category: '',
     size: '',
-    packaging: '',
     imageUrl: ''
   });
 
@@ -72,10 +71,9 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
       year: '',
       franchise: '',
       series: '',
+      subProductLine: '',
       manufacturer: '',
-      category: '',
       size: '',
-      packaging: '',
       imageUrl: ''
     });
     setDialogOpen(true);
@@ -89,10 +87,9 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
       year: figure.year?.toString() || '',
       franchise: figure.franchise || '',
       series: figure.series || '',
+      subProductLine: figure.subProductLine || '',
       manufacturer: figure.manufacturer || '',
-      category: figure.category || '',
       size: figure.size || '',
-      packaging: figure.packaging || '',
       imageUrl: figure.imageUrl || ''
     });
     setDialogOpen(true);
@@ -111,10 +108,9 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
         year: formData.year ? parseInt(formData.year) : undefined,
         franchise: formData.franchise.trim() || undefined,
         series: formData.series.trim() || undefined,
+        subProductLine: formData.subProductLine.trim() || undefined,
         manufacturer: formData.manufacturer.trim() || undefined,
-        category: formData.category.trim() || undefined,
         size: formData.size.trim() || undefined,
-        packaging: formData.packaging.trim() || undefined,
         imageUrl: formData.imageUrl.trim() || undefined
       };
 
@@ -438,20 +434,33 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Action Figure Product Line
-                  </Label>
-                  <Combobox
-                    value={formData.series || ''}
-                    onChange={(value) => setFormData({ ...formData, series: value })}
-                    options={ensureValueInOptions(settings.seriesOptions, formData.series)}
-                    placeholder="Type or select product line..."
-                    emptyMessage="No product line found. Type to add new."
-                  />
-                </div>
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Action Figure Product Line
+                </Label>
+                <Combobox
+                  value={formData.series || ''}
+                  onChange={(value) => setFormData({ ...formData, series: value })}
+                  options={ensureValueInOptions(settings.seriesOptions, formData.series)}
+                  placeholder="Type or select product line..."
+                  emptyMessage="No product line found. Type to add new."
+                />
+              </div>
 
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sub-Product Line
+                </Label>
+                <Combobox
+                  value={formData.subProductLine || ''}
+                  onChange={(value) => setFormData({ ...formData, subProductLine: value })}
+                  options={ensureValueInOptions(settings.subSeriesOptions || [], formData.subProductLine)}
+                  placeholder="Type or select sub-product line..."
+                  emptyMessage="No sub-product line found. Type to add new."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Manufacturer
@@ -462,21 +471,6 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
                     options={ensureValueInOptions(settings.manufacturerOptions, formData.manufacturer)}
                     placeholder="Type or select manufacturer..."
                     emptyMessage="No manufacturer found. Type to add new."
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Category
-                  </Label>
-                  <Combobox
-                    value={formData.category || ''}
-                    onChange={(value) => setFormData({ ...formData, category: value })}
-                    options={ensureValueInOptions(settings.categoryOptions, formData.category)}
-                    placeholder="Type or select category..."
-                    emptyMessage="No category found. Type to add new."
                   />
                 </div>
 
@@ -496,23 +490,6 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
                     ))}
                   </Select>
                 </div>
-              </div>
-
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Packaging
-                </Label>
-                <Select
-                  value={formData.packaging}
-                  onChange={(e) => setFormData({ ...formData, packaging: e.target.value })}
-                >
-                  <option value="">Select packaging...</option>
-                  {ensureValueInOptions(settings.packagingOptions, formData.packaging).map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </Select>
               </div>
 
               <div>
