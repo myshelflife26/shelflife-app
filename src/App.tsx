@@ -261,8 +261,10 @@ function MainApp() {
     try {
       // Upload images to Firebase Storage if they are base64 strings
       let imageUrls = figure.images || [];
+      let storagePhotoUrl = figure.storagePhoto || '';
       const figureId = editingFigure?.id || `temp_${Date.now()}`;
 
+      // Handle main images
       if (imageUrls.length > 0) {
         // Check if any images are base64 (not already URLs)
         const hasBase64Images = imageUrls.some(img => !ImageUploadService.isStorageUrl(img));
@@ -279,10 +281,23 @@ function MainApp() {
         }
       }
 
+      // Handle storage photo
+      if (storagePhotoUrl && !ImageUploadService.isStorageUrl(storagePhotoUrl)) {
+        console.log('Uploading storage photo to Firebase Storage...');
+        storagePhotoUrl = await ImageUploadService.uploadImage(
+          storagePhotoUrl,
+          currentUser.id,
+          figureId,
+          999 // Special index for storage photo
+        );
+        console.log('Storage photo uploaded successfully');
+      }
+
       // Create figure object with URLs instead of base64
       const figureWithUrls = {
         ...figure,
-        images: imageUrls
+        images: imageUrls,
+        storagePhoto: storagePhotoUrl
       };
 
       if (editingFigure) {

@@ -36,35 +36,53 @@ export async function migrateFiguresToStorage(userId: string): Promise<{
 
     for (const figure of userFigures) {
       try {
-        if (!figure.images || figure.images.length === 0) {
+        // Check if any images need migration
+        const hasImages = figure.images && figure.images.length > 0;
+        const hasStoragePhoto = figure.storagePhoto && figure.storagePhoto.length > 0;
+
+        if (!hasImages && !hasStoragePhoto) {
           console.log(`Skipping ${figure.name} - no images`);
           results.skipped++;
           continue;
         }
 
         // Check if any images are base64
-        const hasBase64 = figure.images.some(img => !ImageUploadService.isStorageUrl(img));
+        const hasBase64Images = hasImages && figure.images.some(img => !ImageUploadService.isStorageUrl(img));
+        const hasBase64StoragePhoto = hasStoragePhoto && !ImageUploadService.isStorageUrl(figure.storagePhoto);
 
-        if (!hasBase64) {
+        if (!hasBase64Images && !hasBase64StoragePhoto) {
           console.log(`Skipping ${figure.name} - already using Storage URLs`);
           results.skipped++;
           continue;
         }
 
-        console.log(`Migrating ${figure.name} - ${figure.images.length} images`);
+        console.log(`Migrating ${figure.name} - ${figure.images?.length || 0} images + storage photo`);
+
+        const updates: any = { updatedAt: Date.now() };
 
         // Upload base64 images to Storage
-        const imageUrls = await ImageUploadService.migrateImagesToStorage(
-          figure.images,
-          userId,
-          figure.id
-        );
+        if (hasBase64Images) {
+          const imageUrls = await ImageUploadService.migrateImagesToStorage(
+            figure.images,
+            userId,
+            figure.id
+          );
+          updates.images = imageUrls;
+        }
+
+        // Upload base64 storage photo to Storage
+        if (hasBase64StoragePhoto) {
+          const storagePhotoUrl = await ImageUploadService.uploadImage(
+            figure.storagePhoto,
+            userId,
+            figure.id,
+            999 // Special index for storage photo
+          );
+          updates.storagePhoto = storagePhotoUrl;
+        }
 
         // Update the figure with new URLs
-        await updateDoc(doc(db, 'figures', figure.id), {
-          images: imageUrls,
-          updatedAt: Date.now()
-        });
+        await updateDoc(doc(db, 'figures', figure.id), updates);
 
         console.log(`✓ Migrated ${figure.name}`);
         results.migrated++;
@@ -102,13 +120,17 @@ export async function checkMigrationStatus(userId: string): Promise<{
   let alreadyMigrated = 0;
 
   for (const figure of userFigures) {
-    if (!figure.images || figure.images.length === 0) {
+    const hasImages = figure.images && figure.images.length > 0;
+    const hasStoragePhoto = figure.storagePhoto && figure.storagePhoto.length > 0;
+
+    if (!hasImages && !hasStoragePhoto) {
       continue;
     }
 
-    const hasBase64 = figure.images.some(img => !ImageUploadService.isStorageUrl(img));
+    const hasBase64Images = hasImages && figure.images.some(img => !ImageUploadService.isStorageUrl(img));
+    const hasBase64StoragePhoto = hasStoragePhoto && !ImageUploadService.isStorageUrl(figure.storagePhoto);
 
-    if (hasBase64) {
+    if (hasBase64Images || hasBase64StoragePhoto) {
       needsMigration++;
     } else {
       alreadyMigrated++;
