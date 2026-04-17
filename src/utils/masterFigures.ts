@@ -232,7 +232,9 @@ export class MasterFiguresService {
   static async update(id: string, updates: Partial<MasterFigure>): Promise<boolean> {
     try {
       const figureRef = doc(db, MASTER_FIGURES_COLLECTION, id);
-      await updateDoc(figureRef, updates);
+      // Clean undefined values before updating (Firebase doesn't accept undefined)
+      const cleanedUpdates = this.cleanObject(updates);
+      await updateDoc(figureRef, cleanedUpdates);
       return true;
     } catch (error) {
       console.error('Failed to update master figure:', error);
