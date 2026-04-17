@@ -130,24 +130,24 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
             Create your own fields that will appear when adding/editing figures
           </p>
 
+          {/* Add Field Button - Always show when not adding */}
+          {!isAdding && (
+            <div className="mb-4">
+              <Button onClick={() => setIsAdding(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Field
+              </Button>
+            </div>
+          )}
+
           {fields.length === 0 && !isAdding ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-8">
-              No custom fields yet. Click "Add Field" to create one.
+              No custom fields yet. Click "Add Field" above to create one.
             </p>
-          ) : (
+          ) : fields.length > 0 && (
             <>
-              {/* Add Field Button */}
-              {!isAdding && (
-                <div className="mb-4">
-                  <Button onClick={() => setIsAdding(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Field
-                  </Button>
-                </div>
-              )}
-
               {/* Search Box */}
-              {fields.length > 0 && !isAdding && (
+              {!isAdding && (
                 <div className="mb-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
