@@ -4,6 +4,7 @@ import { SettingsPage } from './SettingsPage';
 import { AccountSettings } from './AccountSettings';
 import { UserManagementPage } from './UserManagementPage';
 import { MasterFiguresDatabasePage } from './MasterFiguresDatabasePage';
+import { SystemMaintenance } from './SystemMaintenance';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { Settings, User as UserIcon, Shield, Wrench, Lock, Eye, Database } from 'lucide-react';
 
@@ -25,8 +26,8 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     { id: 'privacy' as TabType, label: 'Privacy', icon: Eye, adminOnly: false },
     { id: 'account' as TabType, label: 'Account', icon: UserIcon, adminOnly: false },
     { id: 'customFields' as TabType, label: 'Custom Fields', icon: Wrench, adminOnly: false },
+    { id: 'system' as TabType, label: 'Maintenance', icon: Shield, adminOnly: false },
     { id: 'database' as TabType, label: 'Database', icon: Database, adminOnly: true },
-    { id: 'system' as TabType, label: 'System', icon: Shield, adminOnly: true },
     { id: 'users' as TabType, label: 'User Management', icon: Lock, adminOnly: true },
   ];
 
@@ -105,17 +106,11 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
             activeSection="customFields"
           />
         )}
+        {activeTab === 'system' && (
+          <SystemMaintenance currentUser={currentUser} />
+        )}
         {activeTab === 'database' && isAdmin && (
           <MasterFiguresDatabasePage currentUser={currentUser} />
-        )}
-        {activeTab === 'system' && isAdmin && (
-          <SettingsPage
-            currentUser={currentUser}
-            setCurrentPage={setCurrentPage}
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            activeSection="system"
-          />
         )}
         {activeTab === 'users' && isAdmin && (
           <UserManagementPage currentUser={currentUser} />
