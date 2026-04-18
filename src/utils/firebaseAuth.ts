@@ -124,6 +124,11 @@ export class FirebaseAuthService {
       const userData = userDoc.data();
       const email = userData.email;
 
+      console.log('[LOGIN] Found user in Firestore:');
+      console.log('[LOGIN] - Username:', userData.username);
+      console.log('[LOGIN] - Email:', email);
+      console.log('[LOGIN] - Firestore Doc ID:', userDoc.id);
+
       // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
