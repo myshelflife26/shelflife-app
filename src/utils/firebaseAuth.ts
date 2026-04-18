@@ -107,6 +107,8 @@ export class FirebaseAuthService {
    */
   static async login(username: string, password: string): Promise<User | null> {
     try {
+      console.log('[LOGIN] Starting login for username:', username);
+
       // Find user by username to get their email
       const usersRef = collection(db, USERS_COLLECTION);
       const q = query(usersRef, where('username', '==', username.toLowerCase()));
@@ -124,10 +126,19 @@ export class FirebaseAuthService {
       // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
+      console.log('[LOGIN] Signed in successfully. Firebase UID:', userCredential.user.uid);
+      console.log('[LOGIN] Username (lowercase):', username.toLowerCase());
+      console.log('[LOGIN] Checking for old user ID mapping...');
+
       // Migrate old user settings to Firebase UID
       const oldUserId = USERNAME_TO_OLD_ID[username.toLowerCase()];
+      console.log('[LOGIN] Old user ID from mapping:', oldUserId);
+
       if (oldUserId) {
+        console.log('[LOGIN] Calling migration with Firebase UID:', userCredential.user.uid, 'and old ID:', oldUserId);
         SettingsService.migrateUserSettingsToFirebase(userCredential.user.uid, oldUserId);
+      } else {
+        console.log('[LOGIN] No old user ID found in mapping for username:', username.toLowerCase());
       }
 
       // Fetch full user data from Firestore
@@ -224,13 +235,21 @@ export class FirebaseAuthService {
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        console.log('[AUTH_STATE] Auth state changed, Firebase user:', firebaseUser.uid);
+
         const user = await this.getUserById(firebaseUser.uid);
+        console.log('[AUTH_STATE] Got user from Firestore:', user?.username);
 
         // Migrate old user settings to Firebase UID if user exists
         if (user) {
           const oldUserId = USERNAME_TO_OLD_ID[user.username.toLowerCase()];
+          console.log('[AUTH_STATE] Checking migration for username:', user.username.toLowerCase(), '-> old ID:', oldUserId);
+
           if (oldUserId) {
+            console.log('[AUTH_STATE] Calling migration...');
             SettingsService.migrateUserSettingsToFirebase(firebaseUser.uid, oldUserId);
+          } else {
+            console.log('[AUTH_STATE] No old user ID found in mapping');
           }
         }
 
