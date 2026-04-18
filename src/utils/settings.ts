@@ -326,28 +326,34 @@ export class SettingsService {
       const oldKey = `${USER_SETTINGS_KEY_PREFIX}-${oldUserId}`;
       const newKey = `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`;
 
+      console.log(`[MIGRATION] Attempting to migrate from "${oldKey}" to "${newKey}"`);
+
       // Check if new key already has data
       const existingNewSettings = localStorage.getItem(newKey);
       if (existingNewSettings) {
-        console.log('User settings already exist for Firebase UID, skipping migration');
+        console.log('[MIGRATION] User settings already exist for Firebase UID, skipping migration');
+        console.log('[MIGRATION] Existing data:', existingNewSettings);
         return;
       }
 
       // Get old settings
       const oldSettings = localStorage.getItem(oldKey);
       if (!oldSettings) {
-        console.log('No old settings found for', oldUserId);
+        console.log('[MIGRATION] No old settings found for key:', oldKey);
+        console.log('[MIGRATION] Available keys:', Object.keys(localStorage).filter(k => k.includes('app-settings')));
         return;
       }
 
+      console.log('[MIGRATION] Found old settings:', oldSettings);
+
       // Copy to new key
       localStorage.setItem(newKey, oldSettings);
-      console.log(`Migrated user settings from ${oldUserId} to ${firebaseUid}`);
+      console.log(`[MIGRATION] ✅ Successfully migrated user settings from ${oldUserId} to ${firebaseUid}`);
 
       // Optionally remove old key (commented out to be safe)
       // localStorage.removeItem(oldKey);
     } catch (error) {
-      console.error('Error migrating user settings:', error);
+      console.error('[MIGRATION] Error migrating user settings:', error);
     }
   }
 

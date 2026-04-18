@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Migration</title>
+</head>
+<body>
+    <h1>LocalStorage Debug</h1>
+    <button onclick="checkStorage()">Check Storage</button>
+    <pre id="output"></pre>
+
+    <script>
+        function checkStorage() {
+            const output = document.getElementById('output');
+            let result = 'LocalStorage Contents:\n\n';
+
+            // Show all keys that contain 'app-settings'
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('app-settings')) {
+                    const value = localStorage.getItem(key);
+                    result += `Key: ${key}\n`;
+                    result += `Value: ${value}\n`;
+                    result += '\n---\n\n';
+                }
+            }
+
+            output.textContent = result;
+        }
+
+        // Auto-run on load
+        checkStorage();
+    </script>
+</body>
+</html>
