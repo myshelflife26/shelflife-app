@@ -317,6 +317,31 @@ export class SettingsService {
     return this.getSystemSettings();
   }
 
+  // One-time cleanup: Remove incorrectly migrated data for ackpack342
+  static cleanupIncorrectMigration(firebaseUid: string, username: string) {
+    try {
+      // Only run for ackpack342
+      if (username.toLowerCase() !== 'ackpack342') {
+        return;
+      }
+
+      const key = `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`;
+      const checkKey = `${key}-cleaned`;
+
+      // Check if we've already cleaned this
+      if (localStorage.getItem(checkKey)) {
+        return;
+      }
+
+      console.log('[CLEANUP] Removing incorrectly migrated data for ackpack342');
+      localStorage.removeItem(key);
+      localStorage.setItem(checkKey, 'true');
+      console.log('[CLEANUP] ✅ Cleanup complete');
+    } catch (error) {
+      console.error('[CLEANUP] Error during cleanup:', error);
+    }
+  }
+
   // Migrate old user settings from old user IDs to new Firebase UIDs
   static migrateUserSettingsToFirebase(firebaseUid: string, oldUserId: string) {
     try {

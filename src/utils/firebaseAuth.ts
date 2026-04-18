@@ -27,9 +27,10 @@ import { SettingsService } from './settings';
 const USERS_COLLECTION = 'users';
 
 // Map usernames to old localStorage user IDs for migration
+// Only migrate ackpack34 since they created the custom fields in the old system
 const USERNAME_TO_OLD_ID: Record<string, string> = {
-  'ackpack34': 'default',
-  'ackpack342': 'default'
+  'ackpack34': 'default'
+  // ackpack342 starts fresh - no migration
 };
 
 export class FirebaseAuthService {
@@ -129,6 +130,9 @@ export class FirebaseAuthService {
       console.log('[LOGIN] Signed in successfully. Firebase UID:', userCredential.user.uid);
       console.log('[LOGIN] Username (lowercase):', username.toLowerCase());
       console.log('[LOGIN] Checking for old user ID mapping...');
+
+      // One-time cleanup for ackpack342 (remove incorrectly migrated data)
+      SettingsService.cleanupIncorrectMigration(userCredential.user.uid, username);
 
       // Migrate old user settings to Firebase UID
       const oldUserId = USERNAME_TO_OLD_ID[username.toLowerCase()];
@@ -242,6 +246,9 @@ export class FirebaseAuthService {
 
         // Migrate old user settings to Firebase UID if user exists
         if (user) {
+          // One-time cleanup for ackpack342 (remove incorrectly migrated data)
+          SettingsService.cleanupIncorrectMigration(firebaseUser.uid, user.username);
+
           const oldUserId = USERNAME_TO_OLD_ID[user.username.toLowerCase()];
           console.log('[AUTH_STATE] Checking migration for username:', user.username.toLowerCase(), '-> old ID:', oldUserId);
 
