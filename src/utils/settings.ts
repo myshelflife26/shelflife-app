@@ -66,14 +66,20 @@ export class SettingsService {
 
   private static getUserSettings(userId?: string) {
     try {
-      const data = localStorage.getItem(this.getUserSettingsKey(userId));
+      const key = this.getUserSettingsKey(userId);
+      const data = localStorage.getItem(key);
+
+      console.log(`[GET_USER_SETTINGS] Getting settings for userId: ${userId}, key: ${key}, found data: ${!!data}`);
+
       if (data) {
         const settings = JSON.parse(data);
+        console.log(`[GET_USER_SETTINGS] Parsed settings, customFields count: ${settings.customFields?.length || 0}`);
         return {
           ...DEFAULT_USER_SETTINGS,
           ...settings
         };
       }
+      console.log(`[GET_USER_SETTINGS] No data found, returning defaults`);
       return DEFAULT_USER_SETTINGS;
     } catch (error) {
       console.error('Error reading user settings:', error);
@@ -213,6 +219,13 @@ export class SettingsService {
 
   // Custom Fields Management (User-specific)
   static addCustomField(field: Omit<CustomField, 'id'>, userId?: string): CustomField {
+    const actualUserId = userId || FirebaseAuthService.getCurrentUserId() || 'default';
+    const key = this.getUserSettingsKey(actualUserId);
+
+    console.log('[ADD_CUSTOM_FIELD] Adding field:', field.name);
+    console.log('[ADD_CUSTOM_FIELD] User ID:', actualUserId);
+    console.log('[ADD_CUSTOM_FIELD] Will save to key:', key);
+
     const settings = this.getUserSettings(userId);
     const newField: CustomField = {
       ...field,
@@ -220,6 +233,8 @@ export class SettingsService {
     };
     settings.customFields.push(newField);
     this.saveUserSettings(settings, userId);
+
+    console.log('[ADD_CUSTOM_FIELD] Saved successfully');
     return newField;
   }
 
@@ -247,8 +262,15 @@ export class SettingsService {
       // Get all users from Firebase
       const users = await FirebaseAuthService.getAllUsers();
 
+      console.log('[GET_ALL_USERS_FIELDS] Found users:', users.map(u => u.username));
+
       return users.map((user) => {
+        const key = `${USER_SETTINGS_KEY_PREFIX}-${user.id}`;
+        console.log(`[GET_ALL_USERS_FIELDS] Getting settings for ${user.username} (${user.id}) from key: ${key}`);
+
         const userSettings = this.getUserSettings(user.id);
+        console.log(`[GET_ALL_USERS_FIELDS] ${user.username} has ${userSettings.customFields.length} fields:`, userSettings.customFields.map(f => f.name));
+
         return {
           userId: user.id,
           username: user.username,
