@@ -242,15 +242,12 @@ export class SettingsService {
   }
 
   // Admin-only: Get all custom fields from all users
-  static getAllUsersCustomFields(): Array<{ userId: string; username: string; displayName: string; fields: CustomField[] }> {
-    // This requires access to auth to get user list
-    const usersKey = 'action-figure-tracker-users';
-    const usersData = localStorage.getItem(usersKey);
-    if (!usersData) return [];
-
+  static async getAllUsersCustomFields(): Promise<Array<{ userId: string; username: string; displayName: string; fields: CustomField[] }>> {
     try {
-      const users = JSON.parse(usersData);
-      return users.map((user: any) => {
+      // Get all users from Firebase
+      const users = await FirebaseAuthService.getAllUsers();
+
+      return users.map((user) => {
         const userSettings = this.getUserSettings(user.id);
         return {
           userId: user.id,

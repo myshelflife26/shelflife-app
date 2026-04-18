@@ -52,8 +52,8 @@ export function AdminCustomFieldsManager({ onFieldsChange }: AdminCustomFieldsMa
     return () => clearInterval(interval);
   }, [onFieldsChange]);
 
-  const loadAllUsersFields = () => {
-    const data = SettingsService.getAllUsersCustomFields();
+  const loadAllUsersFields = async () => {
+    const data = await SettingsService.getAllUsersCustomFields();
     // Only show users who have custom fields
     setAllUsersFields(data.filter(u => u.fields.length > 0));
   };
