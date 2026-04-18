@@ -28,8 +28,8 @@ const USERS_COLLECTION = 'users';
 
 // Map usernames to old localStorage user IDs for migration
 const USERNAME_TO_OLD_ID: Record<string, string> = {
-  'ackpack34': 'user-1',
-  'ackpack342': 'user-2'
+  'ackpack34': 'default',
+  'ackpack342': 'default'
 };
 
 export class FirebaseAuthService {
