@@ -161,8 +161,10 @@ function MainApp() {
     }
   }, [currentUser]);
 
-  // Load master figures database
+  // Load master figures database (only when user is authenticated)
   useEffect(() => {
+    if (!currentUser) return;
+
     const loadMasterFigures = async () => {
       try {
         const masters = await MasterFiguresService.getAll();
@@ -172,7 +174,7 @@ function MainApp() {
       }
     };
     loadMasterFigures();
-  }, []);
+  }, [currentUser]);
 
   // Record value tracking snapshots and check milestones when figures change
   useEffect(() => {
