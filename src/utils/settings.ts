@@ -320,6 +320,37 @@ export class SettingsService {
     return this.getSystemSettings();
   }
 
+  // Migrate old user settings from old user IDs to new Firebase UIDs
+  static migrateUserSettingsToFirebase(firebaseUid: string, oldUserId: string) {
+    try {
+      const oldKey = `${USER_SETTINGS_KEY_PREFIX}-${oldUserId}`;
+      const newKey = `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`;
+
+      // Check if new key already has data
+      const existingNewSettings = localStorage.getItem(newKey);
+      if (existingNewSettings) {
+        console.log('User settings already exist for Firebase UID, skipping migration');
+        return;
+      }
+
+      // Get old settings
+      const oldSettings = localStorage.getItem(oldKey);
+      if (!oldSettings) {
+        console.log('No old settings found for', oldUserId);
+        return;
+      }
+
+      // Copy to new key
+      localStorage.setItem(newKey, oldSettings);
+      console.log(`Migrated user settings from ${oldUserId} to ${firebaseUid}`);
+
+      // Optionally remove old key (commented out to be safe)
+      // localStorage.removeItem(oldKey);
+    } catch (error) {
+      console.error('Error migrating user settings:', error);
+    }
+  }
+
   // Migrate old settings to new structure
   static migrateOldSettings() {
     try {

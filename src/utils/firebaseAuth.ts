@@ -22,8 +22,15 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import type { User, UserRole } from '../types/user';
+import { SettingsService } from './settings';
 
 const USERS_COLLECTION = 'users';
+
+// Map usernames to old localStorage user IDs for migration
+const USERNAME_TO_OLD_ID: Record<string, string> = {
+  'ackpack34': 'user-1',
+  'ackpack342': 'user-2'
+};
 
 export class FirebaseAuthService {
   private static currentUserCache: User | null = null;
@@ -116,6 +123,12 @@ export class FirebaseAuthService {
 
       // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Migrate old user settings to Firebase UID
+      const oldUserId = USERNAME_TO_OLD_ID[username.toLowerCase()];
+      if (oldUserId) {
+        SettingsService.migrateUserSettingsToFirebase(userCredential.user.uid, oldUserId);
+      }
 
       // Fetch full user data from Firestore
       const user = await this.getUserById(userCredential.user.uid);
@@ -212,6 +225,15 @@ export class FirebaseAuthService {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const user = await this.getUserById(firebaseUser.uid);
+
+        // Migrate old user settings to Firebase UID if user exists
+        if (user) {
+          const oldUserId = USERNAME_TO_OLD_ID[user.username.toLowerCase()];
+          if (oldUserId) {
+            SettingsService.migrateUserSettingsToFirebase(firebaseUser.uid, oldUserId);
+          }
+        }
+
         this.currentUserCache = user;
         callback(user);
       } else {
