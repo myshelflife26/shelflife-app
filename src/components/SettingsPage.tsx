@@ -109,7 +109,18 @@ const OptionList = ({
 };
 
 export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMode, activeSection }: SettingsPageProps) {
-  const [settings, setSettings] = useState<AppSettings>(SettingsService.getSettings());
+  const [settings, setSettings] = useState<AppSettings>({
+    conditionOptions: [],
+    categoryOptions: [],
+    manufacturerOptions: [],
+    franchiseOptions: [],
+    seriesOptions: [],
+    versionOptions: [],
+    sizeOptions: [],
+    packagingOptions: [],
+    customFields: [],
+    visibleColumns: {}
+  });
   const canManageSystem = currentUser.role === 'management'; // Management only
   const isAdminUser = currentUser.role && ['management', 'manager'].includes(currentUser.role); // Management or Manager
   const [collectionPublic, setCollectionPublic] = useState(currentUser.collectionPublic || false);
@@ -181,14 +192,24 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
   const [scrapedData, setScrapedData] = useState<ScrapedFigure[]>([]);
   const [scrapeErrors, setScrapeErrors] = useState<string[]>([]);
 
-  const loadSettings = () => {
-    setSettings(SettingsService.getSettings());
+  const loadSettings = async () => {
+    const loadedSettings = await SettingsService.getSettings();
+    setSettings(loadedSettings);
   };
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Load settings from Firestore
+  useEffect(() => {
+    const loadSettings = async () => {
+      const loadedSettings = await SettingsService.getSettings();
+      setSettings(loadedSettings);
+    };
+    loadSettings();
+  }, [currentUser.id]);
 
   // Load admirers data
   useEffect(() => {
