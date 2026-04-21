@@ -80,10 +80,11 @@ export class SettingsService {
         };
       }
       console.log(`[GET_USER_SETTINGS] No data found, returning defaults`);
-      return DEFAULT_USER_SETTINGS;
+      // Return a copy of defaults to prevent mutation
+      return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
     } catch (error) {
       console.error('Error reading user settings:', error);
-      return DEFAULT_USER_SETTINGS;
+      return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
     }
   }
 
