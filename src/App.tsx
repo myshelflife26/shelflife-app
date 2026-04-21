@@ -107,6 +107,16 @@ function MainApp() {
   const [viewingShelfId, setViewingShelfId] = useState<string | null>(null);
   const [wishlistDialogTrigger, setWishlistDialogTrigger] = useState(0);
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
+  const [conditionOptions, setConditionOptions] = useState<string[]>([]);
+
+  // Load settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await SettingsService.getSettings();
+      setConditionOptions(settings.conditionOptions);
+    };
+    loadSettings();
+  }, [currentUser?.id]);
 
   // Check authentication on mount with Firebase
   useEffect(() => {
@@ -812,8 +822,8 @@ function MainApp() {
   );
 
   const uniqueConditions = useMemo(() =>
-    SettingsService.getSettings().conditionOptions,
-    []
+    conditionOptions,
+    [conditionOptions]
   );
 
   const uniqueSizes = useMemo(() =>
