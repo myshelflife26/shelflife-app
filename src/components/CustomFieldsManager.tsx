@@ -44,7 +44,7 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
     );
   }, [sortedFields, searchQuery]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newField.name.trim()) return;
 
     const fieldToAdd: Omit<CustomField, 'id'> = {
@@ -54,7 +54,7 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
         : undefined
     };
 
-    SettingsService.addCustomField(fieldToAdd);
+    await SettingsService.addCustomField(fieldToAdd);
     setNewField({ name: '', type: 'text', required: false });
     setSelectOptions('');
     setIsAdding(false);
@@ -67,7 +67,7 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
     setEditSelectOptions(field.options ? field.options.join(', ') : '');
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editField || !editField.name.trim()) return;
 
     const fieldToUpdate: Partial<Omit<CustomField, 'id'>> = {
@@ -79,7 +79,7 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
         : undefined
     };
 
-    SettingsService.updateCustomField(editField.id, fieldToUpdate);
+    await SettingsService.updateCustomField(editField.id, fieldToUpdate);
     setEditingId(null);
     setEditField(null);
     setEditSelectOptions('');
@@ -92,9 +92,9 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
     setEditSelectOptions('');
   };
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
     if (confirm('Remove this custom field? This will remove it from all figures.')) {
-      SettingsService.removeCustomField(id);
+      await SettingsService.removeCustomField(id);
       onFieldsChange();
     }
   };

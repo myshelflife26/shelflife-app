@@ -82,7 +82,7 @@ export function AdminCustomFieldsManager({ onFieldsChange }: AdminCustomFieldsMa
     });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!usageDialog) return;
 
     const { userId, fieldId, fieldName, username, deleteType, field } = usageDialog;
@@ -98,8 +98,8 @@ export function AdminCustomFieldsManager({ onFieldsChange }: AdminCustomFieldsMa
       }
     } else {
       // Immediate deletion
-      SettingsService.deleteCustomFieldForUser(userId, fieldId);
-      loadAllUsersFields();
+      await SettingsService.deleteCustomFieldForUser(userId, fieldId);
+      await loadAllUsersFields();
       onFieldsChange();
       alert(`Custom field "${fieldName}" has been immediately deleted.`);
     }

@@ -1,8 +1,11 @@
 import type { AppSettings, CustomField } from '../types/index';
 import { FirebaseAuthService } from './firebaseAuth';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const SYSTEM_SETTINGS_KEY = 'app-settings-system';
 const USER_SETTINGS_KEY_PREFIX = 'app-settings-user';
+const USERS_COLLECTION = 'users';
 
 const DEFAULT_SYSTEM_SETTINGS = {
   conditionOptions: ['MIB', 'Loose', 'Custom'],
@@ -64,41 +67,60 @@ export class SettingsService {
     }
   }
 
-  private static getUserSettings(userId?: string) {
+  private static async getUserSettings(userId?: string) {
     try {
-      const key = this.getUserSettingsKey(userId);
-      const data = localStorage.getItem(key);
-
-      console.log(`[GET_USER_SETTINGS] Getting settings for userId: ${userId}, key: ${key}, found data: ${!!data}`);
-
-      if (data) {
-        const settings = JSON.parse(data);
-        console.log(`[GET_USER_SETTINGS] Parsed settings, customFields count: ${settings.customFields?.length || 0}`);
-        return {
-          ...DEFAULT_USER_SETTINGS,
-          ...settings
-        };
+      const id = userId || FirebaseAuthService.getCurrentUserId();
+      if (!id) {
+        console.log(`[GET_USER_SETTINGS] No user ID, returning defaults`);
+        return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
       }
-      console.log(`[GET_USER_SETTINGS] No data found, returning defaults`);
-      // Return a copy of defaults to prevent mutation
-      return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+
+      console.log(`[GET_USER_SETTINGS] Getting settings from Firestore for userId: ${id}`);
+
+      const userDoc = await getDoc(doc(db, USERS_COLLECTION, id));
+      if (!userDoc.exists()) {
+        console.log(`[GET_USER_SETTINGS] User doc not found, returning defaults`);
+        return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
+      }
+
+      const data = userDoc.data();
+      const settings = {
+        customFields: data.customFields || [],
+        visibleColumns: data.visibleColumns || DEFAULT_USER_SETTINGS.visibleColumns
+      };
+
+      console.log(`[GET_USER_SETTINGS] Found settings, customFields count: ${settings.customFields.length}`);
+      return settings;
     } catch (error) {
-      console.error('Error reading user settings:', error);
+      console.error('Error reading user settings from Firestore:', error);
       return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
     }
   }
 
-  private static saveUserSettings(settings: typeof DEFAULT_USER_SETTINGS, userId?: string): void {
+  private static async saveUserSettings(settings: typeof DEFAULT_USER_SETTINGS, userId?: string): Promise<void> {
     try {
-      localStorage.setItem(this.getUserSettingsKey(userId), JSON.stringify(settings));
+      const id = userId || FirebaseAuthService.getCurrentUserId();
+      if (!id) {
+        console.error('[SAVE_USER_SETTINGS] No user ID');
+        return;
+      }
+
+      console.log(`[SAVE_USER_SETTINGS] Saving to Firestore for userId: ${id}, customFields count: ${settings.customFields.length}`);
+
+      await updateDoc(doc(db, USERS_COLLECTION, id), {
+        customFields: settings.customFields,
+        visibleColumns: settings.visibleColumns
+      });
+
+      console.log(`[SAVE_USER_SETTINGS] Saved successfully`);
     } catch (error) {
-      console.error('Error saving user settings:', error);
+      console.error('Error saving user settings to Firestore:', error);
     }
   }
 
-  static getSettings(userId?: string): AppSettings {
+  static async getSettings(userId?: string): Promise<AppSettings> {
     const systemSettings = this.getSystemSettings();
-    const userSettings = this.getUserSettings(userId);
+    const userSettings = await this.getUserSettings(userId);
     return {
       ...systemSettings,
       ...userSettings
@@ -219,42 +241,41 @@ export class SettingsService {
   }
 
   // Custom Fields Management (User-specific)
-  static addCustomField(field: Omit<CustomField, 'id'>, userId?: string): CustomField {
-    const actualUserId = userId || FirebaseAuthService.getCurrentUserId() || 'default';
-    const key = this.getUserSettingsKey(actualUserId);
+  static async addCustomField(field: Omit<CustomField, 'id'>, userId?: string): Promise<CustomField> {
+    const actualUserId = userId || FirebaseAuthService.getCurrentUserId();
 
     console.log('[ADD_CUSTOM_FIELD] Adding field:', field.name);
     console.log('[ADD_CUSTOM_FIELD] User ID:', actualUserId);
-    console.log('[ADD_CUSTOM_FIELD] Will save to key:', key);
+    console.log('[ADD_CUSTOM_FIELD] Will save to Firestore');
 
-    const settings = this.getUserSettings(userId);
+    const settings = await this.getUserSettings(userId);
     const newField: CustomField = {
       ...field,
       id: crypto.randomUUID()
     };
     settings.customFields.push(newField);
-    this.saveUserSettings(settings, userId);
+    await this.saveUserSettings(settings, userId);
 
     console.log('[ADD_CUSTOM_FIELD] Saved successfully');
     return newField;
   }
 
-  static updateCustomField(id: string, field: Partial<Omit<CustomField, 'id'>>, userId?: string): void {
-    const settings = this.getUserSettings(userId);
+  static async updateCustomField(id: string, field: Partial<Omit<CustomField, 'id'>>, userId?: string): Promise<void> {
+    const settings = await this.getUserSettings(userId);
     const index = settings.customFields.findIndex(f => f.id === id);
     if (index !== -1) {
       settings.customFields[index] = {
         ...settings.customFields[index],
         ...field
       };
-      this.saveUserSettings(settings, userId);
+      await this.saveUserSettings(settings, userId);
     }
   }
 
-  static removeCustomField(id: string, userId?: string): void {
-    const settings = this.getUserSettings(userId);
+  static async removeCustomField(id: string, userId?: string): Promise<void> {
+    const settings = await this.getUserSettings(userId);
     settings.customFields = settings.customFields.filter(f => f.id !== id);
-    this.saveUserSettings(settings, userId);
+    await this.saveUserSettings(settings, userId);
   }
 
   // Admin-only: Get all custom fields from all users
@@ -286,24 +307,24 @@ export class SettingsService {
   }
 
   // Admin-only: Delete custom field from specific user
-  static deleteCustomFieldForUser(userId: string, fieldId: string): void {
-    const settings = this.getUserSettings(userId);
+  static async deleteCustomFieldForUser(userId: string, fieldId: string): Promise<void> {
+    const settings = await this.getUserSettings(userId);
     settings.customFields = settings.customFields.filter(f => f.id !== fieldId);
-    this.saveUserSettings(settings, userId);
+    await this.saveUserSettings(settings, userId);
   }
 
   // Column Visibility Management (User-specific)
-  static updateColumnVisibility(columnId: string, visible: boolean, userId?: string): void {
-    const settings = this.getUserSettings(userId);
+  static async updateColumnVisibility(columnId: string, visible: boolean, userId?: string): Promise<void> {
+    const settings = await this.getUserSettings(userId);
     if (!settings.visibleColumns) {
       settings.visibleColumns = { ...DEFAULT_USER_SETTINGS.visibleColumns };
     }
     settings.visibleColumns[columnId] = visible;
-    this.saveUserSettings(settings, userId);
+    await this.saveUserSettings(settings, userId);
   }
 
-  static getColumnVisibility(userId?: string): Record<string, boolean> {
-    const settings = this.getUserSettings(userId);
+  static async getColumnVisibility(userId?: string): Promise<Record<string, boolean>> {
+    const settings = await this.getUserSettings(userId);
     return settings.visibleColumns || DEFAULT_USER_SETTINGS.visibleColumns;
   }
 
@@ -340,125 +361,67 @@ export class SettingsService {
     return this.getSystemSettings();
   }
 
-  // One-time cleanup: Remove incorrectly migrated data for ackpack342
-  static cleanupIncorrectMigration(firebaseUid: string, username: string) {
+  // Migrate localStorage settings to Firestore
+  static async migrateLocalStorageToFirestore(firebaseUid: string): Promise<void> {
     try {
-      // Only run for ackpack342
-      if (username.toLowerCase() !== 'ackpack342') {
+      console.log(`[MIGRATION_FIRESTORE] Starting migration for user: ${firebaseUid}`);
+
+      // Check if user already has settings in Firestore
+      const userDoc = await getDoc(doc(db, USERS_COLLECTION, firebaseUid));
+      if (!userDoc.exists()) {
+        console.log('[MIGRATION_FIRESTORE] User doc not found');
         return;
       }
 
-      const key = `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`;
-      const checkKey = `${key}-cleaned`;
-
-      // Check if we've already cleaned this
-      if (localStorage.getItem(checkKey)) {
+      const userData = userDoc.data();
+      if (userData.customFields && userData.customFields.length > 0) {
+        console.log('[MIGRATION_FIRESTORE] User already has custom fields in Firestore, skipping migration');
         return;
       }
 
-      console.log('[CLEANUP] Removing incorrectly migrated data for ackpack342');
-      localStorage.removeItem(key);
-      localStorage.setItem(checkKey, 'true');
-      console.log('[CLEANUP] ✅ Cleanup complete');
-    } catch (error) {
-      console.error('[CLEANUP] Error during cleanup:', error);
-    }
-  }
+      // Try to find localStorage settings
+      const possibleKeys = [
+        `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`,
+        `${USER_SETTINGS_KEY_PREFIX}-default`
+      ];
 
-  // Migrate old user settings from old user IDs to new Firebase UIDs
-  static migrateUserSettingsToFirebase(firebaseUid: string, oldUserId: string) {
-    try {
-      const oldKey = `${USER_SETTINGS_KEY_PREFIX}-${oldUserId}`;
-      const newKey = `${USER_SETTINGS_KEY_PREFIX}-${firebaseUid}`;
+      let localSettings = null;
+      let foundKey = null;
 
-      console.log(`[MIGRATION] Attempting to migrate from "${oldKey}" to "${newKey}"`);
-
-      // Check if new key already has data
-      const existingNewSettings = localStorage.getItem(newKey);
-      if (existingNewSettings) {
-        console.log('[MIGRATION] User settings already exist for Firebase UID, skipping migration');
-        console.log('[MIGRATION] Existing data:', existingNewSettings);
-        return;
-      }
-
-      // Get old settings
-      const oldSettings = localStorage.getItem(oldKey);
-      if (!oldSettings) {
-        console.log('[MIGRATION] No old settings found for key:', oldKey);
-        console.log('[MIGRATION] Available keys:', Object.keys(localStorage).filter(k => k.includes('app-settings')));
-        return;
-      }
-
-      console.log('[MIGRATION] Found old settings:', oldSettings);
-
-      // Copy to new key
-      localStorage.setItem(newKey, oldSettings);
-      console.log(`[MIGRATION] ✅ Successfully migrated user settings from ${oldUserId} to ${firebaseUid}`);
-
-      // Optionally remove old key (commented out to be safe)
-      // localStorage.removeItem(oldKey);
-    } catch (error) {
-      console.error('[MIGRATION] Error migrating user settings:', error);
-    }
-  }
-
-  // Migrate old settings to new structure
-  static migrateOldSettings() {
-    try {
-      const OLD_SETTINGS_KEY = 'app-settings';
-
-      // Check if migration is already complete
-      const existingSystemSettings = localStorage.getItem(SYSTEM_SETTINGS_KEY);
-      if (existingSystemSettings) {
-        // Already migrated, clean up old key
-        localStorage.removeItem(OLD_SETTINGS_KEY);
-        return;
-      }
-
-      const oldSettings = localStorage.getItem(OLD_SETTINGS_KEY);
-      if (!oldSettings) {
-        return; // No old settings to migrate
-      }
-
-      const parsed = JSON.parse(oldSettings);
-      const currentUserId = FirebaseAuthService.getCurrentUserId();
-
-      // Migrate system settings
-      const systemSettings = {
-        conditionOptions: parsed.conditionOptions || DEFAULT_SYSTEM_SETTINGS.conditionOptions,
-        categoryOptions: parsed.categoryOptions || DEFAULT_SYSTEM_SETTINGS.categoryOptions,
-        manufacturerOptions: parsed.manufacturerOptions || DEFAULT_SYSTEM_SETTINGS.manufacturerOptions,
-        franchiseOptions: parsed.franchiseOptions || DEFAULT_SYSTEM_SETTINGS.franchiseOptions,
-        seriesOptions: parsed.seriesOptions || DEFAULT_SYSTEM_SETTINGS.seriesOptions,
-        versionOptions: parsed.versionOptions || DEFAULT_SYSTEM_SETTINGS.versionOptions,
-        sizeOptions: parsed.sizeOptions || DEFAULT_SYSTEM_SETTINGS.sizeOptions,
-        packagingOptions: parsed.packagingOptions || DEFAULT_SYSTEM_SETTINGS.packagingOptions
-      };
-
-      this.saveSystemSettings(systemSettings);
-      console.log('Migrated system settings');
-
-      // Migrate custom fields to user settings for current user
-      if (currentUserId && parsed.customFields) {
-        const userSettings = {
-          customFields: parsed.customFields,
-          visibleColumns: DEFAULT_USER_SETTINGS.visibleColumns
-        };
-
-        const userKey = this.getUserSettingsKey(currentUserId);
-        const existingUserSettings = localStorage.getItem(userKey);
-
-        if (!existingUserSettings) {
-          this.saveUserSettings(userSettings, currentUserId);
-          console.log('Migrated custom fields to user settings for user:', currentUserId);
+      for (const key of possibleKeys) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          try {
+            localSettings = JSON.parse(data);
+            foundKey = key;
+            break;
+          } catch (e) {
+            console.error(`[MIGRATION_FIRESTORE] Failed to parse ${key}:`, e);
+          }
         }
       }
 
-      // Remove old settings after successful migration
-      localStorage.removeItem(OLD_SETTINGS_KEY);
+      if (!localSettings || !localSettings.customFields || localSettings.customFields.length === 0) {
+        console.log('[MIGRATION_FIRESTORE] No localStorage custom fields to migrate');
+        return;
+      }
 
+      console.log(`[MIGRATION_FIRESTORE] Found ${localSettings.customFields.length} custom fields in ${foundKey}`);
+      console.log(`[MIGRATION_FIRESTORE] Migrating to Firestore...`);
+
+      // Migrate to Firestore
+      await updateDoc(doc(db, USERS_COLLECTION, firebaseUid), {
+        customFields: localSettings.customFields,
+        visibleColumns: localSettings.visibleColumns || DEFAULT_USER_SETTINGS.visibleColumns
+      });
+
+      console.log(`[MIGRATION_FIRESTORE] ✅ Successfully migrated to Firestore`);
+
+      // Mark as migrated (optional - keep localStorage for now as backup)
+      localStorage.setItem(`${foundKey}-migrated-to-firestore`, 'true');
     } catch (error) {
-      console.error('Error migrating old settings:', error);
+      console.error('[MIGRATION_FIRESTORE] Error during migration:', error);
     }
   }
+
 }

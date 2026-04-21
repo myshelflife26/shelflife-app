@@ -26,13 +26,6 @@ import { SettingsService } from './settings';
 
 const USERS_COLLECTION = 'users';
 
-// Map usernames to old localStorage user IDs for migration
-// Only migrate ackpack34 since they created the custom fields in the old system
-const USERNAME_TO_OLD_ID: Record<string, string> = {
-  'ackpack34': 'default'
-  // ackpack342 starts fresh - no migration
-};
-
 export class FirebaseAuthService {
   private static currentUserCache: User | null = null;
 
@@ -134,21 +127,10 @@ export class FirebaseAuthService {
 
       console.log('[LOGIN] Signed in successfully. Firebase UID:', userCredential.user.uid);
       console.log('[LOGIN] Username (lowercase):', username.toLowerCase());
-      console.log('[LOGIN] Checking for old user ID mapping...');
+      console.log('[LOGIN] Migrating localStorage to Firestore...');
 
-      // One-time cleanup for ackpack342 (remove incorrectly migrated data)
-      SettingsService.cleanupIncorrectMigration(userCredential.user.uid, username);
-
-      // Migrate old user settings to Firebase UID
-      const oldUserId = USERNAME_TO_OLD_ID[username.toLowerCase()];
-      console.log('[LOGIN] Old user ID from mapping:', oldUserId);
-
-      if (oldUserId) {
-        console.log('[LOGIN] Calling migration with Firebase UID:', userCredential.user.uid, 'and old ID:', oldUserId);
-        SettingsService.migrateUserSettingsToFirebase(userCredential.user.uid, oldUserId);
-      } else {
-        console.log('[LOGIN] No old user ID found in mapping for username:', username.toLowerCase());
-      }
+      // Migrate localStorage settings to Firestore
+      await SettingsService.migrateLocalStorageToFirestore(userCredential.user.uid);
 
       // Fetch full user data from Firestore
       const user = await this.getUserById(userCredential.user.uid);
@@ -249,20 +231,9 @@ export class FirebaseAuthService {
         const user = await this.getUserById(firebaseUser.uid);
         console.log('[AUTH_STATE] Got user from Firestore:', user?.username);
 
-        // Migrate old user settings to Firebase UID if user exists
+        // Migrate localStorage settings to Firestore if user exists
         if (user) {
-          // One-time cleanup for ackpack342 (remove incorrectly migrated data)
-          SettingsService.cleanupIncorrectMigration(firebaseUser.uid, user.username);
-
-          const oldUserId = USERNAME_TO_OLD_ID[user.username.toLowerCase()];
-          console.log('[AUTH_STATE] Checking migration for username:', user.username.toLowerCase(), '-> old ID:', oldUserId);
-
-          if (oldUserId) {
-            console.log('[AUTH_STATE] Calling migration...');
-            SettingsService.migrateUserSettingsToFirebase(firebaseUser.uid, oldUserId);
-          } else {
-            console.log('[AUTH_STATE] No old user ID found in mapping');
-          }
+          await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
         }
 
         this.currentUserCache = user;
