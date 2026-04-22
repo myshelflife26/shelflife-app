@@ -27,21 +27,22 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Get custom fields from settings
-  const customFields = useMemo(() => {
-    return SettingsService.getSettings().customFields;
+  // Load custom fields and column visibility from Firestore
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await SettingsService.getSettings();
+      setCustomFields(settings.customFields);
+      const columns = await SettingsService.getColumnVisibility();
+      setVisibleColumns(columns);
+    };
+    loadSettings();
   }, []);
 
-  // Load column visibility
-  useMemo(() => {
-    const columns = SettingsService.getColumnVisibility();
-    setVisibleColumns(columns);
-  }, []);
-
-  const refreshColumnVisibility = () => {
-    const columns = SettingsService.getColumnVisibility();
+  const refreshColumnVisibility = async () => {
+    const columns = await SettingsService.getColumnVisibility();
     setVisibleColumns(columns);
   };
 

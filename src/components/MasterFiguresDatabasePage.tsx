@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MasterFiguresService } from '../utils/masterFigures';
 import type { User } from '../types/user';
-import { Database, Plus, Search, Edit, Trash2, Package, ArrowUpDown, ImageOff, Upload } from 'lucide-react';
+import { Database, Plus, Search, Edit, Trash2, Package, ArrowUpDown, ImageOff, Upload, GitMerge } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Combobox } from './ui/combobox';
@@ -11,6 +11,7 @@ import { SettingsService } from '../utils/settings';
 import { toastManager } from '../utils/toastManager';
 import type { AppSettings } from '../types/index';
 import { parseCSV, type ParseResult } from '../utils/csvParser';
+import { DuplicateDetectionPage } from './DuplicateDetectionPage';
 
 interface MasterFiguresDatabasePageProps {
   currentUser: User;
@@ -32,6 +33,7 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
   const [csvData, setCsvData] = useState('');
   const [parsedImportData, setParsedImportData] = useState<ParseResult | null>(null);
   const [showImportPreview, setShowImportPreview] = useState(false);
+  const [showDuplicateDetection, setShowDuplicateDetection] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     version: '',
@@ -308,13 +310,24 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
               </p>
             </div>
           </div>
-          <Button
-            onClick={() => setImportDialogOpen(true)}
-            variant="default"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setImportDialogOpen(true)}
+              variant="default"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
+            {currentUser.role === 'management' && (
+              <Button
+                onClick={() => setShowDuplicateDetection(true)}
+                variant="outline"
+              >
+                <GitMerge className="h-4 w-4 mr-2" />
+                Find Duplicates
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search */}
@@ -812,6 +825,17 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
             </div>
           </div>
         </div>
+      )}
+
+      {/* Duplicate Detection Dialog */}
+      {showDuplicateDetection && (
+        <DuplicateDetectionPage
+          onClose={() => {
+            setShowDuplicateDetection(false);
+            // Reload figures after closing
+            loadMasterFigures();
+          }}
+        />
       )}
     </div>
   );

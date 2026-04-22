@@ -107,14 +107,41 @@ export class SettingsService {
 
       console.log(`[SAVE_USER_SETTINGS] Saving to Firestore for userId: ${id}, customFields count: ${settings.customFields.length}`);
 
-      await updateDoc(doc(db, USERS_COLLECTION, id), {
-        customFields: settings.customFields,
-        visibleColumns: settings.visibleColumns
-      });
+      // Helper function to remove undefined properties from an object
+      const removeUndefined = (obj: any): any => {
+        if (Array.isArray(obj)) {
+          return obj.map(item => removeUndefined(item));
+        }
+        if (obj !== null && typeof obj === 'object') {
+          return Object.keys(obj).reduce((acc, key) => {
+            if (obj[key] !== undefined) {
+              acc[key] = removeUndefined(obj[key]);
+            }
+            return acc;
+          }, {} as any);
+        }
+        return obj;
+      };
+
+      // Clean data - remove undefined values (Firebase doesn't accept them)
+      const dataToSave: any = {
+        customFields: removeUndefined(settings.customFields || [])
+      };
+
+      // Only add visibleColumns if it's defined
+      if (settings.visibleColumns !== undefined) {
+        dataToSave.visibleColumns = settings.visibleColumns;
+      } else {
+        dataToSave.visibleColumns = DEFAULT_USER_SETTINGS.visibleColumns;
+      }
+
+      // Use setDoc with merge: true to create the document if it doesn't exist
+      await setDoc(doc(db, USERS_COLLECTION, id), dataToSave, { merge: true });
 
       console.log(`[SAVE_USER_SETTINGS] Saved successfully`);
     } catch (error) {
       console.error('Error saving user settings to Firestore:', error);
+      throw error; // Re-throw so caller knows it failed
     }
   }
 
@@ -286,11 +313,11 @@ export class SettingsService {
 
       console.log('[GET_ALL_USERS_FIELDS] Found users:', users.map(u => u.username));
 
-      return users.map((user) => {
+      const results = await Promise.all(users.map(async (user) => {
         const key = `${USER_SETTINGS_KEY_PREFIX}-${user.id}`;
         console.log(`[GET_ALL_USERS_FIELDS] Getting settings for ${user.username} (${user.id}) from key: ${key}`);
 
-        const userSettings = this.getUserSettings(user.id);
+        const userSettings = await this.getUserSettings(user.id);
         console.log(`[GET_ALL_USERS_FIELDS] ${user.username} has ${userSettings.customFields.length} fields:`, userSettings.customFields.map(f => f.name));
 
         return {
@@ -299,7 +326,9 @@ export class SettingsService {
           displayName: user.displayName,
           fields: userSettings.customFields
         };
-      });
+      }));
+
+      return results;
     } catch (error) {
       console.error('Error loading all users custom fields:', error);
       return [];

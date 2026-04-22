@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ActionFigure, CustomFormula } from '../types/index';
+import type { ActionFigure, CustomFormula, AppSettings } from '../types/index';
 import { SettingsService } from '../utils/settings';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -36,7 +36,7 @@ interface FigureFormProps {
 }
 
 export function FigureForm({ open, onClose, onSave, figure, currentUser }: FigureFormProps) {
-  const settings = SettingsService.getSettings();
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [scannerModalOpen, setScannerModalOpen] = useState(false);
   const [masterFigureAccessories, setMasterFigureAccessories] = useState<any[]>([]);
@@ -50,7 +50,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
     series: '',
     manufacturer: '',
     category: '',
-    condition: settings.conditionOptions[0] || 'MIB',
+    condition: 'MIB',
     currentValue: 0,
     purchaseDate: new Date().toISOString().split('T')[0],
     location: '',
@@ -83,6 +83,15 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
     }
     return [...options, currentValue].sort();
   };
+
+  // Load settings from Firestore
+  useEffect(() => {
+    const loadSettings = async () => {
+      const loadedSettings = await SettingsService.getSettings();
+      setSettings(loadedSettings);
+    };
+    loadSettings();
+  }, []);
 
   // Load master figures for autocomplete on custom parts
   useEffect(() => {
@@ -327,6 +336,10 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       completenessPercentage: completeness
     }));
   };
+
+  if (!settings) {
+    return null; // Loading settings
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

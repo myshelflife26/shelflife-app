@@ -1,7 +1,7 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Storage } from '../utils/storage';
 import { SettingsService } from '../utils/settings';
-import type { ActionFigure } from '../types/index';
+import type { ActionFigure, CustomField } from '../types/index';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -21,10 +21,15 @@ interface ExportImportMenuProps {
 
 export function ExportImportMenu({ onImport, selectedFigures, allFigures }: ExportImportMenuProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
-  // Get custom fields from settings
-  const customFields = useMemo(() => {
-    return SettingsService.getSettings().customFields;
+  // Load custom fields from Firestore
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await SettingsService.getSettings();
+      setCustomFields(settings.customFields);
+    };
+    loadSettings();
   }, []);
 
   const handleExportJSON = () => {

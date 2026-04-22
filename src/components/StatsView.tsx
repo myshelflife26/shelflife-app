@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import type { ActionFigure } from '../types/index';
+import { useMemo, useState, useEffect } from 'react';
+import type { ActionFigure, AppSettings } from '../types/index';
 import { ReactionsService } from '../utils/reactions';
 import { AuthService } from '../utils/auth';
 import { Storage } from '../utils/storage';
@@ -17,6 +17,7 @@ interface StatsViewProps {
 }
 
 export function StatsView({ figures }: StatsViewProps) {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeTab, setActiveTab] = useState<StatsTab>('overview');
   const [topTenScope, setTopTenScope] = useState<'my-collection' | 'global'>('my-collection');
   const [topTenPages, setTopTenPages] = useState({
@@ -40,6 +41,23 @@ export function StatsView({ figures }: StatsViewProps) {
   }>({});
 
   const ITEMS_PER_PAGE = 10;
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const loadedSettings = await SettingsService.getSettings();
+      setSettings(loadedSettings);
+    };
+    loadSettings();
+  }, []);
+
+  if (!settings) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
+    );
+  }
 
   // Reset all pages when filters or scope changes
   const resetPages = () => {
@@ -145,14 +163,13 @@ export function StatsView({ figures }: StatsViewProps) {
       });
 
       // Get custom field definitions from settings to map ID to name
-      const settings = SettingsService.getSettings();
-      const customFieldOptions = Array.from(customFieldIds)
+      const customFieldOptions = settings ? Array.from(customFieldIds)
         .map(id => {
           const fieldDef = settings.customFields.find(cf => cf.id === id);
           return fieldDef ? { id: fieldDef.id, name: fieldDef.name } : null;
         })
         .filter(Boolean)
-        .sort((a, b) => a!.name.localeCompare(b!.name)) as Array<{ id: string; name: string }>;
+        .sort((a, b) => a!.name.localeCompare(b!.name)) as Array<{ id: string; name: string }> : [];
 
       return {
         manufacturers,
@@ -189,7 +206,7 @@ export function StatsView({ figures }: StatsViewProps) {
         customFieldOptions: []
       };
     }
-  }, [figures, topTenScope]);
+  }, [figures, topTenScope, settings]);
 
   // Top Ten calculations - depends on scope filter and filters (not pagination - handled per category)
   const topTenData = useMemo(() => {
@@ -854,7 +871,7 @@ export function StatsView({ figures }: StatsViewProps) {
                   <div className="mt-3">
                     <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
                       {(() => {
-                        const settings = SettingsService.getSettings();
+                        if (!settings) return topTenFilters.customField;
                         const fieldDef = settings.customFields.find(cf => cf.id === topTenFilters.customField);
                         return fieldDef ? fieldDef.name : topTenFilters.customField;
                       })()} Value

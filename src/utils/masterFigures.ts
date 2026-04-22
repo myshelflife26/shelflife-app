@@ -330,4 +330,94 @@ export class MasterFiguresService {
       return null;
     }
   }
+
+  /**
+   * Merge two master figures
+   * @param keepFigureId - ID of figure to keep (usually older one)
+   * @param deleteFigureId - ID of figure to delete (duplicate)
+   * @param mergedData - Field-by-field selections for the merged figure
+   * @returns Object with success status and count of updated user figures
+   */
+  static async mergeFigures(
+    keepFigureId: string,
+    deleteFigureId: string,
+    mergedData: Partial<MasterFigure>
+  ): Promise<{ success: boolean; updatedUserFigures: number; error?: string }> {
+    try {
+      // Get both figures to validate they exist
+      const keepFigure = await this.getById(keepFigureId);
+      const deleteFigure = await this.getById(deleteFigureId);
+
+      if (!keepFigure || !deleteFigure) {
+        return {
+          success: false,
+          updatedUserFigures: 0,
+          error: 'One or both figures not found'
+        };
+      }
+
+      // Step 1: Update the figure we're keeping with merged data
+      const updateSuccess = await this.update(keepFigureId, this.cleanObject(mergedData));
+      if (!updateSuccess) {
+        return {
+          success: false,
+          updatedUserFigures: 0,
+          error: 'Failed to update keep figure'
+        };
+      }
+
+      // Step 2: Find and update user figures that reference the deleted figure
+      // Since user figures don't have masterFigureId, we match by data fields
+      let updatedCount = 0;
+      try {
+        const figuresCollection = collection(db, 'figures');
+        const allUserFigures = await getDocs(figuresCollection);
+
+        for (const docSnapshot of allUserFigures.docs) {
+          const userFig = docSnapshot.data();
+
+          // Check if this user figure matches the figure being deleted
+          const nameMatch = userFig.name?.toLowerCase() === deleteFigure.name?.toLowerCase();
+          const mfgMatch = userFig.manufacturer?.toLowerCase() === deleteFigure.manufacturer?.toLowerCase();
+          const yearMatch = !userFig.year || userFig.year === deleteFigure.year;
+          const versionMatch = !userFig.version || userFig.version === deleteFigure.version;
+
+          if (nameMatch && mfgMatch && yearMatch && versionMatch) {
+            // Add merge metadata to user figure
+            await updateDoc(docSnapshot.ref, {
+              'metadata.mergedFromMasterFigure': deleteFigureId,
+              'metadata.mergedToMasterFigure': keepFigureId,
+              'metadata.mergedAt': Date.now()
+            });
+            updatedCount++;
+          }
+        }
+      } catch (error) {
+        console.error('Error updating user figures:', error);
+        // Continue with deletion even if user figure updates fail
+      }
+
+      // Step 3: Delete the duplicate figure
+      const deleteSuccess = await this.delete(deleteFigureId);
+      if (!deleteSuccess) {
+        return {
+          success: false,
+          updatedUserFigures: updatedCount,
+          error: 'Failed to delete duplicate figure'
+        };
+      }
+
+      return {
+        success: true,
+        updatedUserFigures: updatedCount
+      };
+    } catch (error) {
+      console.error('Failed to merge figures:', error);
+      return {
+        success: false,
+        updatedUserFigures: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
 }

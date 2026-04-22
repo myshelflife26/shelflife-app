@@ -43,10 +43,15 @@ export function FilterSheet({
 }: FilterSheetProps) {
   const [localFilters, setLocalFilters] = useState<Filters>(filters);
   const [isOpen, setIsOpen] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
-  // Get custom fields from settings
-  const customFields = useMemo(() => {
-    return SettingsService.getSettings().customFields;
+  // Load custom fields from Firestore
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await SettingsService.getSettings();
+      setCustomFields(settings.customFields);
+    };
+    loadSettings();
   }, []);
 
   // Calculate unique values for each custom field

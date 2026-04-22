@@ -1471,7 +1471,7 @@ export function SettingsPage({ currentUser, setCurrentPage, darkMode, setDarkMod
         </div>
       )}
 
-      {showSection('system') && canManageSystem && (
+      {showSection('general') && canManageSystem && (
         <>
           <div className="mb-6 flex items-center justify-between">
             <div>
