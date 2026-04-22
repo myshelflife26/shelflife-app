@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DuplicateDetectionService, type DuplicateMatch } from '../utils/duplicateDetection';
 import { MasterFiguresService, type MasterFigure } from '../utils/masterFigures';
 import { Button } from './ui/button';
 import { Select } from './ui/select';
-import { Search, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, X, Clock, CalendarClock } from 'lucide-react';
 import { toastManager } from '../utils/toastManager';
 import { MergeDialog } from './MergeDialog';
+import { Pagination } from './Pagination';
 
 interface DuplicateDetectionPageProps {
   onClose: () => void;
@@ -16,6 +17,13 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const [filteredDuplicates, setFilteredDuplicates] = useState<DuplicateMatch[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'likely' | 'possible'>('all');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Bulk merge
+  const [isBulkMerging, setIsBulkMerging] = useState(false);
 
   // Manual comparison
   const [allFigures, setAllFigures] = useState<MasterFigure[]>([]);
@@ -39,7 +47,16 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
     } else {
       setFilteredDuplicates(duplicates.filter(d => d.matchType === filterType));
     }
+    // Reset to page 1 when filter changes
+    setCurrentPage(1);
   }, [filterType, duplicates]);
+
+  // Paginate filtered duplicates
+  const paginatedDuplicates = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredDuplicates.slice(startIndex, endIndex);
+  }, [filteredDuplicates, currentPage, pageSize]);
 
   const loadAllFigures = async () => {
     const figures = await MasterFiguresService.getAll();
@@ -111,6 +128,73 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
     loadAllFigures();
   };
 
+  const handleBulkMerge = async () => {
+    if (paginatedDuplicates.length === 0) {
+      toastManager.error('No duplicates on this page to merge');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to merge all ${paginatedDuplicates.length} duplicate pair(s) on this page?\n\n` +
+      `For each pair:\n` +
+      `- The OLDER figure will be kept\n` +
+      `- The NEWER figure will be deleted\n` +
+      `- All fields from the OLDER figure will be preserved\n\n` +
+      `This action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsBulkMerging(true);
+    let successCount = 0;
+    let failCount = 0;
+    let totalUpdatedUserFigures = 0;
+
+    for (const match of paginatedDuplicates) {
+      try {
+        // Determine which is older
+        const olderFigure = DuplicateDetectionService.getOlderFigure(match.figure1, match.figure2);
+        const keepFigure = olderFigure === 1 ? match.figure1 : match.figure2;
+        const deleteFigure = olderFigure === 1 ? match.figure2 : match.figure1;
+
+        // Merge using all fields from the keep figure (older one)
+        const result = await MasterFiguresService.mergeFigures(
+          keepFigure.id,
+          deleteFigure.id,
+          keepFigure // Use all fields from older figure
+        );
+
+        if (result.success) {
+          successCount++;
+          totalUpdatedUserFigures += result.updatedUserFigures;
+        } else {
+          failCount++;
+          console.error(`Failed to merge ${deleteFigure.name}:`, result.error);
+        }
+      } catch (error) {
+        failCount++;
+        console.error('Error during bulk merge:', error);
+      }
+    }
+
+    setIsBulkMerging(false);
+
+    // Show results
+    if (successCount > 0) {
+      toastManager.success(
+        `Successfully merged ${successCount} pair(s)! ` +
+        `Updated ${totalUpdatedUserFigures} user figure(s). ` +
+        (failCount > 0 ? `${failCount} failed.` : '')
+      );
+    } else {
+      toastManager.error(`Failed to merge duplicates. ${failCount} errors.`);
+    }
+
+    // Refresh duplicates list
+    handleScan();
+    loadAllFigures();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
@@ -172,85 +256,136 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
 
           {/* Results Table */}
           {filteredDuplicates.length > 0 && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-                        Figure 1
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-                        Figure 2
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-                        Match Type
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-                        Matched Fields
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredDuplicates.map((match, index) => (
-                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {match.figure1.name}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {match.figure1.manufacturer}
-                            {match.figure1.year && ` (${match.figure1.year})`}
-                            {match.figure1.version && ` - ${match.figure1.version}`}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {match.figure2.name}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {match.figure2.manufacturer}
-                            {match.figure2.year && ` (${match.figure2.year})`}
-                            {match.figure2.version && ` - ${match.figure2.version}`}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {match.matchType === 'likely' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Likely
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Possible
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {match.matchedFields.join(', ')}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            {match.matchScore} fields match
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            onClick={() => handleCompareClick(match)}
-                            size="sm"
-                            variant="outline"
-                          >
-                            Compare & Merge
-                          </Button>
-                        </td>
+            <div className="space-y-4">
+              {/* Pagination and Bulk Actions */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredDuplicates.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+                <Button
+                  onClick={handleBulkMerge}
+                  disabled={isBulkMerging || paginatedDuplicates.length === 0}
+                  variant="default"
+                >
+                  {isBulkMerging ? 'Merging...' : `Merge All on Page (${paginatedDuplicates.length})`}
+                </Button>
+              </div>
+
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
+                          Older Figure (Keep)
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
+                          Newer Figure (Delete)
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
+                          Match Type
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
+                          Matched Fields
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {paginatedDuplicates.map((match, index) => {
+                        const olderFigure = DuplicateDetectionService.getOlderFigure(match.figure1, match.figure2);
+                        const keepFigure = olderFigure === 1 ? match.figure1 : match.figure2;
+                        const deleteFigure = olderFigure === 1 ? match.figure2 : match.figure1;
+
+                        return (
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-900">
+                            <td className="px-4 py-3 bg-green-50 dark:bg-green-900/10">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                <span className="text-xs font-medium text-green-700 dark:text-green-300">
+                                  {new Date(keepFigure.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {keepFigure.name}
+                              </div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                {keepFigure.manufacturer}
+                                {keepFigure.year && ` (${keepFigure.year})`}
+                                {keepFigure.version && ` - ${keepFigure.version}`}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 bg-red-50 dark:bg-red-900/10">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Clock className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                <span className="text-xs font-medium text-red-700 dark:text-red-300">
+                                  {new Date(deleteFigure.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {deleteFigure.name}
+                              </div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                {deleteFigure.manufacturer}
+                                {deleteFigure.year && ` (${deleteFigure.year})`}
+                                {deleteFigure.version && ` - ${deleteFigure.version}`}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {match.matchType === 'likely' ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Likely
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Possible
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                {match.matchedFields.join(', ')}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                {match.matchScore} fields match
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Button
+                                onClick={() => handleCompareClick(match)}
+                                size="sm"
+                                variant="outline"
+                              >
+                                Compare & Merge
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Bottom Pagination */}
+              <div className="flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredDuplicates.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
               </div>
             </div>
           )}
