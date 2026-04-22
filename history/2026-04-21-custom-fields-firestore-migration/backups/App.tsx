@@ -18,7 +18,7 @@ import { ShelfLifeValueService } from './utils/shelfLifeValue';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
-import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload } from 'lucide-react';
+import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { TabbedSettingsPage } from './components/TabbedSettingsPage';
@@ -58,11 +58,9 @@ import { CollectionGrowthPage } from './components/CollectionGrowthPage';
 import { TopJealousFigures } from './components/TopJealousFigures';
 import { PublicProfilePage } from './components/PublicProfilePage';
 import { Grid3x3 } from 'lucide-react';
-import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
-import { toastManager } from './utils/toastManager';
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
-type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves' | 'import';
+type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves';
 
 function MainApp() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -109,9 +107,6 @@ function MainApp() {
   const [viewingShelfId, setViewingShelfId] = useState<string | null>(null);
   const [wishlistDialogTrigger, setWishlistDialogTrigger] = useState(0);
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
-  const [importCsvData, setImportCsvData] = useState('');
-  const [parsedImportData, setParsedImportData] = useState<ParseResult | null>(null);
-  const [showImportPreview, setShowImportPreview] = useState(false);
   const [conditionOptions, setConditionOptions] = useState<string[]>([]);
 
   // Load settings
@@ -267,100 +262,6 @@ function MainApp() {
       loadFigures();
     } catch (error) {
       console.error('Failed to import figures:', error);
-      toastManager.error('Failed to import figures');
-    }
-  };
-
-  // Handle CSV parsing for preview
-  const handleParseCSV = () => {
-    if (!importCsvData.trim()) {
-      toastManager.error('Please paste CSV data first');
-      return;
-    }
-
-    const result = parseCSV(importCsvData);
-    setParsedImportData(result);
-    setShowImportPreview(true);
-
-    if (result.success) {
-      toastManager.success(`Parsed ${result.figures.length} figures successfully`);
-    } else {
-      toastManager.error(`Parse failed: ${result.errors.join(', ')}`);
-    }
-  };
-
-  // Handle CSV import to user collection
-  const handleImportCSV = async () => {
-    if (!currentUser) return;
-    if (!parsedImportData || !parsedImportData.success) {
-      toastManager.error('Please parse CSV data first');
-      return;
-    }
-
-    try {
-      const figureCount = parsedImportData.figures.length;
-      const confirm = window.confirm(
-        `Import ${figureCount} figure${figureCount > 1 ? 's' : ''} to your collection?`
-      );
-
-      if (!confirm) return;
-
-      // Convert parsed figures to ActionFigure format
-      const importedFigures: Omit<ActionFigure, 'id'>[] = parsedImportData.figures.map(pf => ({
-        name: pf.name,
-        manufacturer: pf.manufacturer || 'Unknown',
-        franchise: pf.franchise,
-        series: pf.series || 'Unknown Series',
-        category: pf.category || 'Action Figure',
-        condition: 'Loose', // Default condition
-        currentValue: 0,
-        purchaseDate: new Date().toISOString().split('T')[0],
-        location: '',
-        notes: '',
-        year: pf.year,
-        version: pf.version,
-        size: pf.size,
-        productLine: pf.series, // Use series as productLine for compatibility
-        subProductLine: pf.subProductLine,
-        packaging: pf.packaging
-      }));
-
-      // Import all figures to Firebase
-      await FirebaseStorage.importFigures(currentUser.id, importedFigures);
-
-      // Add each imported figure to master database
-      for (const figure of importedFigures) {
-        await MasterFiguresService.addFromUserFigure(
-          {
-            name: figure.name,
-            version: figure.version,
-            year: figure.year,
-            series: figure.series,
-            productLine: figure.productLine,
-            subProductLine: figure.subProductLine,
-            manufacturer: figure.manufacturer,
-            category: figure.category,
-            size: figure.size,
-            packaging: figure.packaging
-          },
-          currentUser.id,
-          currentUser.displayName,
-          'import'
-        );
-      }
-
-      toastManager.success(`Successfully imported ${figureCount} figures!`);
-
-      // Reset import state
-      setImportCsvData('');
-      setParsedImportData(null);
-      setShowImportPreview(false);
-
-      // Switch to collection view and reload
-      setCollectionTab('collection');
-      loadFigures();
-    } catch (error) {
-      console.error('Failed to import CSV:', error);
       toastManager.error('Failed to import figures');
     }
   };
@@ -1335,17 +1236,6 @@ function MainApp() {
                   <Grid3x3 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
                   Shelves
                 </button>
-                <button
-                  onClick={() => setCollectionTab('import')}
-                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    collectionTab === 'import'
-                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <Upload className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-2" />
-                  Import
-                </button>
               </div>
 
               {/* Row 2: Filter, Export, and Selection Controls */}
@@ -1560,153 +1450,6 @@ function MainApp() {
               onNavigateToShelf={(shelfId) => setViewingShelfId(shelfId)}
             />
           )
-        ) : collectionTab === 'import' ? (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Import Figures to Your Collection
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Import action figures from CSV or TSV format. Paste your data below or use the scraper to fetch from websites.
-              </p>
-
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-                  CSV Format
-                </h3>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
-                  Expected columns: name, manufacturer, franchise, series, year, version, size, category, packaging, subProductLine (optional)
-                </p>
-                <code className="text-xs text-blue-800 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded block overflow-x-auto">
-                  name,manufacturer,franchise,series,year,version,size,category,packaging
-                </code>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    CSV/TSV Data
-                  </label>
-                  <textarea
-                    value={importCsvData}
-                    onChange={(e) => setImportCsvData(e.target.value)}
-                    className="w-full h-96 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
-                    placeholder="name,manufacturer,franchise,series,year,version,size,category,packaging&#10;Snake Eyes,Hasbro,G.I. Joe,A Real American Hero,1982,V1,3.75&quot;,Action Figure,Individual&#10;Scarlett,Hasbro,G.I. Joe,A Real American Hero,1982,V1,3.75&quot;,Action Figure,Individual"
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleParseCSV}
-                    disabled={!importCsvData.trim()}
-                  >
-                    Parse & Preview
-                  </Button>
-                  <Button
-                    variant="default"
-                    onClick={handleImportCSV}
-                    disabled={!parsedImportData || !parsedImportData.success}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import to My Collection
-                  </Button>
-                </div>
-
-                {/* Preview Section */}
-                {showImportPreview && parsedImportData && (
-                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      Import Preview
-                    </h3>
-
-                    {/* Errors */}
-                    {parsedImportData.errors.length > 0 && (
-                      <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <h4 className="text-sm font-semibold text-red-900 dark:text-red-200 mb-2">
-                          Errors ({parsedImportData.errors.length})
-                        </h4>
-                        <ul className="list-disc list-inside text-xs text-red-700 dark:text-red-300 space-y-1">
-                          {parsedImportData.errors.map((error, i) => (
-                            <li key={i}>{error}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Warnings */}
-                    {parsedImportData.warnings.length > 0 && (
-                      <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                        <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2">
-                          Warnings ({parsedImportData.warnings.length})
-                        </h4>
-                        <ul className="list-disc list-inside text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
-                          {parsedImportData.warnings.slice(0, 5).map((warning, i) => (
-                            <li key={i}>{warning}</li>
-                          ))}
-                          {parsedImportData.warnings.length > 5 && (
-                            <li>... and {parsedImportData.warnings.length - 5} more</li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Success Preview */}
-                    {parsedImportData.success && parsedImportData.figures.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                          <p className="text-sm font-semibold text-green-900 dark:text-green-200">
-                            Ready to import {parsedImportData.figures.length} figure{parsedImportData.figures.length > 1 ? 's' : ''}
-                          </p>
-                        </div>
-
-                        <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                          <table className="w-full text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
-                              <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Name</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Manufacturer</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Series</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Year</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {parsedImportData.figures.slice(0, 10).map((figure, i) => (
-                                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                                  <td className="px-4 py-2 text-gray-900 dark:text-white">{figure.name}</td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{figure.manufacturer || '-'}</td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{figure.series || '-'}</td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{figure.year || '-'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          {parsedImportData.figures.length > 10 && (
-                            <div className="p-2 text-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900">
-                              ... and {parsedImportData.figures.length - 10} more figures
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Sample Data Files
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Try importing one of our sample CSV files located in the <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">sample-data/</code> folder.
-                  </p>
-                  <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                    <li><strong>action-figures-starter.csv</strong> - 107 figures across 9 franchises</li>
-                    <li><strong>gijoe-arah-1982-1986.csv</strong> - 72 G.I. Joe figures from 1982-1986</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
         ) : collectionTab === 'collection' ? (
           <>
             <Pagination
