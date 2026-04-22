@@ -59,7 +59,6 @@ import { TopJealousFigures } from './components/TopJealousFigures';
 import { PublicProfilePage } from './components/PublicProfilePage';
 import { Grid3x3 } from 'lucide-react';
 import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
-import { toastManager } from './utils/toastManager';
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves' | 'import';
