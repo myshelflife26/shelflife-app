@@ -701,8 +701,6 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
                     <li><strong>gijoe-arah-1982-1986.csv</strong> - 72 G.I. Joe figures from 1982-1986</li>
                   </ul>
                 </div>
-              </div>
-            </div>
 
                 {/* Preview Section */}
                 {showImportPreview && parsedImportData && (
