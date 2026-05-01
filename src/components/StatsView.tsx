@@ -77,68 +77,67 @@ export function StatsView({ figures }: StatsViewProps) {
     return (page - 1) * ITEMS_PER_PAGE + index + 1;
   };
 
-  const stats = useMemo(() => {
-    const totalFigures = figures.length;
-    const totalValue = figures.reduce((sum, f) => sum + f.currentValue, 0);
-    const averageValue = totalFigures > 0 ? totalValue / totalFigures : 0;
+  // Calculate stats directly without useMemo to avoid infinite loop issues
+  const totalFigures = figures.length;
+  const totalValue = figures.reduce((sum, f) => sum + f.currentValue, 0);
+  const averageValue = totalFigures > 0 ? totalValue / totalFigures : 0;
 
-    // Condition breakdown
-    const conditionCounts = figures.reduce((acc, f) => {
-      acc[f.condition] = (acc[f.condition] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  // Condition breakdown
+  const conditionCounts = figures.reduce((acc, f) => {
+    acc[f.condition] = (acc[f.condition] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-    // Manufacturer breakdown
-    const manufacturerCounts = figures.reduce((acc, f) => {
-      const mfg = f.manufacturer || 'Unknown';
-      acc[mfg] = (acc[mfg] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  // Manufacturer breakdown
+  const manufacturerCounts = figures.reduce((acc, f) => {
+    const mfg = f.manufacturer || 'Unknown';
+    acc[mfg] = (acc[mfg] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-    // Category breakdown
-    const categoryCounts = figures.reduce((acc, f) => {
-      const cat = f.category || 'Unknown';
-      acc[cat] = (acc[cat] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  // Category breakdown
+  const categoryCounts = figures.reduce((acc, f) => {
+    const cat = f.category || 'Unknown';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-    // Value by condition
-    const valueByCondition = figures.reduce((acc, f) => {
-      acc[f.condition] = (acc[f.condition] || 0) + f.currentValue;
-      return acc;
-    }, {} as Record<string, number>);
+  // Value by condition
+  const valueByCondition = figures.reduce((acc, f) => {
+    acc[f.condition] = (acc[f.condition] || 0) + f.currentValue;
+    return acc;
+  }, {} as Record<string, number>);
 
-    // Recent additions (last 5 by purchase date)
-    const recentFigures = [...figures]
-      .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime())
-      .slice(0, 5);
+  // Recent additions (last 5 by purchase date)
+  const recentFigures = [...figures]
+    .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime())
+    .slice(0, 5);
 
-    // Reactions stats (only for public figures)
-    const currentUser = AuthService.getCurrentUser();
-    const publicFigureIds = figures.filter(f => f.isPublic || currentUser?.collectionPublic).map(f => f.id);
-    const reactionStats = currentUser ? ReactionsService.getCollectionStats(currentUser.id, publicFigureIds) : null;
-    const topReactedFigures = currentUser ? ReactionsService.getTopFigures(currentUser.id, publicFigureIds, 5) : [];
+  // Reactions stats (only for public figures)
+  const currentUserForStats = AuthService.getCurrentUser();
+  const publicFigureIds = figures.filter(f => f.isPublic || currentUserForStats?.collectionPublic).map(f => f.id);
+  const reactionStats = currentUserForStats ? ReactionsService.getCollectionStats(currentUserForStats.id, publicFigureIds) : null;
+  const topReactedFigures = currentUserForStats ? ReactionsService.getTopFigures(currentUserForStats.id, publicFigureIds, 5) : [];
 
-    // Jealousy meter - figures ranked by how much others envy them
-    const topJealousyFigures = currentUser ? ReactionsService.getTopFiguresByJealousy(currentUser.id, publicFigureIds, 5) : [];
+  // Jealousy meter - figures ranked by how much others envy them
+  const topJealousyFigures = currentUserForStats ? ReactionsService.getTopFiguresByJealousy(currentUserForStats.id, publicFigureIds, 5) : [];
 
-    return {
-      totalFigures,
-      totalValue,
-      averageValue,
-      conditionCounts,
-      manufacturerCounts,
-      categoryCounts,
-      valueByCondition,
-      recentFigures,
-      reactionStats,
-      topReactedFigures,
-      topJealousyFigures,
-    };
-  }, [figures.length]);
+  const stats = {
+    totalFigures,
+    totalValue,
+    averageValue,
+    conditionCounts,
+    manufacturerCounts,
+    categoryCounts,
+    valueByCondition,
+    recentFigures,
+    reactionStats,
+    topReactedFigures,
+    topJealousyFigures,
+  };
 
-  // Extract filter options based on scope
-  const filterOptions = useMemo(() => {
+  // Extract filter options based on scope (calculated directly without useMemo)
+  const getFilterOptions = () => {
     const currentUser = AuthService.getCurrentUser();
     if (!currentUser) return null;
 
@@ -207,10 +206,11 @@ export function StatsView({ figures }: StatsViewProps) {
         customFieldOptions: []
       };
     }
-  }, [figures.length, topTenScope, settings?.customFields.length]);
+  };
+  const filterOptions = getFilterOptions();
 
-  // Top Ten calculations - depends on scope filter and filters (not pagination - handled per category)
-  const topTenData = useMemo(() => {
+  // Top Ten calculations (calculated directly without useMemo)
+  const getTopTenData = () => {
     const currentUser = AuthService.getCurrentUser();
     if (!currentUser) return null;
 
@@ -335,25 +335,8 @@ export function StatsView({ figures }: StatsViewProps) {
         fireTotal: allFire.length,
       };
     }
-  }, [
-    figures.length,
-    topTenScope,
-    topTenFilters.manufacturer,
-    topTenFilters.category,
-    topTenFilters.size,
-    topTenFilters.condition,
-    topTenFilters.packaging,
-    topTenFilters.minValue,
-    topTenFilters.maxValue,
-    topTenFilters.customField,
-    topTenFilters.customFieldValue,
-    topTenPages.mostValuable,
-    topTenPages.jealousy,
-    topTenPages.mostReacted,
-    topTenPages.appreciate,
-    topTenPages.love,
-    topTenPages.fire
-  ]);
+  };
+  const topTenData = getTopTenData();
 
   const StatCard = ({
     icon: Icon,
