@@ -207,7 +207,7 @@ export function StatsView({ figures }: StatsViewProps) {
         customFieldOptions: []
       };
     }
-  }, [figures.length, topTenScope, JSON.stringify(settings)]);
+  }, [figures.length, topTenScope, settings?.customFields.length]);
 
   // Top Ten calculations - depends on scope filter and filters (not pagination - handled per category)
   const topTenData = useMemo(() => {
@@ -335,7 +335,25 @@ export function StatsView({ figures }: StatsViewProps) {
         fireTotal: allFire.length,
       };
     }
-  }, [figures.length, topTenScope, JSON.stringify(topTenFilters), JSON.stringify(topTenPages)]);
+  }, [
+    figures.length,
+    topTenScope,
+    topTenFilters.manufacturer,
+    topTenFilters.category,
+    topTenFilters.size,
+    topTenFilters.condition,
+    topTenFilters.packaging,
+    topTenFilters.minValue,
+    topTenFilters.maxValue,
+    topTenFilters.customField,
+    topTenFilters.customFieldValue,
+    topTenPages.mostValuable,
+    topTenPages.jealousy,
+    topTenPages.mostReacted,
+    topTenPages.appreciate,
+    topTenPages.love,
+    topTenPages.fire
+  ]);
 
   const StatCard = ({
     icon: Icon,
