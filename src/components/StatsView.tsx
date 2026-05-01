@@ -207,7 +207,7 @@ export function StatsView({ figures }: StatsViewProps) {
         customFieldOptions: []
       };
     }
-  }, [figures.length, topTenScope, settings]);
+  }, [figures.length, topTenScope, JSON.stringify(settings)]);
 
   // Top Ten calculations - depends on scope filter and filters (not pagination - handled per category)
   const topTenData = useMemo(() => {
@@ -335,7 +335,7 @@ export function StatsView({ figures }: StatsViewProps) {
         fireTotal: allFire.length,
       };
     }
-  }, [figures.length, topTenScope, topTenFilters, topTenPages]);
+  }, [figures.length, topTenScope, JSON.stringify(topTenFilters), JSON.stringify(topTenPages)]);
 
   const StatCard = ({
     icon: Icon,
