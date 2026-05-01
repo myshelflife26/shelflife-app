@@ -106,7 +106,7 @@ export function GlobalStatisticsPage() {
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {fig.series || <span className="italic">No Series</span>}
+                    {fig.productLine || <span className="italic">No Product Line</span>}
                   </p>
                 </div>
                 <div className="text-right">
@@ -130,7 +130,7 @@ export function GlobalStatisticsPage() {
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {fig.series || <span className="italic">No Series</span>}
+                    {fig.productLine || <span className="italic">No Product Line</span>}
                   </p>
                 </div>
                 <div className="text-right">
@@ -154,7 +154,7 @@ export function GlobalStatisticsPage() {
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">{fig.figureName}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {fig.series || <span className="italic">No Series</span>}
+                    {fig.productLine || <span className="italic">No Product Line</span>}
                   </p>
                 </div>
                 <div className="text-right">
@@ -166,19 +166,19 @@ export function GlobalStatisticsPage() {
           </div>
         </div>
 
-        {/* Top Series */}
+        {/* Top Product Lines */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-6 w-6 text-green-600" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Top Series</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Top Product Lines</h2>
           </div>
           <div className="space-y-3">
-            {stats.topSeries.slice(0, 5).map((series, index) => (
+            {stats.topProductLines.slice(0, 5).map((productLine, index) => (
               <div key={index} className="flex items-center justify-between">
                 <p className="font-medium text-gray-900 dark:text-white flex-1">
-                  {series.series || <span className="text-gray-500 dark:text-gray-400 italic">No Series</span>}
+                  {productLine.productLine || <span className="text-gray-500 dark:text-gray-400 italic">No Product Line</span>}
                 </p>
-                <p className="font-bold text-gray-900 dark:text-white">{series.count}</p>
+                <p className="font-bold text-gray-900 dark:text-white">{productLine.count}</p>
               </div>
             ))}
           </div>

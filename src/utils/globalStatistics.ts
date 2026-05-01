@@ -4,7 +4,7 @@ import type { ActionFigure } from '../types';
 
 export interface FigurePopularity {
   figureName: string;
-  series: string;
+  productLine: string;
   manufacturer: string;
   count: number; // How many users own this
   totalValue: number; // Combined value across all owners
@@ -19,7 +19,7 @@ export interface GlobalStats {
   mostCollectedFigures: FigurePopularity[];
   rarestFigures: FigurePopularity[];
   trendingFigures: FigurePopularity[]; // Recently added (last 30 days)
-  topSeries: Array<{ series: string; count: number }>;
+  topProductLines: Array<{ productLine: string; count: number }>;
   topManufacturers: Array<{ manufacturer: string; count: number }>;
 }
 
@@ -59,10 +59,10 @@ export class GlobalStatisticsService {
       const totalValue = allFigures.reduce((sum, f) => sum + (f.currentValue || 0), 0);
       const avgCollectionSize = totalUsers > 0 ? totalFigures / totalUsers : 0;
 
-      // Calculate figure popularity (group by name + series)
+      // Calculate figure popularity (group by name + productLine)
       const figureMap = new Map<string, {
         figureName: string;
-        series: string;
+        productLine: string;
         manufacturer: string;
         count: number;
         totalValue: number;
@@ -72,11 +72,19 @@ export class GlobalStatisticsService {
       const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
       allFigures.forEach(fig => {
-        const key = `${fig.name}|||${fig.series}|||${fig.manufacturer}`;
+        // Use productLine, fallback to series for backwards compatibility
+        const productLine = fig.productLine || fig.series || '';
+        // Combine franchise (IP) and product line
+        const franchise = fig.franchise || '';
+        const combinedProductLine = franchise && productLine
+          ? `${franchise} - ${productLine}`
+          : productLine || franchise;
+
+        const key = `${fig.name}|||${combinedProductLine}|||${fig.manufacturer}`;
         if (!figureMap.has(key)) {
           figureMap.set(key, {
             figureName: fig.name,
-            series: fig.series,
+            productLine: combinedProductLine,
             manufacturer: fig.manufacturer,
             count: 0,
             totalValue: 0,
@@ -97,7 +105,7 @@ export class GlobalStatisticsService {
       // Convert to array and calculate averages
       const figurePopularity: FigurePopularity[] = Array.from(figureMap.values()).map(entry => ({
         figureName: entry.figureName,
-        series: entry.series,
+        productLine: entry.productLine,
         manufacturer: entry.manufacturer,
         count: entry.count,
         totalValue: entry.totalValue,
@@ -120,7 +128,7 @@ export class GlobalStatisticsService {
         .filter(([_, entry]) => entry.recentlyAdded > 0)
         .map(([_, entry]) => ({
           figureName: entry.figureName,
-          series: entry.series,
+          productLine: entry.productLine,
           manufacturer: entry.manufacturer,
           count: entry.count,
           totalValue: entry.totalValue,
@@ -129,13 +137,22 @@ export class GlobalStatisticsService {
         .sort((a, b) => b.count - a.count) // Sort by total count
         .slice(0, 10);
 
-      // Top series
-      const seriesMap = new Map<string, number>();
+      // Top product lines (combine franchise + product line, with fallback to series for backwards compatibility)
+      const productLineMap = new Map<string, number>();
       allFigures.forEach(fig => {
-        seriesMap.set(fig.series, (seriesMap.get(fig.series) || 0) + 1);
+        const productLine = fig.productLine || fig.series;
+        const franchise = fig.franchise || '';
+        // Combine franchise (IP) and product line
+        const combinedProductLine = franchise && productLine
+          ? `${franchise} - ${productLine}`
+          : productLine || franchise;
+
+        if (combinedProductLine) {
+          productLineMap.set(combinedProductLine, (productLineMap.get(combinedProductLine) || 0) + 1);
+        }
       });
-      const topSeries = Array.from(seriesMap.entries())
-        .map(([series, count]) => ({ series, count }))
+      const topProductLines = Array.from(productLineMap.entries())
+        .map(([productLine, count]) => ({ productLine, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
@@ -157,7 +174,7 @@ export class GlobalStatisticsService {
         mostCollectedFigures,
         rarestFigures,
         trendingFigures,
-        topSeries,
+        topProductLines,
         topManufacturers
       };
 

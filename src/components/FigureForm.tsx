@@ -59,6 +59,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
     imageUrl: '',
     size: '',
     productLine: '',
+    productLineNumber: '',
     subProductLine: '',
     packaging: '',
     upc: '',
@@ -131,6 +132,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
         imageUrl: '',
         size: '',
         productLine: '',
+        productLineNumber: '',
         subProductLine: '',
         packaging: '',
         upc: '',
@@ -247,9 +249,15 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       name: result.name,
       manufacturer: result.manufacturer || prev.manufacturer,
       year: result.year ? parseInt(result.year, 10) : prev.year,
+      version: result.version || prev.version,
+      franchise: result.franchise || prev.franchise,
       productLine: result.productLine || prev.productLine,
+      productLineNumber: result.productLineNumber || prev.productLineNumber,
       subProductLine: result.subProductLine || prev.subProductLine,
       category: result.category || prev.category,
+      size: result.size || prev.size,
+      packaging: result.packaging || prev.packaging,
+      upc: result.upc || prev.upc,
       currentValue: result.estimatedValue || prev.currentValue,
       images: result.images.length > 0 ? result.images : prev.images,
       condition: result.condition || prev.condition,
@@ -352,41 +360,45 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Search Database Banner - Only show when adding new figures */}
-          {!figure && (
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-4 shadow-lg mb-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <Search className="h-8 w-8 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg">Save Time! Auto-Fill This Form</h3>
-                    <p className="text-sm text-blue-100">Search our database or scan a barcode to auto-populate details</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button
-                    type="button"
-                    onClick={() => setScannerModalOpen(true)}
-                    variant="outline"
-                    className="bg-white text-purple-600 hover:bg-gray-100 border-white"
-                    title="Scan UPC barcode"
-                  >
-                    <Scan className="h-4 w-4 mr-2" />
-                    Scan Barcode
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setSearchModalOpen(true)}
-                    variant="outline"
-                    className="bg-white text-blue-600 hover:bg-gray-100 border-white"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Search Database
-                  </Button>
+          {/* Search Database Banner - Show for both adding and editing */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-4 shadow-lg mb-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Search className="h-8 w-8 flex-shrink-0" />
+                <div>
+                  <h3 className="font-bold text-lg">
+                    {figure ? 'Update from Database' : 'Save Time! Auto-Fill This Form'}
+                  </h3>
+                  <p className="text-sm text-blue-100">
+                    {figure
+                      ? 'Search the master database to update this figure\'s details with the latest information'
+                      : 'Search our database or scan a barcode to auto-populate details'}
+                  </p>
                 </div>
               </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  type="button"
+                  onClick={() => setScannerModalOpen(true)}
+                  variant="outline"
+                  className="bg-white text-purple-600 hover:bg-gray-100 border-white"
+                  title="Scan UPC barcode"
+                >
+                  <Scan className="h-4 w-4 mr-2" />
+                  Scan Barcode
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setSearchModalOpen(true)}
+                  variant="outline"
+                  className="bg-white text-blue-600 hover:bg-gray-100 border-white"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {figure ? 'Update from Database' : 'Search Database'}
+                </Button>
+              </div>
             </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Images */}
@@ -400,9 +412,18 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
+            {/* FIGURE DETAILS GROUP */}
+            <div className="md:col-span-2">
+              <div className="border-2 border-purple-300 dark:border-purple-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <span className="text-lg">🎭</span>
+                  Figure Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
             {/* Name */}
             <div>
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name" className="text-sm">Name *</Label>
               <Input
                 id="name"
                 name="name"
@@ -415,7 +436,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Franchise/IP */}
             <div>
-              <Label htmlFor="franchise">Franchise/IP</Label>
+              <Label htmlFor="franchise" className="text-sm">Franchise/IP</Label>
               <Combobox
                 id="franchise"
                 name="franchise"
@@ -429,7 +450,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Version */}
             <div>
-              <Label htmlFor="version">Version</Label>
+              <Label htmlFor="version" className="text-sm">Version</Label>
               <Combobox
                 id="version"
                 name="version"
@@ -443,7 +464,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Year */}
             <div>
-              <Label htmlFor="year">Release Year</Label>
+              <Label htmlFor="year" className="text-sm">Release Year</Label>
               <Input
                 id="year"
                 name="year"
@@ -458,7 +479,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Action Figure Product Line */}
             <div>
-              <Label htmlFor="series">Action Figure Product Line</Label>
+              <Label htmlFor="series" className="text-sm">Action Figure Product Line</Label>
               <Combobox
                 id="series"
                 name="series"
@@ -470,9 +491,21 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
+            {/* Product Line Number */}
+            <div>
+              <Label htmlFor="productLineNumber" className="text-sm">Product Line Number</Label>
+              <Input
+                id="productLineNumber"
+                name="productLineNumber"
+                value={formData.productLineNumber || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, productLineNumber: e.target.value }))}
+                placeholder="e.g., #45, 1234"
+              />
+            </div>
+
             {/* Manufacturer */}
             <div>
-              <Label htmlFor="manufacturer">Manufacturer</Label>
+              <Label htmlFor="manufacturer" className="text-sm">Manufacturer</Label>
               <Combobox
                 id="manufacturer"
                 name="manufacturer"
@@ -486,7 +519,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Category */}
             <div>
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category" className="text-sm">Category</Label>
               <Combobox
                 id="category"
                 name="category"
@@ -498,9 +531,63 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
+            {/* Size */}
+            <div>
+              <Label htmlFor="size" className="text-sm">Size</Label>
+              <Combobox
+                id="size"
+                name="size"
+                value={formData.size || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, size: value }))}
+                options={ensureValueInOptions(settings.sizeOptions, formData.size)}
+                placeholder='e.g., 3.75", 6", 12"'
+                emptyMessage="No size found. Type to add new."
+              />
+            </div>
+
+            {/* UPC/Barcode */}
+            <div>
+              <Label htmlFor="upc" className="text-sm">UPC/Barcode</Label>
+              <Input
+                id="upc"
+                name="upc"
+                value={formData.upc || ''}
+                onChange={handleChange}
+                placeholder="e.g., 630509123456"
+              />
+            </div>
+
+            {/* Packaging */}
+            <div>
+              <Label htmlFor="packaging" className="text-sm">Packaging</Label>
+              <Combobox
+                id="packaging"
+                name="packaging"
+                value={formData.packaging || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, packaging: value }))}
+                options={ensureValueInOptions(settings.packagingOptions, formData.packaging)}
+                placeholder="e.g., Individual, with Vehicle"
+                emptyMessage="No packaging found. Type to add new."
+              />
+            </div>
+
+                </div>
+              </div>
+            </div>
+            {/* END FIGURE DETAILS GROUP */}
+
+            {/* COLLECTOR DETAILS GROUP */}
+            <div className="md:col-span-2">
+              <div className="border-2 border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-orange-50 dark:bg-orange-900/20">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <span className="text-lg">📊</span>
+                  Collector Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
             {/* Condition */}
             <div>
-              <Label htmlFor="condition">Condition *</Label>
+              <Label htmlFor="condition" className="text-sm">Condition *</Label>
               <Select
                 id="condition"
                 name="condition"
@@ -635,7 +722,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Current Value */}
             <div>
-              <Label htmlFor="currentValue">Current Value ($)</Label>
+              <Label htmlFor="currentValue" className="text-sm">Current Value ($)</Label>
               <Input
                 id="currentValue"
                 name="currentValue"
@@ -651,7 +738,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
             {/* Purchase Date */}
             <div>
-              <Label htmlFor="purchaseDate">Purchase Date</Label>
+              <Label htmlFor="purchaseDate" className="text-sm">Purchase Date</Label>
               <Input
                 id="purchaseDate"
                 name="purchaseDate"
@@ -661,57 +748,9 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               />
             </div>
 
-            {/* Size */}
-            <div>
-              <Label htmlFor="size">Size</Label>
-              <Select
-                id="size"
-                name="size"
-                value={formData.size}
-                onChange={handleChange}
-              >
-                <option value="">Select size...</option>
-                {ensureValueInOptions(settings.sizeOptions, formData.size).map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Packaging */}
-            <div>
-              <Label htmlFor="packaging">Packaging</Label>
-              <Select
-                id="packaging"
-                name="packaging"
-                value={formData.packaging}
-                onChange={handleChange}
-              >
-                <option value="">Select packaging...</option>
-                {ensureValueInOptions(settings.packagingOptions, formData.packaging).map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* UPC/Barcode */}
-            <div>
-              <Label htmlFor="upc">UPC/Barcode</Label>
-              <Input
-                id="upc"
-                name="upc"
-                value={formData.upc || ''}
-                onChange={handleChange}
-                placeholder="e.g., 630509123456"
-              />
-            </div>
-
-            {/* Availability - Multi-select */}
+            {/* Marketplace Availability */}
             <div className="md:col-span-2">
-              <Label>Marketplace Availability</Label>
+              <Label className="text-sm">Marketplace Availability</Label>
               <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                 Mark this figure as available for sale or trade in the marketplace
               </p>
@@ -725,7 +764,9 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                         ...prev,
                         availability: checked
                           ? [...(prev.availability || []), 'for-sale']
-                          : (prev.availability || []).filter(a => a !== 'for-sale')
+                          : (prev.availability || []).filter(a => a !== 'for-sale'),
+                        // Auto-enable public when marking for sale
+                        isPublic: checked ? true : prev.isPublic
                       }));
                     }}
                   />
@@ -742,7 +783,9 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                         ...prev,
                         availability: checked
                           ? [...(prev.availability || []), 'for-trade']
-                          : (prev.availability || []).filter(a => a !== 'for-trade')
+                          : (prev.availability || []).filter(a => a !== 'for-trade'),
+                        // Auto-enable public when marking for trade
+                        isPublic: checked ? true : prev.isPublic
                       }));
                     }}
                   />
@@ -811,62 +854,74 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
               </div>
             )}
 
-            {/* Storage Location */}
+            {/* Storage Location - Grouped */}
             <div className="md:col-span-2">
-              <Label htmlFor="location">Storage Location</Label>
-              <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="e.g., Display Cabinet - Top Shelf"
-              />
-            </div>
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <span className="text-lg">📦</span>
+                  Storage Location
+                </h3>
 
-            {/* Storage Location/Display Photo */}
-            <div className="md:col-span-2">
-              <Label htmlFor="storagePhoto">Storage Location/Display Photo</Label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                Upload a photo showing where this figure is stored or displayed (private - not shown in public gallery)
-              </p>
-              <div className="flex gap-3 items-start">
-                {formData.storagePhoto && (
-                  <div className="relative w-32 h-32 border-2 border-gray-300 dark:border-gray-600 rounded overflow-hidden">
-                    <img
-                      src={formData.storagePhoto}
-                      alt="Storage location"
-                      className="w-full h-full object-cover"
+                <div className="space-y-3">
+                  {/* Location Name Field */}
+                  <div>
+                    <Label htmlFor="location" className="text-sm">Location Name</Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      placeholder="e.g., Display Cabinet - Top Shelf"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, storagePhoto: '' }))}
-                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
-                      title="Remove photo"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
                   </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    id="storagePhoto"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setFormData(prev => ({ ...prev, storagePhoto: reader.result as string }));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="cursor-pointer"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Accepted formats: JPG, PNG, GIF (Max 5MB)
-                  </p>
+
+                  {/* Display Photo Field */}
+                  <div>
+                    <Label htmlFor="storagePhoto" className="text-sm">Display Photo</Label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Upload a photo showing where this figure is stored or displayed (private - not shown in public gallery)
+                    </p>
+                    <div className="flex gap-3 items-start">
+                      {formData.storagePhoto && (
+                        <div className="relative w-32 h-32 border-2 border-gray-300 dark:border-gray-600 rounded overflow-hidden">
+                          <img
+                            src={formData.storagePhoto}
+                            alt="Storage location"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, storagePhoto: '' }))}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                            title="Remove photo"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <Input
+                          id="storagePhoto"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setFormData(prev => ({ ...prev, storagePhoto: reader.result as string }));
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="cursor-pointer"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Accepted formats: JPG, PNG, GIF (Max 5MB)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -933,96 +988,207 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
             {/* Dynamic Custom Fields */}
             {settings.customFields.length > 0 && (
               <>
-                <div className="md:col-span-2 border-t pt-4 mt-2">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Custom Fields
-                  </h3>
-                </div>
-                {settings.customFields.map((field) => (
-                  <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                    <Label htmlFor={`custom-${field.id}`}>
-                      {field.name}
-                      {field.required && <span className="text-red-600 ml-1">*</span>}
-                    </Label>
-                    {field.type === 'text' && (
-                      <Input
-                        id={`custom-${field.id}`}
-                        value={formData.customFields?.[field.id] || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customFields: { ...prev.customFields, [field.id]: e.target.value }
-                          }))
-                        }
-                        required={field.required}
-                      />
-                    )}
-                    {field.type === 'textarea' && (
-                      <Textarea
-                        id={`custom-${field.id}`}
-                        value={formData.customFields?.[field.id] || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customFields: { ...prev.customFields, [field.id]: e.target.value }
-                          }))
-                        }
-                        rows={3}
-                        required={field.required}
-                      />
-                    )}
-                    {field.type === 'number' && (
-                      <Input
-                        id={`custom-${field.id}`}
-                        type="number"
-                        value={formData.customFields?.[field.id] || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customFields: { ...prev.customFields, [field.id]: parseFloat(e.target.value) || '' }
-                          }))
-                        }
-                        required={field.required}
-                      />
-                    )}
-                    {field.type === 'date' && (
-                      <Input
-                        id={`custom-${field.id}`}
-                        type="date"
-                        value={formData.customFields?.[field.id] || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customFields: { ...prev.customFields, [field.id]: e.target.value }
-                          }))
-                        }
-                        required={field.required}
-                      />
-                    )}
-                    {field.type === 'select' && field.options && (
-                      <Select
-                        id={`custom-${field.id}`}
-                        value={formData.customFields?.[field.id] || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customFields: { ...prev.customFields, [field.id]: e.target.value }
-                          }))
-                        }
-                        required={field.required}
-                      >
-                        <option value="">Select {field.name}...</option>
-                        {ensureValueInOptions(field.options, String(formData.customFields?.[field.id] || '')).map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
+                {/* Personal Custom Fields */}
+                {settings.customFields.filter(f => !f.scope || f.scope === 'user').length > 0 && (
+                  <div className="md:col-span-2">
+                    <div className="border-2 border-blue-300 dark:border-blue-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <span className="text-lg">👤</span>
+                        Personal Custom Fields
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {settings.customFields.filter(f => !f.scope || f.scope === 'user').map((field) => (
+                          <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                            <Label htmlFor={`custom-${field.id}`} className="text-sm">
+                              {field.name}
+                              {field.required && <span className="text-red-600 ml-1">*</span>}
+                            </Label>
+                            {field.type === 'text' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'textarea' && (
+                              <Textarea
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                rows={3}
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'number' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                type="number"
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: parseFloat(e.target.value) || '' }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'date' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                type="date"
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'select' && field.options && (
+                              <Select
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              >
+                                <option value="">Select {field.name}...</option>
+                                {ensureValueInOptions(field.options, String(formData.customFields?.[field.id] || '')).map((option) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                          </div>
                         ))}
-                      </Select>
-                    )}
+                      </div>
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {/* Global Custom Fields */}
+                {settings.customFields.filter(f => f.scope === 'global').length > 0 && (
+                  <div className="md:col-span-2">
+                    <div className="border-2 border-green-300 dark:border-green-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <span className="text-lg">🌐</span>
+                        Global Custom Fields
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {settings.customFields.filter(f => f.scope === 'global').map((field) => (
+                          <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                            <Label htmlFor={`custom-${field.id}`} className="text-sm">
+                              {field.name}
+                              {field.required && <span className="text-red-600 ml-1">*</span>}
+                            </Label>
+                            {field.type === 'text' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'textarea' && (
+                              <Textarea
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                rows={3}
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'number' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                type="number"
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: parseFloat(e.target.value) || '' }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'date' && (
+                              <Input
+                                id={`custom-${field.id}`}
+                                type="date"
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'select' && field.options && (
+                              <Select
+                                id={`custom-${field.id}`}
+                                value={formData.customFields?.[field.id] || ''}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    customFields: { ...prev.customFields, [field.id]: e.target.value }
+                                  }))
+                                }
+                                required={field.required}
+                              >
+                                <option value="">Select {field.name}...</option>
+                                {ensureValueInOptions(field.options, String(formData.customFields?.[field.id] || '')).map((option) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
+
+                </div>
+              </div>
+            </div>
+            {/* END COLLECTOR DETAILS GROUP */}
+
           </div>
 
           <DialogFooter>

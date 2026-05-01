@@ -6,6 +6,7 @@ export interface CustomField {
   type: CustomFieldType;
   options?: string[]; // For select type
   required?: boolean;
+  scope?: 'user' | 'global'; // 'user' = personal to user, 'global' = available to all users (default: 'user')
 }
 
 export interface CustomFormula {
@@ -182,6 +183,7 @@ export interface ActionFigure {
   // New fields
   size?: string; // 4", 7", 12", etc.
   productLine?: string;
+  productLineNumber?: string; // Item number within product line (e.g., "#45", "1234")
   subProductLine?: string;
   packaging?: string; // Individual, with Vehicle, Multi-pack
   upc?: string; // UPC/EAN barcode for product identification

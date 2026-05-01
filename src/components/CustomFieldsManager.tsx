@@ -19,7 +19,8 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
   const [newField, setNewField] = useState<Omit<CustomField, 'id'>>({
     name: '',
     type: 'text',
-    required: false
+    required: false,
+    scope: 'user'
   });
   const [editField, setEditField] = useState<CustomField | null>(null);
   const [selectOptions, setSelectOptions] = useState<string>('');
@@ -316,6 +317,21 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
             </Select>
           </div>
 
+          <div>
+            <Label htmlFor="fieldScope">Field Scope</Label>
+            <Select
+              id="fieldScope"
+              value={newField.scope || 'user'}
+              onChange={(e) => setNewField({ ...newField, scope: e.target.value as 'user' | 'global' })}
+            >
+              <option value="user">👤 Personal (only you can see)</option>
+              <option value="global">🌐 Global (available to all users)</option>
+            </Select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Personal fields are private to you. Global fields can be seen by all users.
+            </p>
+          </div>
+
           {newField.type === 'select' && (
             <div>
               <Label htmlFor="selectOptions">Dropdown Options *</Label>
@@ -350,7 +366,7 @@ export function CustomFieldsManager({ fields, onFieldsChange }: CustomFieldsMana
             <Button
               onClick={() => {
                 setIsAdding(false);
-                setNewField({ name: '', type: 'text', required: false });
+                setNewField({ name: '', type: 'text', required: false, scope: 'user' });
                 setSelectOptions('');
               }}
               variant="outline"

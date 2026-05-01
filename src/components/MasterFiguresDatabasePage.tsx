@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MasterFiguresService } from '../utils/masterFigures';
 import type { User } from '../types/user';
-import { Database, Plus, Search, Edit, Trash2, Package, ArrowUpDown, ImageOff, Upload, GitMerge } from 'lucide-react';
+import { Database, Plus, Search, Edit, Trash2, Package, ArrowUpDown, ImageOff, Upload, GitMerge, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Combobox } from './ui/combobox';
@@ -12,6 +12,7 @@ import { toastManager } from '../utils/toastManager';
 import type { AppSettings } from '../types/index';
 import { parseCSV, type ParseResult } from '../utils/csvParser';
 import { DuplicateDetectionPage } from './DuplicateDetectionPage';
+import { DataCleanupDialog } from './DataCleanupDialog';
 
 interface MasterFiguresDatabasePageProps {
   currentUser: User;
@@ -34,12 +35,14 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
   const [parsedImportData, setParsedImportData] = useState<ParseResult | null>(null);
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [showDuplicateDetection, setShowDuplicateDetection] = useState(false);
+  const [showDataCleanup, setShowDataCleanup] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     version: '',
     year: '',
     franchise: '',
     series: '',
+    productLineNumber: '',
     subProductLine: '',
     manufacturer: '',
     size: '',
@@ -87,6 +90,7 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
       year: '',
       franchise: '',
       series: '',
+      productLineNumber: '',
       subProductLine: '',
       manufacturer: '',
       size: '',
@@ -103,6 +107,7 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
       year: figure.year?.toString() || '',
       franchise: figure.franchise || '',
       series: figure.series || '',
+      productLineNumber: figure.productLineNumber || '',
       subProductLine: figure.subProductLine || '',
       manufacturer: figure.manufacturer || '',
       size: figure.size || '',
@@ -124,6 +129,7 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
         year: formData.year ? parseInt(formData.year) : undefined,
         franchise: formData.franchise.trim() || undefined,
         series: formData.series.trim() || undefined,
+        productLineNumber: formData.productLineNumber.trim() || undefined,
         subProductLine: formData.subProductLine.trim() || undefined,
         manufacturer: formData.manufacturer.trim() || undefined,
         size: formData.size.trim() || undefined,
@@ -214,6 +220,7 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
           category: pf.category || 'Action Figure',
           size: pf.size,
           productLine: pf.series, // Use series as productLine for compatibility
+          productLineNumber: pf.productLineNumber,
           subProductLine: pf.subProductLine,
           packaging: pf.packaging,
           source: 'import' as const,
@@ -319,13 +326,22 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
               Import CSV
             </Button>
             {currentUser.role === 'management' && (
-              <Button
-                onClick={() => setShowDuplicateDetection(true)}
-                variant="outline"
-              >
-                <GitMerge className="h-4 w-4 mr-2" />
-                Find Duplicates
-              </Button>
+              <>
+                <Button
+                  onClick={() => setShowDuplicateDetection(true)}
+                  variant="outline"
+                >
+                  <GitMerge className="h-4 w-4 mr-2" />
+                  Find Duplicates
+                </Button>
+                <Button
+                  onClick={() => setShowDataCleanup(true)}
+                  variant="outline"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Clean Up Data
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -582,6 +598,17 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
 
               <div>
                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Product Line Number
+                </Label>
+                <Input
+                  value={formData.productLineNumber || ''}
+                  onChange={(e) => setFormData({ ...formData, productLineNumber: e.target.value })}
+                  placeholder="e.g., #45, 1234"
+                />
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Sub-Product Line
                 </Label>
                 <Combobox
@@ -830,9 +857,21 @@ export function MasterFiguresDatabasePage({ currentUser }: MasterFiguresDatabase
       {/* Duplicate Detection Dialog */}
       {showDuplicateDetection && (
         <DuplicateDetectionPage
+          currentUser={currentUser}
           onClose={() => {
             setShowDuplicateDetection(false);
             // Reload figures after closing
+            loadMasterFigures();
+          }}
+        />
+      )}
+
+      {/* Data Cleanup Dialog */}
+      {showDataCleanup && (
+        <DataCleanupDialog
+          onClose={() => setShowDataCleanup(false)}
+          onCleanupComplete={() => {
+            // Reload figures after cleanup
             loadMasterFigures();
           }}
         />

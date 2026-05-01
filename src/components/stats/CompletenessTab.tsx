@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react';
 import type { ActionFigure, SetCompletion } from '../../types/index';
 import { SeriesSetsService } from '../../utils/seriesSets';
 import { AuthService } from '../../utils/auth';
-import { CheckCircle, Circle, ChevronDown, ChevronUp, Target, Plus, Filter } from 'lucide-react';
+import { WantListService } from '../../utils/wantList';
+import { CheckCircle, Circle, ChevronDown, ChevronUp, Target, Plus, Filter, Trash2, Heart } from 'lucide-react';
 import { Select } from '../ui/select';
 import { SeriesCompletionView } from '../SeriesCompletionView';
+import { CustomSetDialog } from '../CustomSetDialog';
+import { Button } from '../ui/button';
+import { toastManager } from '../../utils/toastManager';
 
 interface CompletenessTabProps {
   figures: ActionFigure[];
@@ -16,11 +20,13 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
   const [seriesFilter, setSeriesFilter] = useState<string>('all');
   const [manufacturerFilter, setManufacturerFilter] = useState<string>('all');
   const [showCompleteOnly, setShowCompleteOnly] = useState(false);
+  const [customSetDialogOpen, setCustomSetDialogOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const completionData = useMemo(() => {
     if (!currentUser) return [];
     return SeriesSetsService.getCompletionData(currentUser.id, figures);
-  }, [figures, currentUser]);
+  }, [figures, currentUser, refreshKey]);
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -62,6 +68,69 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
       }
       return newSet;
     });
+  };
+
+  const handleCreateCustomSet = (setData: {
+    name: string;
+    series: string;
+    manufacturer?: string;
+    releaseYear?: number;
+    figureNames: string[];
+  }) => {
+    if (!currentUser) return;
+
+    SeriesSetsService.addCustomSet(currentUser.id, {
+      name: setData.name,
+      series: setData.series,
+      manufacturer: setData.manufacturer,
+      releaseYear: setData.releaseYear,
+      totalCount: setData.figureNames.length,
+      figureNames: setData.figureNames,
+    });
+
+    toastManager.success(`Custom set "${setData.name}" created!`);
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleDeleteCustomSet = (setId: string, setName: string) => {
+    if (!currentUser) return;
+
+    if (!confirm(`Delete custom set "${setName}"?`)) return;
+
+    const success = SeriesSetsService.deleteCustomSet(currentUser.id, setId);
+    if (success) {
+      toastManager.success(`Custom set "${setName}" deleted`);
+      setRefreshKey(prev => prev + 1);
+    } else {
+      toastManager.error('Failed to delete custom set');
+    }
+  };
+
+  const handleAddMissingToWantList = (completion: SetCompletion) => {
+    if (!currentUser) return;
+
+    if (completion.missingFigures.length === 0) {
+      toastManager.info('This set is already complete!');
+      return;
+    }
+
+    const addedCount = WantListService.autoPopulateFromSets(
+      currentUser.id,
+      completion.missingFigures,
+      {
+        name: completion.set.name,
+        series: completion.set.series,
+        manufacturer: completion.set.manufacturer,
+      }
+    );
+
+    if (addedCount > 0) {
+      toastManager.success(
+        `Added ${addedCount} figure${addedCount !== 1 ? 's' : ''} to your want list!`
+      );
+    } else {
+      toastManager.info('All missing figures are already on your want list');
+    }
   };
 
   const completedSetsCount = completionData.filter(c => c.completionPercentage === 100).length;
@@ -204,9 +273,16 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
                       )}
                     </div>
                     <div className="text-left">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                        {completion.set.name}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          {completion.set.name}
+                        </h3>
+                        {completion.set.isCustom && (
+                          <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded-full">
+                            Custom
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>{completion.set.series}</span>
                         {completion.set.manufacturer && (
@@ -238,6 +314,18 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
                         {completion.ownedCount} / {completion.set.totalCount}
                       </div>
                     </div>
+                    {completion.set.isCustom && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCustomSet(completion.set.id, completion.set.name);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950 rounded transition-colors"
+                        title="Delete custom set"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <div>
                       {isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-400" />
@@ -290,10 +378,20 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
                       {/* Missing Figures */}
                       {completion.missingFigures.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                            <Circle className="w-4 h-4 text-gray-400" />
-                            Missing ({completion.missingFigures.length})
-                          </h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                              <Circle className="w-4 h-4 text-gray-400" />
+                              Missing ({completion.missingFigures.length})
+                            </h4>
+                            <button
+                              onClick={() => handleAddMissingToWantList(completion)}
+                              className="text-xs flex items-center gap-1 px-2 py-1 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                              title="Add all missing figures to want list"
+                            >
+                              <Heart className="w-3 h-3" />
+                              Add to Want List
+                            </button>
+                          </div>
                           <ul className="space-y-2">
                             {completion.missingFigures.map((figureName, index) => (
                               <li
@@ -316,20 +414,34 @@ export function CompletenessTab({ figures }: CompletenessTabProps) {
         </div>
       )}
 
-      {/* Custom Set Note */}
+      {/* Create Custom Set */}
       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              Want to track custom sets?
-            </h4>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Custom set creation feature coming soon! You'll be able to create and track your own custom series and sets.
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-3">
+            <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                Create Custom Sets
+              </h4>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Track your own custom series and sets
+              </p>
+            </div>
           </div>
+          <Button onClick={() => setCustomSetDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Set
+          </Button>
         </div>
       </div>
+
+      {/* Custom Set Dialog */}
+      <CustomSetDialog
+        isOpen={customSetDialogOpen}
+        onClose={() => setCustomSetDialogOpen(false)}
+        onCreateSet={handleCreateCustomSet}
+        availableFigures={figures}
+      />
     </div>
   );
 }

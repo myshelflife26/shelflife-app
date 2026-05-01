@@ -30,6 +30,7 @@ export interface MasterFigure {
   category: string;
   size?: string;
   productLine?: string; // Primary field
+  productLineNumber?: string; // Item number within product line (e.g., "#45", "1234")
   subProductLine?: string; // Primary field
   packaging?: string;
   upc?: string; // UPC/EAN barcode
@@ -305,13 +306,19 @@ export class MasterFiguresService {
   static async search(searchTerm: string): Promise<MasterFigure[]> {
     try {
       const allFigures = await this.getAll();
+      console.log('Total figures in database:', allFigures.length);
       const term = searchTerm.toLowerCase();
 
-      return allFigures.filter(figure =>
+      const results = allFigures.filter(figure =>
         figure.name.toLowerCase().includes(term) ||
-        figure.manufacturer.toLowerCase().includes(term) ||
-        figure.series.toLowerCase().includes(term)
+        (figure.manufacturer && figure.manufacturer.toLowerCase().includes(term)) ||
+        (figure.series && figure.series.toLowerCase().includes(term)) ||
+        (figure.productLine && figure.productLine.toLowerCase().includes(term)) ||
+        (figure.subProductLine && figure.subProductLine.toLowerCase().includes(term))
       );
+
+      console.log('Filtered figures matching', term, ':', results.length);
+      return results;
     } catch (error) {
       console.error('Failed to search master figures:', error);
       return [];
@@ -336,13 +343,15 @@ export class MasterFiguresService {
    * @param keepFigureId - ID of figure to keep (usually older one)
    * @param deleteFigureId - ID of figure to delete (duplicate)
    * @param mergedData - Field-by-field selections for the merged figure
-   * @returns Object with success status and count of updated user figures
+   * @param userUpdateStrategy - How to update user collections: 'soft' (only empty fields) or 'full' (all fields)
+   * @returns Object with success status, count of updated user figures, count of notified users, and count of consolidated duplicates
    */
   static async mergeFigures(
     keepFigureId: string,
     deleteFigureId: string,
-    mergedData: Partial<MasterFigure>
-  ): Promise<{ success: boolean; updatedUserFigures: number; error?: string }> {
+    mergedData: Partial<MasterFigure>,
+    userUpdateStrategy: 'soft' | 'full' = 'soft'
+  ): Promise<{ success: boolean; updatedUserFigures: number; notifiedUsers: number; consolidatedDuplicates: number; error?: string }> {
     try {
       // Get both figures to validate they exist
       const keepFigure = await this.getById(keepFigureId);
@@ -352,6 +361,8 @@ export class MasterFiguresService {
         return {
           success: false,
           updatedUserFigures: 0,
+          notifiedUsers: 0,
+          consolidatedDuplicates: 0,
           error: 'One or both figures not found'
         };
       }
@@ -362,6 +373,8 @@ export class MasterFiguresService {
         return {
           success: false,
           updatedUserFigures: 0,
+          notifiedUsers: 0,
+          consolidatedDuplicates: 0,
           error: 'Failed to update keep figure'
         };
       }
@@ -369,6 +382,8 @@ export class MasterFiguresService {
       // Step 2: Find and update user figures that reference the deleted figure
       // Since user figures don't have masterFigureId, we match by data fields
       let updatedCount = 0;
+      const affectedUsers = new Set<string>(); // Track unique user IDs
+
       try {
         const figuresCollection = collection(db, 'figures');
         const allUserFigures = await getDocs(figuresCollection);
@@ -383,13 +398,50 @@ export class MasterFiguresService {
           const versionMatch = !userFig.version || userFig.version === deleteFigure.version;
 
           if (nameMatch && mfgMatch && yearMatch && versionMatch) {
-            // Add merge metadata to user figure
-            await updateDoc(docSnapshot.ref, {
+            // Build update object based on strategy
+            const updates: any = {
               'metadata.mergedFromMasterFigure': deleteFigureId,
               'metadata.mergedToMasterFigure': keepFigureId,
               'metadata.mergedAt': Date.now()
-            });
+            };
+
+            // Fields that should NEVER be updated (user-specific data)
+            const preservedFields = [
+              'userId', 'createdAt', 'updatedAt', 'id',
+              'condition', 'location', 'purchasePrice', 'currentValue',
+              'purchaseDate', 'notes', 'tags', 'images', 'mainImageIndex',
+              'isWishlist', 'accessories', 'metadata'
+            ];
+
+            // Apply update strategy
+            if (userUpdateStrategy === 'full') {
+              // Full update: Copy all non-preserved fields from merged data
+              for (const key in mergedData) {
+                if (!preservedFields.includes(key)) {
+                  updates[key] = (mergedData as any)[key];
+                }
+              }
+            } else {
+              // Soft update: Only update empty fields
+              for (const key in mergedData) {
+                if (!preservedFields.includes(key)) {
+                  const userValue = (userFig as any)[key];
+                  const isEmpty = userValue === undefined || userValue === null || userValue === '';
+                  if (isEmpty) {
+                    updates[key] = (mergedData as any)[key];
+                  }
+                }
+              }
+            }
+
+            // Apply the update
+            await updateDoc(docSnapshot.ref, this.cleanObject(updates));
             updatedCount++;
+
+            // Track the user for notifications
+            if (userFig.userId) {
+              affectedUsers.add(userFig.userId);
+            }
           }
         }
       } catch (error) {
@@ -397,25 +449,120 @@ export class MasterFiguresService {
         // Continue with deletion even if user figure updates fail
       }
 
-      // Step 3: Delete the duplicate figure
+      // Step 2.5: Detect and merge duplicate user figures
+      // After updating user figures to point to the merged master, check if any user now has duplicates
+      let consolidatedCount = 0;
+      try {
+        for (const userId of affectedUsers) {
+          // Get all figures for this user
+          const userFiguresQuery = query(
+            collection(db, 'figures'),
+            where('userId', '==', userId)
+          );
+          const userFiguresSnapshot = await getDocs(userFiguresQuery);
+          const userFigures = userFiguresSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ref: doc.ref,
+            ...doc.data()
+          }));
+
+          // Group figures by name+manufacturer+year+version to find duplicates
+          const figureGroups = new Map<string, any[]>();
+          for (const fig of userFigures) {
+            const key = `${fig.name?.toLowerCase()}-${fig.manufacturer?.toLowerCase()}-${fig.year || 'null'}-${fig.version?.toLowerCase() || 'null'}`;
+            if (!figureGroups.has(key)) {
+              figureGroups.set(key, []);
+            }
+            figureGroups.get(key)!.push(fig);
+          }
+
+          // For each group with duplicates, keep one and delete the rest
+          for (const [key, duplicates] of figureGroups.entries()) {
+            if (duplicates.length > 1) {
+              // Sort by completeness (most fields populated), then by oldest
+              duplicates.sort((a, b) => {
+                // Count populated fields
+                const countFields = (fig: any) => {
+                  const fields = ['name', 'manufacturer', 'year', 'version', 'productLine', 'subProductLine', 'category', 'size', 'packaging', 'imageUrl', 'notes', 'condition', 'location'];
+                  return fields.filter(f => fig[f] !== undefined && fig[f] !== null && fig[f] !== '').length;
+                };
+                const aCount = countFields(a);
+                const bCount = countFields(b);
+                if (aCount !== bCount) return bCount - aCount; // More complete first
+                return (a.createdAt || 0) - (b.createdAt || 0); // Older first
+              });
+
+              // Keep the first one (most complete and oldest), delete the rest
+              const keepFig = duplicates[0];
+              for (let i = 1; i < duplicates.length; i++) {
+                const deleteFig = duplicates[i];
+                await deleteDoc(deleteFig.ref);
+                consolidatedCount++;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error consolidating duplicate user figures:', error);
+        // Continue even if consolidation fails
+      }
+
+      // Step 3: Create notifications for affected users
+      let notifiedCount = 0;
+      try {
+        const notificationsCollection = collection(db, 'notifications');
+        const notificationMessage = userUpdateStrategy === 'full'
+          ? `A figure in your collection "${deleteFigure.name}" was merged with "${keepFigure.name}". Your figure data has been updated to match the merged record.`
+          : `A figure in your collection "${deleteFigure.name}" was merged with "${keepFigure.name}". Empty fields in your figure have been updated with new data.`;
+
+        for (const userId of affectedUsers) {
+          await addDoc(notificationsCollection, {
+            userId,
+            type: 'figure_merge',
+            title: 'Figure Merged in Database',
+            message: notificationMessage,
+            read: false,
+            createdAt: Date.now(),
+            data: {
+              deletedFigureId: deleteFigureId,
+              deletedFigureName: deleteFigure.name,
+              keptFigureId: keepFigureId,
+              keptFigureName: keepFigure.name,
+              updateStrategy: userUpdateStrategy
+            }
+          });
+          notifiedCount++;
+        }
+      } catch (error) {
+        console.error('Error creating notifications:', error);
+        // Continue even if notifications fail
+      }
+
+      // Step 4: Delete the duplicate figure
       const deleteSuccess = await this.delete(deleteFigureId);
       if (!deleteSuccess) {
         return {
           success: false,
           updatedUserFigures: updatedCount,
+          notifiedUsers: notifiedCount,
+          consolidatedDuplicates: consolidatedCount,
           error: 'Failed to delete duplicate figure'
         };
       }
 
       return {
         success: true,
-        updatedUserFigures: updatedCount
+        updatedUserFigures: updatedCount,
+        notifiedUsers: notifiedCount,
+        consolidatedDuplicates: consolidatedCount
       };
     } catch (error) {
       console.error('Failed to merge figures:', error);
       return {
         success: false,
         updatedUserFigures: 0,
+        notifiedUsers: 0,
+        consolidatedDuplicates: 0,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

@@ -226,10 +226,7 @@ export class FirebaseAuthService {
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        console.log('[AUTH_STATE] Auth state changed, Firebase user:', firebaseUser.uid);
-
         const user = await this.getUserById(firebaseUser.uid);
-        console.log('[AUTH_STATE] Got user from Firestore:', user?.username);
 
         // Migrate localStorage settings to Firestore if user exists
         if (user) {

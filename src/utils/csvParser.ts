@@ -8,6 +8,7 @@ export interface ParsedFigure {
   manufacturer: string;
   franchise?: string;
   series?: string;
+  productLineNumber?: string;
   year?: number;
   version?: string;
   size?: string;
@@ -114,6 +115,17 @@ function normalizeHeader(header: string): string {
     'packaging': 'packaging',
     'package': 'packaging',
 
+    'productlinenumber': 'productLineNumber',
+    'productlinenumb': 'productLineNumber',
+    'productlineno': 'productLineNumber',
+    'linenumber': 'productLineNumber',
+    'itemnumber': 'productLineNumber',
+    'itemno': 'productLineNumber',
+    'productnumber': 'productLineNumber',
+    'productno': 'productLineNumber',
+    'number': 'productLineNumber',
+    'no': 'productLineNumber',
+
     'subproductline': 'subProductLine',
     'subline': 'subProductLine',
     'wave': 'subProductLine',
@@ -206,6 +218,13 @@ export function parseCSV(data: string): ParseResult {
             figure.version = value;
             break;
           case 'size':
+            // Detect if size field contains multiple values separated by commas
+            if (value.includes(',')) {
+              result.warnings.push(
+                `Line ${lineNumber}: Size field "${value}" contains commas. ` +
+                `This may indicate improperly formatted CSV. Consider wrapping multi-value fields in quotes.`
+              );
+            }
             figure.size = value;
             break;
           case 'category':

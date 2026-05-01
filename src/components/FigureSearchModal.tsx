@@ -31,8 +31,8 @@ export function FigureSearchModal({ open, onClose, onSelect, currentUser }: Figu
     setError(null);
 
     try {
-      // Search community database only (no eBay)
-      const searchResults = FigureSearchService.searchCommunityOnly(query);
+      // Search master figures database and community database (includes ALL duplicates)
+      const searchResults = await FigureSearchService.searchCommunityOnly(query);
       setResults(searchResults);
 
       if (searchResults.length === 0) {
@@ -204,6 +204,7 @@ export function FigureSearchModal({ open, onClose, onSelect, currentUser }: Figu
                     <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                       {result.manufacturer && <p>Manufacturer: {result.manufacturer}</p>}
                       {result.year && <p>Year: {result.year}</p>}
+                      {result.version && <p>Version: {result.version}</p>}
                       {result.productLine && <p>Line: {result.productLine}</p>}
                       {result.subProductLine && <p>Sub-Line: {result.subProductLine}</p>}
                       {result.condition && <p>Condition: {result.condition}</p>}

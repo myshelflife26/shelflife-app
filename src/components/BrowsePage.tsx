@@ -8,19 +8,22 @@ import { BlockingService } from '../utils/blocking';
 import { ReportingService } from '../utils/reporting';
 import type { ReportCategory } from '../utils/reporting';
 import { toastManager } from '../utils/toastManager';
-import type { ActionFigure } from '../types/index';
+import type { ActionFigure, Filters } from '../types/index';
 import type { User, ReactionType } from '../types/user';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign } from 'lucide-react';
+import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign, Shuffle, Bookmark, BookmarkCheck } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
 import { TradeRequestDialog } from './TradeRequestDialog';
 import { UserRatingBadge } from './UserRatingBadge';
+import { FilterSheet } from './FilterSheet';
+import { ResponseTimeBadge } from './ResponseTimeBadge';
+import { BookmarksService } from '../utils/bookmarks';
 
 interface BrowsePageProps {
   currentUser: User;
@@ -29,11 +32,32 @@ interface BrowsePageProps {
   onClearInitialUserId?: () => void;
 }
 
-type ViewMode = 'all' | 'users' | 'recent' | 'admiring';
+type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks';
 
 export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<Filters>({
+    search: '',
+    manufacturers: [],
+    conditions: [],
+    priceRange: [0, 10000],
+    dateRange: ['', ''],
+    categories: [],
+    sizes: [],
+    packaging: [],
+    productLines: [],
+    locations: [],
+    years: [],
+    versions: [],
+    upc: undefined,
+    isComplete: 'all',
+    completenessRange: undefined,
+    saleTradeStatuses: [],
+    customFields: {},
+    showFavoritesOnly: false,
+    tags: [],
+  });
   const [selectedFigure, setSelectedFigure] = useState<(ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }) | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageForm, setMessageForm] = useState({
@@ -55,6 +79,13 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
   const [admirerCounts, setAdmirerCounts] = useState<Map<string, number>>(new Map());
   const [tradeRequestOpen, setTradeRequestOpen] = useState(false);
   const [tradeRequestMode, setTradeRequestMode] = useState<'trade' | 'sale'>('trade');
+  const [bookmarkedFigureIds, setBookmarkedFigureIds] = useState<Set<string>>(new Set());
+
+  // Load bookmarks on mount
+  useEffect(() => {
+    const bookmarks = BookmarksService.getBookmarkedFigureIds();
+    setBookmarkedFigureIds(new Set(bookmarks));
+  }, []);
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -158,22 +189,240 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
     return allPublicFigures.slice(-20).reverse(); // Most recent first
   }, [allPublicFigures]);
 
-  // Filter figures based on search
-  const filteredFigures = useMemo(() => {
-    let figures = viewMode === 'recent' ? recentFigures : allPublicFigures;
+  // Extract unique values for filters
+  const uniqueManufacturers = useMemo(() => {
+    const manufacturers = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.manufacturer) manufacturers.add(fig.manufacturer);
+    });
+    return Array.from(manufacturers).sort();
+  }, [allPublicFigures]);
 
+  const uniqueCategories = useMemo(() => {
+    const categories = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.category) categories.add(fig.category);
+    });
+    return Array.from(categories).sort();
+  }, [allPublicFigures]);
+
+  const uniqueConditions = useMemo(() => {
+    const conditions = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.condition) conditions.add(fig.condition);
+    });
+    return Array.from(conditions).sort();
+  }, [allPublicFigures]);
+
+  const uniqueSizes = useMemo(() => {
+    const sizes = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.size) sizes.add(fig.size);
+    });
+    return Array.from(sizes).sort();
+  }, [allPublicFigures]);
+
+  const uniquePackaging = useMemo(() => {
+    const packaging = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.packaging) packaging.add(fig.packaging);
+    });
+    return Array.from(packaging).sort();
+  }, [allPublicFigures]);
+
+  const uniqueProductLines = useMemo(() => {
+    const productLines = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.productLine) productLines.add(fig.productLine);
+    });
+    return Array.from(productLines).sort();
+  }, [allPublicFigures]);
+
+  const uniqueLocations = useMemo(() => {
+    const locations = new Set<string>();
+    allPublicFigures.forEach(fig => {
+      if (fig.location) locations.add(fig.location);
+    });
+    return Array.from(locations).sort();
+  }, [allPublicFigures]);
+
+  // Filter figures based on search and filters
+  const filteredFigures = useMemo(() => {
+    let figures = viewMode === 'recent'
+      ? recentFigures
+      : viewMode === 'bookmarks'
+      ? allPublicFigures.filter(fig => bookmarkedFigureIds.has(fig.id))
+      : allPublicFigures;
+
+    // Apply search query (advanced search)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      figures = figures.filter(figure =>
-        figure.name.toLowerCase().includes(query) ||
-        figure.manufacturer?.toLowerCase().includes(query) ||
-        figure.category?.toLowerCase().includes(query) ||
-        figure.ownerName.toLowerCase().includes(query)
+      figures = figures.filter(figure => {
+        // Basic fields
+        if (figure.name.toLowerCase().includes(query)) return true;
+        if (figure.manufacturer?.toLowerCase().includes(query)) return true;
+        if (figure.category?.toLowerCase().includes(query)) return true;
+        if (figure.ownerName.toLowerCase().includes(query)) return true;
+
+        // Notes content
+        if (figure.notes?.toLowerCase().includes(query)) return true;
+
+        // Custom fields
+        if (figure.customFields) {
+          const customFieldValues = Object.values(figure.customFields)
+            .map(v => String(v).toLowerCase());
+          if (customFieldValues.some(v => v.includes(query))) return true;
+        }
+
+        // Accessories
+        if (figure.accessories) {
+          const accessoryNames = figure.accessories
+            .map(acc => acc.name.toLowerCase());
+          if (accessoryNames.some(name => name.includes(query))) return true;
+        }
+
+        // Additional searchable fields
+        if (figure.version?.toLowerCase().includes(query)) return true;
+        if (figure.productLine?.toLowerCase().includes(query)) return true;
+        if (figure.series?.toLowerCase().includes(query)) return true;
+        if (figure.franchise?.toLowerCase().includes(query)) return true;
+        if (figure.upc?.toLowerCase().includes(query)) return true;
+
+        return false;
+      });
+    }
+
+    // Apply filters
+    if (filters.manufacturers.length > 0) {
+      figures = figures.filter(fig =>
+        fig.manufacturer && filters.manufacturers.includes(fig.manufacturer)
       );
     }
 
+    if (filters.categories.length > 0) {
+      figures = figures.filter(fig =>
+        fig.category && filters.categories.includes(fig.category)
+      );
+    }
+
+    if (filters.conditions.length > 0) {
+      figures = figures.filter(fig =>
+        fig.condition && filters.conditions.includes(fig.condition)
+      );
+    }
+
+    if (filters.sizes.length > 0) {
+      figures = figures.filter(fig =>
+        fig.size && filters.sizes.includes(fig.size)
+      );
+    }
+
+    if (filters.packaging.length > 0) {
+      figures = figures.filter(fig =>
+        fig.packaging && filters.packaging.includes(fig.packaging)
+      );
+    }
+
+    if (filters.productLines.length > 0) {
+      figures = figures.filter(fig =>
+        fig.productLine && filters.productLines.includes(fig.productLine)
+      );
+    }
+
+    if (filters.locations.length > 0) {
+      figures = figures.filter(fig =>
+        fig.location && filters.locations.includes(fig.location)
+      );
+    }
+
+    if (filters.years.length > 0) {
+      figures = figures.filter(fig =>
+        fig.year && filters.years.includes(fig.year)
+      );
+    }
+
+    if (filters.versions.length > 0) {
+      figures = figures.filter(fig =>
+        fig.version && filters.versions.includes(fig.version)
+      );
+    }
+
+    if (filters.tags.length > 0) {
+      figures = figures.filter(fig =>
+        fig.tags && fig.tags.some(tag => filters.tags.includes(tag))
+      );
+    }
+
+    // Price range filter
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000) {
+      figures = figures.filter(fig =>
+        fig.currentValue >= filters.priceRange[0] &&
+        fig.currentValue <= filters.priceRange[1]
+      );
+    }
+
+    // Date range filter
+    if (filters.dateRange[0] || filters.dateRange[1]) {
+      figures = figures.filter(fig => {
+        if (!fig.purchaseDate) return false;
+        const purchaseDate = new Date(fig.purchaseDate);
+        if (filters.dateRange[0] && purchaseDate < new Date(filters.dateRange[0])) return false;
+        if (filters.dateRange[1] && purchaseDate > new Date(filters.dateRange[1])) return false;
+        return true;
+      });
+    }
+
+    // Completeness range filter
+    if (filters.completenessRange) {
+      figures = figures.filter(fig => {
+        const completeness = fig.completenessPercentage ?? 100;
+        return completeness >= filters.completenessRange![0] &&
+               completeness <= filters.completenessRange![1];
+      });
+    }
+
+    // Is complete filter (legacy)
+    if (filters.isComplete && filters.isComplete !== 'all') {
+      figures = figures.filter(fig => {
+        if (filters.isComplete === 'yes') {
+          return fig.isComplete === true || (fig.completenessPercentage ?? 100) === 100;
+        } else {
+          return fig.isComplete === false || (fig.completenessPercentage ?? 100) < 100;
+        }
+      });
+    }
+
+    // UPC filter
+    if (filters.upc) {
+      const upcQuery = filters.upc.toLowerCase();
+      figures = figures.filter(fig =>
+        fig.upc && fig.upc.toLowerCase().includes(upcQuery)
+      );
+    }
+
+    // Sale/Trade status filter
+    if (filters.saleTradeStatuses.length > 0) {
+      figures = figures.filter(fig =>
+        fig.availability && filters.saleTradeStatuses.some(status =>
+          fig.availability!.includes(status)
+        )
+      );
+    }
+
+    // Custom fields filter
+    if (filters.customFields && Object.keys(filters.customFields).length > 0) {
+      figures = figures.filter(fig => {
+        if (!fig.customFields) return false;
+        return Object.entries(filters.customFields!).every(([fieldId, values]) => {
+          if (values.length === 0) return true;
+          const figValue = fig.customFields![fieldId];
+          return figValue && values.includes(String(figValue));
+        });
+      });
+    }
+
     return figures;
-  }, [allPublicFigures, recentFigures, viewMode, searchQuery]);
+  }, [allPublicFigures, recentFigures, viewMode, searchQuery, filters, bookmarkedFigureIds]);
 
   // Handle figure click - open detail modal
   const handleFigureClick = (figure: ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }) => {
@@ -188,6 +437,38 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
     setSelectedFigure(null);
     setCurrentReaction(null);
     setReactionStats({ appreciate: 0, love: 0, fire: 0, total: 0 });
+  };
+
+  // Handle random figure discovery
+  const handleRandomFigure = () => {
+    const figures = filteredFigures.length > 0 ? filteredFigures : allPublicFigures;
+    if (figures.length === 0) {
+      toastManager.error('No figures available');
+      return;
+    }
+    const randomIndex = Math.floor(Math.random() * figures.length);
+    const randomFigure = figures[randomIndex];
+    handleFigureClick(randomFigure);
+  };
+
+  // Handle bookmark toggle
+  const handleToggleBookmark = (e: React.MouseEvent, figureId: string, figureName: string, imageUrl?: string) => {
+    e.stopPropagation(); // Prevent opening figure detail modal
+
+    const isBookmarked = BookmarksService.toggleBookmark(figureId, figureName, imageUrl);
+
+    // Update local state
+    setBookmarkedFigureIds(prev => {
+      const newSet = new Set(prev);
+      if (isBookmarked) {
+        newSet.add(figureId);
+        toastManager.success(`Bookmarked "${figureName}"`);
+      } else {
+        newSet.delete(figureId);
+        toastManager.info(`Removed bookmark`);
+      }
+      return newSet;
+    });
   };
 
   // Load reaction data for a figure
@@ -413,17 +694,48 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
           <Eye className="h-4 w-4 inline mr-2" />
           Recently Added
         </button>
+        <button
+          onClick={() => setViewMode('bookmarks')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'bookmarks'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <BookmarkCheck className="h-4 w-4 inline mr-2" />
+          Bookmarks ({bookmarkedFigureIds.size})
+        </button>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       {viewMode !== 'users' && viewMode !== 'admiring' && (
-        <div className="mb-6">
+        <div className="mb-6 flex gap-3 items-start flex-wrap">
           <Input
-            placeholder="Search by figure name, manufacturer, category, or owner..."
+            placeholder="Search figures, accessories, notes, custom fields..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
+            className="max-w-md flex-1"
           />
+          <FilterSheet
+            filters={filters}
+            onFilterChange={setFilters}
+            manufacturers={uniqueManufacturers}
+            categories={uniqueCategories}
+            conditions={uniqueConditions}
+            sizes={uniqueSizes}
+            packaging={uniquePackaging}
+            productLines={uniqueProductLines}
+            locations={uniqueLocations}
+            figures={allPublicFigures}
+          />
+          <Button
+            onClick={handleRandomFigure}
+            variant="outline"
+            title="Discover a random figure"
+          >
+            <Shuffle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Random Figure</span>
+          </Button>
         </div>
       )}
 
@@ -606,6 +918,18 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
                         className="w-full h-full object-cover"
                         style={{ objectPosition: figure.imagePosition || 'center center' }}
                       />
+                      {/* Bookmark button */}
+                      <button
+                        onClick={(e) => handleToggleBookmark(e, figure.id, figure.name, mainImage)}
+                        className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors z-10"
+                        title={bookmarkedFigureIds.has(figure.id) ? 'Remove bookmark' : 'Bookmark this figure'}
+                      >
+                        {bookmarkedFigureIds.has(figure.id) ? (
+                          <BookmarkCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Bookmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        )}
+                      </button>
                       {figure.images && figure.images.length > 1 && (
                         <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
                           +{figure.images.length - 1} more
@@ -630,6 +954,18 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
                   ) : (
                     <div className="relative w-full h-36 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                       <Package className="h-12 w-12 text-gray-400" />
+                      {/* Bookmark button */}
+                      <button
+                        onClick={(e) => handleToggleBookmark(e, figure.id, figure.name)}
+                        className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors z-10"
+                        title={bookmarkedFigureIds.has(figure.id) ? 'Remove bookmark' : 'Bookmark this figure'}
+                      >
+                        {bookmarkedFigureIds.has(figure.id) ? (
+                          <BookmarkCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Bookmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        )}
+                      </button>
                       {/* For Sale/For Trade badges */}
                       {figure.availability && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
@@ -747,9 +1083,13 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
               <DialogTitle>{selectedFigure.name}</DialogTitle>
               <DialogDescription className="flex flex-col gap-2">
                 <span>Owned by {selectedFigure.ownerName} (@{selectedFigure.ownerUsername})</span>
-                {selectedFigure.userId && (
-                  <UserRatingBadge userId={selectedFigure.userId} size="md" />
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {selectedFigure.userId && (
+                    <UserRatingBadge userId={selectedFigure.userId} size="md" />
+                  )}
+                  {/* TODO: Calculate actual response time from message history */}
+                  <ResponseTimeBadge responseTimeHours={null} />
+                </div>
               </DialogDescription>
             </DialogHeader>
 

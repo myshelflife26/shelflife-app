@@ -1,4 +1,5 @@
 import { MasterFiguresService, type MasterFigure } from './masterFigures';
+import { RejectedDuplicatesService } from './rejectedDuplicates';
 
 export interface DuplicateMatch {
   figure1: MasterFigure;
@@ -24,9 +25,13 @@ export class DuplicateDetectionService {
     'year',
     'version',
     'productLine',
-    'subProductLine',
-    'series'
+    'productLineNumber',
+    'subProductLine'
+    // Note: 'series' is a legacy field and should not be used for comparison
   ];
+
+  // Minimum name similarity required (0-1 scale, where 1 is identical)
+  private static MIN_NAME_SIMILARITY = 0.6;
 
   /**
    * Scan entire master database for duplicates
@@ -35,6 +40,9 @@ export class DuplicateDetectionService {
     const allFigures = await MasterFiguresService.getAll();
     const matches: DuplicateMatch[] = [];
     const comparedPairs = new Set<string>();
+
+    // Load rejected pairs for filtering
+    const rejectedPairs = await RejectedDuplicatesService.getRejectedPairIds();
 
     // Compare each pair once
     for (let i = 0; i < allFigures.length; i++) {
@@ -46,6 +54,11 @@ export class DuplicateDetectionService {
         const pairId = [fig1.id, fig2.id].sort().join('-');
         if (comparedPairs.has(pairId)) continue;
         comparedPairs.add(pairId);
+
+        // Skip if this pair has been rejected
+        if (rejectedPairs.has(pairId)) {
+          continue;
+        }
 
         const match = this.compareFigures(fig1, fig2);
         if (match.matchType !== null) {
@@ -63,18 +76,84 @@ export class DuplicateDetectionService {
   }
 
   /**
+   * Calculate Dice coefficient for string similarity (0-1 scale)
+   * Based on bigram comparison
+   */
+  private static calculateNameSimilarity(str1: string, str2: string): number {
+    // Normalize strings
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
+
+    // Exact match
+    if (s1 === s2) return 1.0;
+
+    // One contains the other (high similarity)
+    if (s1.includes(s2) || s2.includes(s1)) {
+      const shorter = Math.min(s1.length, s2.length);
+      const longer = Math.max(s1.length, s2.length);
+      return shorter / longer; // Returns 0.5-1.0 range
+    }
+
+    // Dice coefficient (bigram comparison)
+    const bigrams1 = this.getBigrams(s1);
+    const bigrams2 = this.getBigrams(s2);
+
+    if (bigrams1.size === 0 || bigrams2.size === 0) {
+      return 0;
+    }
+
+    const intersection = new Set([...bigrams1].filter(x => bigrams2.has(x)));
+    return (2.0 * intersection.size) / (bigrams1.size + bigrams2.size);
+  }
+
+  /**
+   * Get bigrams (character pairs) from a string
+   */
+  private static getBigrams(str: string): Set<string> {
+    const bigrams = new Set<string>();
+    for (let i = 0; i < str.length - 1; i++) {
+      bigrams.add(str.substring(i, i + 2));
+    }
+    return bigrams;
+  }
+
+  /**
    * Compare two specific figures and determine if they're duplicates
+   * REQUIRES name similarity before considering other fields
    */
   static compareFigures(fig1: MasterFigure, fig2: MasterFigure): DuplicateMatch {
     const matchedFields: string[] = [];
     let matchScore = 0;
 
-    // Check each comparison field
+    // First, check name similarity - this is REQUIRED
+    const nameSimilarity = this.calculateNameSimilarity(fig1.name, fig2.name);
+    const nameMatches = nameSimilarity >= this.MIN_NAME_SIMILARITY;
+
+    // If names don't match sufficiently, not a duplicate
+    if (!nameMatches) {
+      return {
+        figure1: fig1,
+        figure2: fig2,
+        matchType: null as any,
+        matchedFields: [],
+        matchScore: 0
+      };
+    }
+
+    // Names match, so count it
+    matchedFields.push('name');
+    matchScore++;
+
+    // Check remaining comparison fields (skip name since we already checked it)
     for (const field of this.COMPARISON_FIELDS) {
+      if (field === 'name') continue; // Already checked
+
       const val1 = (fig1 as any)[field];
       const val2 = (fig2 as any)[field];
 
-      if (this.fieldsMatch(val1, val2)) {
+      const matches = this.fieldsMatch(val1, val2);
+
+      if (matches) {
         matchedFields.push(field);
         matchScore++;
       }
@@ -83,14 +162,22 @@ export class DuplicateDetectionService {
     // Determine match type based on criteria
     let matchType: 'likely' | 'possible' | null = null;
 
-    // Likely match: 3+ fields match
+    // Likely match: name matches AND 2+ other fields match (total 3+)
     if (matchScore >= 3) {
       matchType = 'likely';
     }
-    // Possible match: name + year OR name + version
+    // Possible match: name + manufacturer (same figure name from same company is strong signal)
     else if (
       matchedFields.includes('name') &&
-      (matchedFields.includes('year') || matchedFields.includes('version'))
+      matchedFields.includes('manufacturer') &&
+      matchScore >= 2
+    ) {
+      matchType = 'possible';
+    }
+    // Possible match: name matches AND (year OR version) match
+    else if (
+      matchedFields.includes('year') ||
+      matchedFields.includes('version')
     ) {
       matchType = 'possible';
     }
@@ -120,6 +207,12 @@ export class DuplicateDetectionService {
     // Number comparison
     if (typeof field1 === 'number' && typeof field2 === 'number') {
       return field1 === field2;
+    }
+
+    // Mixed type comparison (number vs string) - convert both to string
+    if ((typeof field1 === 'number' && typeof field2 === 'string') ||
+        (typeof field1 === 'string' && typeof field2 === 'number')) {
+      return String(field1) === String(field2);
     }
 
     // Default: strict equality

@@ -11,6 +11,7 @@ import { StatsTabNavigation, type StatsTab } from './stats/StatsTabNavigation';
 import { TrendsTab } from './stats/TrendsTab';
 import { MilestonesTab } from './stats/MilestonesTab';
 import { CompletenessTab } from './stats/CompletenessTab';
+import { ComparativeTab } from './stats/ComparativeTab';
 
 interface StatsViewProps {
   figures: ActionFigure[];
@@ -1434,6 +1435,11 @@ export function StatsView({ figures }: StatsViewProps) {
       {/* Completeness Tab */}
       {activeTab === 'completeness' && (
         <CompletenessTab figures={figures} />
+      )}
+
+      {/* Comparative Tab */}
+      {activeTab === 'comparative' && (
+        <ComparativeTab figures={figures} />
       )}
     </div>
   );

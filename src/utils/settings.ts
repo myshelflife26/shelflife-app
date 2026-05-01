@@ -71,15 +71,11 @@ export class SettingsService {
     try {
       const id = userId || FirebaseAuthService.getCurrentUserId();
       if (!id) {
-        console.log(`[GET_USER_SETTINGS] No user ID, returning defaults`);
         return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
       }
 
-      console.log(`[GET_USER_SETTINGS] Getting settings from Firestore for userId: ${id}`);
-
       const userDoc = await getDoc(doc(db, USERS_COLLECTION, id));
       if (!userDoc.exists()) {
-        console.log(`[GET_USER_SETTINGS] User doc not found, returning defaults`);
         return JSON.parse(JSON.stringify(DEFAULT_USER_SETTINGS));
       }
 
@@ -89,7 +85,6 @@ export class SettingsService {
         visibleColumns: data.visibleColumns || DEFAULT_USER_SETTINGS.visibleColumns
       };
 
-      console.log(`[GET_USER_SETTINGS] Found settings, customFields count: ${settings.customFields.length}`);
       return settings;
     } catch (error) {
       console.error('Error reading user settings from Firestore:', error);
@@ -393,18 +388,14 @@ export class SettingsService {
   // Migrate localStorage settings to Firestore
   static async migrateLocalStorageToFirestore(firebaseUid: string): Promise<void> {
     try {
-      console.log(`[MIGRATION_FIRESTORE] Starting migration for user: ${firebaseUid}`);
-
       // Check if user already has settings in Firestore
       const userDoc = await getDoc(doc(db, USERS_COLLECTION, firebaseUid));
       if (!userDoc.exists()) {
-        console.log('[MIGRATION_FIRESTORE] User doc not found');
         return;
       }
 
       const userData = userDoc.data();
       if (userData.customFields && userData.customFields.length > 0) {
-        console.log('[MIGRATION_FIRESTORE] User already has custom fields in Firestore, skipping migration');
         return;
       }
 
@@ -431,20 +422,14 @@ export class SettingsService {
       }
 
       if (!localSettings || !localSettings.customFields || localSettings.customFields.length === 0) {
-        console.log('[MIGRATION_FIRESTORE] No localStorage custom fields to migrate');
         return;
       }
-
-      console.log(`[MIGRATION_FIRESTORE] Found ${localSettings.customFields.length} custom fields in ${foundKey}`);
-      console.log(`[MIGRATION_FIRESTORE] Migrating to Firestore...`);
 
       // Migrate to Firestore
       await updateDoc(doc(db, USERS_COLLECTION, firebaseUid), {
         customFields: localSettings.customFields,
         visibleColumns: localSettings.visibleColumns || DEFAULT_USER_SETTINGS.visibleColumns
       });
-
-      console.log(`[MIGRATION_FIRESTORE] ✅ Successfully migrated to Firestore`);
 
       // Mark as migrated (optional - keep localStorage for now as backup)
       localStorage.setItem(`${foundKey}-migrated-to-firestore`, 'true');

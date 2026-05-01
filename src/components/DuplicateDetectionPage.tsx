@@ -1,22 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { DuplicateDetectionService, type DuplicateMatch } from '../utils/duplicateDetection';
 import { MasterFiguresService, type MasterFigure } from '../utils/masterFigures';
+import { RejectedDuplicatesService } from '../utils/rejectedDuplicates';
 import { Button } from './ui/button';
 import { Select } from './ui/select';
-import { Search, AlertTriangle, CheckCircle, X, Clock, CalendarClock } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, X, Clock, CalendarClock, XCircle } from 'lucide-react';
 import { toastManager } from '../utils/toastManager';
 import { MergeDialog } from './MergeDialog';
 import { Pagination } from './Pagination';
+import type { User } from '../types/user';
 
 interface DuplicateDetectionPageProps {
   onClose: () => void;
+  currentUser: User;
 }
 
-export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps) {
+export function DuplicateDetectionPage({ onClose, currentUser }: DuplicateDetectionPageProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const [filteredDuplicates, setFilteredDuplicates] = useState<DuplicateMatch[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'likely' | 'possible'>('all');
+  const [sortType, setSortType] = useState<'matchType' | 'older' | 'newer'>('matchType');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,16 +44,45 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
     loadAllFigures();
   }, []);
 
-  // Filter duplicates when filter type changes
+  // Filter and sort duplicates when filter type or sort type changes
   useEffect(() => {
-    if (filterType === 'all') {
-      setFilteredDuplicates(duplicates);
-    } else {
-      setFilteredDuplicates(duplicates.filter(d => d.matchType === filterType));
+    // First, filter
+    let filtered = filterType === 'all'
+      ? [...duplicates]
+      : duplicates.filter(d => d.matchType === filterType);
+
+    // Then, sort
+    if (sortType === 'matchType') {
+      // Sort by match type (likely first) then by match score
+      filtered.sort((a, b) => {
+        if (a.matchType === 'likely' && b.matchType === 'possible') return -1;
+        if (a.matchType === 'possible' && b.matchType === 'likely') return 1;
+        return b.matchScore - a.matchScore;
+      });
+    } else if (sortType === 'older') {
+      // Sort by older figure name alphabetically (A-Z)
+      filtered.sort((a, b) => {
+        const aOlderFigure = DuplicateDetectionService.getOlderFigure(a.figure1, a.figure2);
+        const bOlderFigure = DuplicateDetectionService.getOlderFigure(b.figure1, b.figure2);
+        const aOlderName = (aOlderFigure === 1 ? a.figure1 : a.figure2).name.toLowerCase();
+        const bOlderName = (bOlderFigure === 1 ? b.figure1 : b.figure2).name.toLowerCase();
+        return aOlderName.localeCompare(bOlderName);
+      });
+    } else if (sortType === 'newer') {
+      // Sort by newer figure name alphabetically (A-Z)
+      filtered.sort((a, b) => {
+        const aOlderFigure = DuplicateDetectionService.getOlderFigure(a.figure1, a.figure2);
+        const bOlderFigure = DuplicateDetectionService.getOlderFigure(b.figure1, b.figure2);
+        const aNewerName = (aOlderFigure === 1 ? a.figure2 : a.figure1).name.toLowerCase();
+        const bNewerName = (bOlderFigure === 1 ? b.figure2 : b.figure1).name.toLowerCase();
+        return aNewerName.localeCompare(bNewerName);
+      });
     }
-    // Reset to page 1 when filter changes
+
+    setFilteredDuplicates(filtered);
+    // Reset to page 1 when filter or sort changes
     setCurrentPage(1);
-  }, [filterType, duplicates]);
+  }, [filterType, sortType, duplicates]);
 
   // Paginate filtered duplicates
   const paginatedDuplicates = useMemo(() => {
@@ -116,6 +149,32 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
     setShowMergeDialog(true);
   };
 
+  const handleRejectDuplicate = async (match: DuplicateMatch) => {
+    const success = await RejectedDuplicatesService.reject(
+      match.figure1.id,
+      match.figure2.id,
+      match.figure1.name,
+      match.figure2.name,
+      currentUser.id,
+      currentUser.username
+    );
+
+    if (success) {
+      toastManager.success('Marked as not a duplicate. This pair will not appear in future scans.');
+      // Remove from current list
+      setFilteredDuplicates(prev => prev.filter(d =>
+        !(d.figure1.id === match.figure1.id && d.figure2.id === match.figure2.id) &&
+        !(d.figure1.id === match.figure2.id && d.figure2.id === match.figure1.id)
+      ));
+      setDuplicates(prev => prev.filter(d =>
+        !(d.figure1.id === match.figure1.id && d.figure2.id === match.figure2.id) &&
+        !(d.figure1.id === match.figure2.id && d.figure2.id === match.figure1.id)
+      ));
+    } else {
+      toastManager.error('Failed to mark as not a duplicate');
+    }
+  };
+
   const handleMergeComplete = () => {
     setShowMergeDialog(false);
     setMergeFigure1(null);
@@ -134,11 +193,34 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
       return;
     }
 
+    // Ask user which strategy to use
+    const strategy = window.prompt(
+      `Choose merge strategy for ${paginatedDuplicates.length} duplicate pair(s):\n\n` +
+      `Enter "1" to keep OLDER figures' fields\n` +
+      `Enter "2" to keep NEWER figures' fields\n\n` +
+      `Note: The older figure will always be kept (newer deleted), but you can choose which figure's field data to preserve.\n\n` +
+      `Enter 1 or 2:`,
+      '1'
+    );
+
+    if (strategy === null) {
+      // User canceled
+      return;
+    }
+
+    if (strategy !== '1' && strategy !== '2') {
+      toastManager.error('Invalid choice. Please enter 1 or 2.');
+      return;
+    }
+
+    const keepOlderFields = strategy === '1';
+    const strategyDescription = keepOlderFields ? 'OLDER figures' : 'NEWER figures';
+
     const confirmMessage = `Are you sure you want to merge all ${paginatedDuplicates.length} duplicate pair(s) on this page?\n\n` +
       `For each pair:\n` +
-      `- The OLDER figure will be kept\n` +
+      `- The OLDER figure will be kept (ID preserved)\n` +
       `- The NEWER figure will be deleted\n` +
-      `- All fields from the OLDER figure will be preserved\n\n` +
+      `- All fields from the ${strategyDescription} will be used\n\n` +
       `This action cannot be undone.`;
 
     if (!confirm(confirmMessage)) {
@@ -149,6 +231,7 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
     let successCount = 0;
     let failCount = 0;
     let totalUpdatedUserFigures = 0;
+    let totalConsolidatedDuplicates = 0;
 
     for (const match of paginatedDuplicates) {
       try {
@@ -157,16 +240,20 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
         const keepFigure = olderFigure === 1 ? match.figure1 : match.figure2;
         const deleteFigure = olderFigure === 1 ? match.figure2 : match.figure1;
 
-        // Merge using all fields from the keep figure (older one)
+        // Choose which figure's fields to use based on strategy
+        const sourceFields = keepOlderFields ? keepFigure : deleteFigure;
+
+        // Merge: keep older figure's ID, but use selected figure's field data
         const result = await MasterFiguresService.mergeFigures(
           keepFigure.id,
           deleteFigure.id,
-          keepFigure // Use all fields from older figure
+          sourceFields
         );
 
         if (result.success) {
           successCount++;
           totalUpdatedUserFigures += result.updatedUserFigures;
+          totalConsolidatedDuplicates += result.consolidatedDuplicates;
         } else {
           failCount++;
           console.error(`Failed to merge ${deleteFigure.name}:`, result.error);
@@ -181,11 +268,20 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
 
     // Show results
     if (successCount > 0) {
-      toastManager.success(
-        `Successfully merged ${successCount} pair(s)! ` +
-        `Updated ${totalUpdatedUserFigures} user figure(s). ` +
-        (failCount > 0 ? `${failCount} failed.` : '')
-      );
+      const messages = [
+        `Successfully merged ${successCount} pair(s) using ${strategyDescription}' field data!`,
+        `Updated ${totalUpdatedUserFigures} user figure(s).`
+      ];
+
+      if (totalConsolidatedDuplicates > 0) {
+        messages.push(`Consolidated ${totalConsolidatedDuplicates} duplicate user figure(s).`);
+      }
+
+      if (failCount > 0) {
+        messages.push(`${failCount} failed.`);
+      }
+
+      toastManager.success(messages.join(' '));
     } else {
       toastManager.error(`Failed to merge duplicates. ${failCount} errors.`);
     }
@@ -226,7 +322,7 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Scan the entire database for potential duplicates based on matching fields.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <Button
                 onClick={handleScan}
                 disabled={isScanning}
@@ -237,19 +333,31 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
               </Button>
 
               {duplicates.length > 0 && (
-                <Select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as 'all' | 'likely' | 'possible')}
-                  className="w-48"
-                >
-                  <option value="all">All ({duplicates.length})</option>
-                  <option value="likely">
-                    Likely ({duplicates.filter(d => d.matchType === 'likely').length})
-                  </option>
-                  <option value="possible">
-                    Possible ({duplicates.filter(d => d.matchType === 'possible').length})
-                  </option>
-                </Select>
+                <>
+                  <Select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as 'all' | 'likely' | 'possible')}
+                    className="w-48"
+                  >
+                    <option value="all">All ({duplicates.length})</option>
+                    <option value="likely">
+                      Likely ({duplicates.filter(d => d.matchType === 'likely').length})
+                    </option>
+                    <option value="possible">
+                      Possible ({duplicates.filter(d => d.matchType === 'possible').length})
+                    </option>
+                  </Select>
+
+                  <Select
+                    value={sortType}
+                    onChange={(e) => setSortType(e.target.value as 'matchType' | 'older' | 'newer')}
+                    className="w-52"
+                  >
+                    <option value="matchType">Sort by Match Type</option>
+                    <option value="older">Sort by Older Figure (A-Z)</option>
+                    <option value="newer">Sort by Newer Figure (A-Z)</option>
+                  </Select>
+                </>
               )}
             </div>
           </div>
@@ -361,13 +469,24 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <Button
-                                onClick={() => handleCompareClick(match)}
-                                size="sm"
-                                variant="outline"
-                              >
-                                Compare & Merge
-                              </Button>
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  onClick={() => handleCompareClick(match)}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  Compare & Merge
+                                </Button>
+                                <Button
+                                  onClick={() => handleRejectDuplicate(match)}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Not a Duplicate
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -458,6 +577,7 @@ export function DuplicateDetectionPage({ onClose }: DuplicateDetectionPageProps)
         <MergeDialog
           figure1={mergeFigure1}
           figure2={mergeFigure2}
+          currentUser={currentUser}
           onClose={() => {
             setShowMergeDialog(false);
             setMergeFigure1(null);

@@ -3,6 +3,7 @@ import type { ActionFigure, TradeProposal, UserRating } from '../types/index';
 import type { User } from '../types/user';
 import { MarketplaceService } from '../utils/marketplaceService';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
+import { MarketplaceAlertsService } from '../utils/marketplaceAlerts';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -110,6 +111,13 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
       setUserDisplayNames(displayNameMap);
       setUserUsernames(usernameMap);
       setHasMore(false); // For future pagination implementation
+
+      // Check for want list matches and create alerts
+      try {
+        await MarketplaceAlertsService.scanAndNotify(currentUser.id, listings);
+      } catch (error) {
+        console.error('Failed to scan marketplace for want list matches:', error);
+      }
     } catch (error) {
       console.error('Failed to load marketplace:', error);
     } finally {

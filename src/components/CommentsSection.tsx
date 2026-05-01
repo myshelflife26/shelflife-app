@@ -123,6 +123,34 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId }: Commen
     return date.toLocaleDateString();
   };
 
+  // Parse @mentions in comment text and return JSX with clickable links
+  const parseCommentWithMentions = (text: string) => {
+    // Split text by @mentions pattern
+    const parts = text.split(/(@\w+)/g);
+
+    return parts.map((part, index) => {
+      // Check if this part is a mention
+      if (part.startsWith('@')) {
+        const username = part.slice(1); // Remove @ symbol
+        return (
+          <span
+            key={index}
+            className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              toastManager.info(`View profile: @${username}`);
+              // TODO: Navigate to user profile when profile page exists
+            }}
+            title={`View @${username}'s profile`}
+          >
+            {part}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -138,7 +166,7 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId }: Commen
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment..."
+          placeholder="Add a comment... (Use @username to mention someone)"
           rows={3}
           className="resize-none"
         />
@@ -242,7 +270,7 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId }: Commen
                   </div>
                 ) : (
                   <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {comment.text}
+                    {parseCommentWithMentions(comment.text)}
                   </p>
                 )}
 

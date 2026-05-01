@@ -135,5 +135,16 @@ service cloud.firestore {
         isManagement()
       );
     }
+
+    match /rejectedDuplicates/{rejectionId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isManagement();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isManagement();
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
   }
 }

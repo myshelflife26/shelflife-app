@@ -1,6 +1,6 @@
-import { BarChart3, TrendingUp, Award, CheckCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, Award, CheckCircle, Users } from 'lucide-react';
 
-export type StatsTab = 'overview' | 'trends' | 'milestones' | 'completeness';
+export type StatsTab = 'overview' | 'trends' | 'milestones' | 'completeness' | 'comparative';
 
 interface StatsTabNavigationProps {
   activeTab: StatsTab;
@@ -39,6 +39,11 @@ export function StatsTabNavigation({
       id: 'completeness',
       label: 'Completeness',
       icon: CheckCircle,
+    },
+    {
+      id: 'comparative',
+      label: 'Comparative',
+      icon: Users,
     },
   ];
 

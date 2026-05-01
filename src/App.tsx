@@ -59,6 +59,7 @@ import { TopJealousFigures } from './components/TopJealousFigures';
 import { PublicProfilePage } from './components/PublicProfilePage';
 import { Grid3x3 } from 'lucide-react';
 import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
+import { OnboardingTour, useOnboardingTour, type TourStep } from './components/OnboardingTour';
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves' | 'import';
@@ -112,6 +113,42 @@ function MainApp() {
   const [parsedImportData, setParsedImportData] = useState<ParseResult | null>(null);
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [conditionOptions, setConditionOptions] = useState<string[]>([]);
+
+  // Onboarding tour
+  const [showOnboarding, markOnboardingComplete, resetOnboarding] = useOnboardingTour();
+
+  const tourSteps: TourStep[] = [
+    {
+      target: '[data-tour="add-figure"]',
+      title: 'Add Your First Figure',
+      description: 'Click here to add action figures to your collection. You can add photos, details, and custom fields!',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="filters"]',
+      title: 'Filter Your Collection',
+      description: 'Use filters to quickly find figures by manufacturer, condition, price range, and more.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="stats"]',
+      title: 'View Statistics',
+      description: 'Check your collection stats including total value, completeness tracking, and trends.',
+      placement: 'left',
+    },
+    {
+      target: '[data-tour="browse"]',
+      title: 'Browse Public Collections',
+      description: 'Discover figures from other collectors, connect with the community, and find trades.',
+      placement: 'left',
+    },
+    {
+      target: '[data-tour="marketplace"]',
+      title: 'Buy & Sell Figures',
+      description: 'List your figures for sale or trade, and browse the marketplace for new additions.',
+      placement: 'left',
+    },
+  ];
 
   // Load settings
   useEffect(() => {
@@ -991,6 +1028,7 @@ function MainApp() {
                 <TrendingUp className="h-5 w-5" />
               </Button>
               <Button
+                data-tour="browse"
                 variant={currentPage === 'browse' ? 'default' : 'ghost'}
                 size="icon"
                 onClick={() => setCurrentPage('browse')}
@@ -999,6 +1037,7 @@ function MainApp() {
                 <Search className="h-5 w-5" />
               </Button>
               <Button
+                data-tour="marketplace"
                 variant={currentPage === 'marketplace' ? 'default' : 'ghost'}
                 size="icon"
                 onClick={() => setCurrentPage('marketplace')}
@@ -1269,6 +1308,7 @@ function MainApp() {
                   Table
                 </button>
                 <button
+                  data-tour="stats"
                   onClick={() => setCollectionTab('stats')}
                   className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     collectionTab === 'stats'
@@ -1349,18 +1389,20 @@ function MainApp() {
 
               {/* Row 2: Filter, Export, and Selection Controls */}
               <div className="flex flex-wrap gap-3 items-center">
-                <FilterSheet
-                  filters={filters}
-                  onFilterChange={setFilters}
-                  manufacturers={uniqueManufacturers}
-                  categories={uniqueCategories}
-                  conditions={uniqueConditions}
-                  sizes={uniqueSizes}
-                  packaging={uniquePackaging}
-                  productLines={uniqueProductLines}
-                  locations={uniqueLocations}
-                  figures={figures}
-                />
+                <div data-tour="filters">
+                  <FilterSheet
+                    filters={filters}
+                    onFilterChange={setFilters}
+                    manufacturers={uniqueManufacturers}
+                    categories={uniqueCategories}
+                    conditions={uniqueConditions}
+                    sizes={uniqueSizes}
+                    packaging={uniquePackaging}
+                    productLines={uniqueProductLines}
+                    locations={uniqueLocations}
+                    figures={figures}
+                  />
+                </div>
 
                 <Button
                   variant={filters.showFavoritesOnly ? 'default' : 'outline'}
@@ -1501,6 +1543,7 @@ function MainApp() {
             </p>
             <div className="flex gap-3 justify-center">
               <Button
+                data-tour="add-figure"
                 onClick={handleAddFigure}
                 disabled={currentUser.role === 'management' && !!adminViewingUserId}
               >
@@ -2055,6 +2098,15 @@ function MainApp() {
 
       {/* Toast Notifications */}
       <ToastContainer />
+
+      {/* Onboarding Tour */}
+      {showOnboarding && currentUser && figures.length === 0 && (
+        <OnboardingTour
+          steps={tourSteps}
+          onComplete={markOnboardingComplete}
+          onSkip={markOnboardingComplete}
+        />
+      )}
     </div>
   );
 }
