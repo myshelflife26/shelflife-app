@@ -471,7 +471,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       </div>
 
       {/* Most Jealous Tab */}
-      {feedTab === 'jealous' && topJealousyFigures.length > 0 && (
+      {feedTab === 'jealous' && (
         <div className="mb-8 bg-orange-100/70 dark:bg-orange-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="h-6 w-6 text-orange-500" />
@@ -481,6 +481,17 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Figures with the highest current jealousy scores
           </p>
+
+          {topJealousyFigures.length === 0 ? (
+            <div className="text-center py-12">
+              <Flame className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No jealous figures yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Start reacting to figures to see what makes collectors jealous!
+              </p>
+            </div>
+          ) : (
+            <>
 
           {/* Simple pagination without page size selector */}
           <div className="flex items-center justify-between px-2 sm:px-4 py-2 sm:py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mb-4">
@@ -635,6 +646,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -642,7 +654,6 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       {feedTab === 'rising' && (
         <>
         {/* 7 Days Section */}
-        {risingStars7Days.length > 0 && (
         <div className="mb-8 bg-pink-100/70 dark:bg-pink-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-6 w-6 text-orange-600" />
@@ -652,6 +663,17 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Figures with the biggest jealousy score increases over the past week
           </p>
+
+          {risingStars7Days.length === 0 ? (
+            <div className="text-center py-12">
+              <TrendingUp className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No rising stars in the past 7 days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Check back later as collectors react to figures!
+              </p>
+            </div>
+          ) : (
+            <>
 
           <Pagination
             currentPage={rising7DaysPage}
@@ -772,11 +794,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             onPageChange={setRising7DaysPage}
             onPageSizeChange={setRising7DaysPageSize}
           />
+          </>
+          )}
         </div>
-        )}
 
         {/* 30 Days Section */}
-        {risingStars30Days.length > 0 && (
         <div className="mb-8 bg-blue-100/70 dark:bg-blue-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-6 w-6 text-blue-600" />
@@ -787,6 +809,16 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             Figures with the biggest jealousy score increases over the past 30 days
           </p>
 
+          {risingStars30Days.length === 0 ? (
+            <div className="text-center py-12">
+              <TrendingUp className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No rising stars in the past 30 days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Check back later as collectors react to figures!
+              </p>
+            </div>
+          ) : (
+            <>
           <Pagination
             currentPage={rising30DaysPage}
             totalItems={risingStars30Days.length}
@@ -900,11 +932,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             onPageChange={setRising30DaysPage}
             onPageSizeChange={setRising30DaysPageSize}
           />
+          </>
+          )}
         </div>
-        )}
 
         {/* Custom Period Section */}
-        {risingStarsCustom.length > 0 && (
         <div className="mb-8 bg-green-100/70 dark:bg-green-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -935,6 +967,16 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             Figures with the biggest jealousy score increases over the past {customDaysBack} days
           </p>
 
+          {risingStarsCustom.length === 0 ? (
+            <div className="text-center py-12">
+              <TrendingUp className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No rising stars in the past {customDaysBack} days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Try a different time period or check back later!
+              </p>
+            </div>
+          ) : (
+            <>
           <Pagination
             currentPage={risingCustomPage}
             totalItems={risingStarsCustom.length}
@@ -1048,13 +1090,14 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             onPageChange={setRisingCustomPage}
             onPageSizeChange={setRisingCustomPageSize}
           />
+          </>
+          )}
         </div>
-        )}
         </>
       )}
 
       {/* Suggested Collectors Tab */}
-      {feedTab === 'collectors' && suggestedUsers.length > 0 && (
+      {feedTab === 'collectors' && (
         <div className="mb-8 bg-purple-100/70 dark:bg-purple-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <UserPlus className="h-6 w-6 text-purple-600" />
@@ -1064,6 +1107,16 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             Users with similar figures to your collection
           </p>
 
+          {suggestedUsers.length === 0 ? (
+            <div className="text-center py-12">
+              <UserPlus className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No suggested collectors yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Add figures to your collection to get personalized suggestions!
+              </p>
+            </div>
+          ) : (
+            <>
           <Pagination
             currentPage={suggestedUsersPage}
             totalItems={suggestedUsers.length}
@@ -1110,11 +1163,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             onPageChange={setSuggestedUsersPage}
             onPageSizeChange={setSuggestedUsersPageSize}
           />
+          </>
+          )}
         </div>
       )}
 
       {/* Recently Added Tab */}
-      {feedTab === 'recent' && recentPublicFigures.length > 0 && (
+      {feedTab === 'recent' && (
         <div className="mb-8 bg-indigo-100/70 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-6 w-6 text-purple-600" />
@@ -1122,6 +1177,16 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             <span className="text-sm text-gray-500 dark:text-gray-400">({recentPublicFigures.length})</span>
           </div>
 
+          {recentPublicFigures.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No recently added figures</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Check back later to see what collectors are adding!
+              </p>
+            </div>
+          ) : (
+            <>
           <Pagination
             currentPage={recentFiguresPage}
             totalItems={recentPublicFigures.length}
@@ -1217,6 +1282,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             onPageChange={setRecentFiguresPage}
             onPageSizeChange={setRecentFiguresPageSize}
           />
+          </>
+          )}
         </div>
       )}
 
