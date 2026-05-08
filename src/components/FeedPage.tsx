@@ -42,9 +42,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [risingStars30Days, setRisingStars30Days] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
   const [risingStarsCustom, setRisingStarsCustom] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);
   const [customDaysBack, setCustomDaysBack] = useState(365);
+  const [recentCustomDaysBack, setRecentCustomDaysBack] = useState(365);
   const [admiredFigures, setAdmiredFigures] = useState<FigureWithOwner[]>([]);
-  const [recentPublicFigures, setRecentPublicFigures] = useState<FigureWithOwner[]>([]);
+  const [recentFigures7Days, setRecentFigures7Days] = useState<FigureWithOwner[]>([]);
+  const [recentFigures30Days, setRecentFigures30Days] = useState<FigureWithOwner[]>([]);
+  const [recentFiguresCustom, setRecentFiguresCustom] = useState<FigureWithOwner[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
+  const [randomCollectors, setRandomCollectors] = useState<Array<User & { sampleFigures: FigureWithOwner[] }>>([]);
   const [admiringUsers, setAdmiringUsers] = useState<string[]>([]);
   const [selectedFigure, setSelectedFigure] = useState<FigureWithOwner | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
@@ -62,8 +66,14 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [admiredFiguresPageSize, setAdmiredFiguresPageSize] = useState(25);
   const [suggestedUsersPage, setSuggestedUsersPage] = useState(1);
   const [suggestedUsersPageSize, setSuggestedUsersPageSize] = useState(25);
-  const [recentFiguresPage, setRecentFiguresPage] = useState(1);
-  const [recentFiguresPageSize, setRecentFiguresPageSize] = useState(25);
+  const [randomCollectorsPage, setRandomCollectorsPage] = useState(1);
+  const [randomCollectorsPageSize, setRandomCollectorsPageSize] = useState(25);
+  const [recent7DaysPage, setRecent7DaysPage] = useState(1);
+  const [recent7DaysPageSize, setRecent7DaysPageSize] = useState(25);
+  const [recent30DaysPage, setRecent30DaysPage] = useState(1);
+  const [recent30DaysPageSize, setRecent30DaysPageSize] = useState(25);
+  const [recentCustomPage, setRecentCustomPage] = useState(1);
+  const [recentCustomPageSize, setRecentCustomPageSize] = useState(25);
 
   useEffect(() => {
     // Scroll to top when page loads
@@ -123,7 +133,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       7
     );
 
-    const risingFigures7Days = rises7Days
+    let risingFigures7Days = rises7Days
       .map(rise => {
         const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
         if (!figure) return null;
@@ -134,6 +144,15 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         };
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
+
+    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
+    const filtered7Days = risingFigures7Days.filter(f => f.increase >= 3);
+    if (filtered7Days.length > 0) {
+      risingFigures7Days = filtered7Days;
+    } else if (risingFigures7Days.length > 0) {
+      // Show top 10 biggest bumps even if under 3 points
+      risingFigures7Days = risingFigures7Days.slice(0, 10);
+    }
 
     setRisingStars7Days(risingFigures7Days);
 
@@ -144,7 +163,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       30
     );
 
-    const risingFigures30Days = rises30Days
+    let risingFigures30Days = rises30Days
       .map(rise => {
         const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
         if (!figure) return null;
@@ -155,6 +174,15 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         };
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
+
+    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
+    const filtered30Days = risingFigures30Days.filter(f => f.increase >= 3);
+    if (filtered30Days.length > 0) {
+      risingFigures30Days = filtered30Days;
+    } else if (risingFigures30Days.length > 0) {
+      // Show top 10 biggest bumps even if under 3 points
+      risingFigures30Days = risingFigures30Days.slice(0, 10);
+    }
 
     setRisingStars30Days(risingFigures30Days);
 
@@ -165,7 +193,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       customDaysBack
     );
 
-    const risingFiguresCustom = risesCustom
+    let risingFiguresCustom = risesCustom
       .map(rise => {
         const figure = publicFiguresWithOwners.find(f => f.id === rise.figureId && f.userId === rise.ownerId);
         if (!figure) return null;
@@ -176,6 +204,15 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         };
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
+
+    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
+    const filteredCustom = risingFiguresCustom.filter(f => f.increase >= 3);
+    if (filteredCustom.length > 0) {
+      risingFiguresCustom = filteredCustom;
+    } else if (risingFiguresCustom.length > 0) {
+      // Show top 10 biggest bumps even if under 3 points
+      risingFiguresCustom = risingFiguresCustom.slice(0, 10);
+    }
 
     setRisingStarsCustom(risingFiguresCustom);
 
@@ -201,34 +238,41 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
     setAdmiredFigures(admiredUsersFigures);
 
-    // Get recently added figures (last 7 days, excluding blocked users)
+    // Get recently added figures (7 days, 30 days, custom)
     const blockedUserIds = BlockingService.getBlockedUserIds(currentUser.id);
-    const recentPublic = publicFiguresWithOwners.filter(f => {
-      if (!f.userId) return false;
 
-      // Exclude figures from users that current user has blocked
-      if (blockedUserIds.includes(f.userId)) return false;
+    const sevenDaysAgoTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgoTime = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const customDaysAgoTime = Date.now() - (recentCustomDaysBack * 24 * 60 * 60 * 1000);
 
-      // Check if created or made public in last 7 days
-      const recentlyCreated = f.createdAt && f.createdAt > sevenDaysAgo;
-      const recentlyPublic = f.updatedAt && f.updatedAt > sevenDaysAgo;
+    const getRecentFigures = (cutoffTime: number) => {
+      return publicFiguresWithOwners.filter(f => {
+        if (!f.userId) return false;
+        if (blockedUserIds.includes(f.userId)) return false;
 
-      return recentlyCreated || recentlyPublic;
-    })
-    // Sort by most recent first (createdAt or updatedAt)
-    .sort((a, b) => {
-      const aTime = Math.max(a.createdAt || 0, a.updatedAt || 0);
-      const bTime = Math.max(b.createdAt || 0, b.updatedAt || 0);
-      return bTime - aTime;
-    });
+        const recentlyCreated = f.createdAt && f.createdAt > cutoffTime;
+        const recentlyPublic = f.updatedAt && f.updatedAt > cutoffTime;
 
-    setRecentPublicFigures(recentPublic);
+        return recentlyCreated || recentlyPublic;
+      })
+      .sort((a, b) => {
+        const aTime = Math.max(a.createdAt || 0, a.updatedAt || 0);
+        const bTime = Math.max(b.createdAt || 0, b.updatedAt || 0);
+        return bTime - aTime;
+      });
+    };
 
-    // If not admiring anyone, suggest users
-    if (admiring.length === 0) {
-      const suggestions = await getSuggestedUsers(allUsers, currentUser.id, publicFiguresWithOwners);
-      setSuggestedUsers(suggestions);
-    }
+    setRecentFigures7Days(getRecentFigures(sevenDaysAgoTime));
+    setRecentFigures30Days(getRecentFigures(thirtyDaysAgoTime));
+    setRecentFiguresCustom(getRecentFigures(customDaysAgoTime));
+
+    // Get suggested users based on matching figures
+    const suggestions = await getSuggestedUsers(allUsers, currentUser.id, publicFiguresWithOwners);
+    setSuggestedUsers(suggestions);
+
+    // Get random collectors with sample figures
+    const randomUsers = await getRandomCollectors(allUsers, currentUser.id, publicFiguresWithOwners);
+    setRandomCollectors(randomUsers);
     } catch (error) {
       console.error('Failed to load feed data:', error);
     }
@@ -279,6 +323,37 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     }
   };
 
+  const getRandomCollectors = async (
+    allUsers: User[],
+    currentUserId: string,
+    publicFiguresWithOwners: FigureWithOwner[]
+  ): Promise<Array<User & { sampleFigures: FigureWithOwner[] }>> => {
+    try {
+      // Get users with public figures, excluding current user and blocked users
+      const eligibleUsers = allUsers.filter(u =>
+        u.id !== currentUserId &&
+        !BlockingService.isUserBlocked(currentUserId, u.id) &&
+        publicFiguresWithOwners.some(f => f.userId === u.id)
+      );
+
+      // Shuffle and take 10 random users
+      const shuffled = eligibleUsers.sort(() => Math.random() - 0.5).slice(0, 10);
+
+      // For each user, get 4 random figures
+      return shuffled.map(user => {
+        const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
+        const sampleFigures = userFigures.sort(() => Math.random() - 0.5).slice(0, 4);
+        return {
+          ...user,
+          sampleFigures
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get random collectors:', error);
+      return [];
+    }
+  };
+
   const handleReaction = (figureId: string, ownerId: string, type: 'fire' | 'love' | 'appreciate') => {
     ReactionsService.toggleReaction(figureId, ownerId, currentUser.id, type);
     // Refresh feed data to update rising stars and scores
@@ -323,11 +398,29 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     return suggestedUsers.slice(startIndex, endIndex);
   }, [suggestedUsers, suggestedUsersPage, suggestedUsersPageSize]);
 
-  const paginatedRecentFigures = useMemo(() => {
-    const startIndex = (recentFiguresPage - 1) * recentFiguresPageSize;
-    const endIndex = startIndex + recentFiguresPageSize;
-    return recentPublicFigures.slice(startIndex, endIndex);
-  }, [recentPublicFigures, recentFiguresPage, recentFiguresPageSize]);
+  const paginatedRandomCollectors = useMemo(() => {
+    const startIndex = (randomCollectorsPage - 1) * randomCollectorsPageSize;
+    const endIndex = startIndex + randomCollectorsPageSize;
+    return randomCollectors.slice(startIndex, endIndex);
+  }, [randomCollectors, randomCollectorsPage, randomCollectorsPageSize]);
+
+  const paginatedRecent7Days = useMemo(() => {
+    const startIndex = (recent7DaysPage - 1) * recent7DaysPageSize;
+    const endIndex = startIndex + recent7DaysPageSize;
+    return recentFigures7Days.slice(startIndex, endIndex);
+  }, [recentFigures7Days, recent7DaysPage, recent7DaysPageSize]);
+
+  const paginatedRecent30Days = useMemo(() => {
+    const startIndex = (recent30DaysPage - 1) * recent30DaysPageSize;
+    const endIndex = startIndex + recent30DaysPageSize;
+    return recentFigures30Days.slice(startIndex, endIndex);
+  }, [recentFigures30Days, recent30DaysPage, recent30DaysPageSize]);
+
+  const paginatedRecentCustom = useMemo(() => {
+    const startIndex = (recentCustomPage - 1) * recentCustomPageSize;
+    const endIndex = startIndex + recentCustomPageSize;
+    return recentFiguresCustom.slice(startIndex, endIndex);
+  }, [recentFiguresCustom, recentCustomPage, recentCustomPageSize]);
 
   const handleAdmire = async (userId: string) => {
     const result = await AdmirersService.requestToAdmire(currentUser.id, userId);

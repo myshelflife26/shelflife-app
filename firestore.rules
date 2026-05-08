@@ -62,6 +62,41 @@ service cloud.firestore {
       );
     }
 
+    // Conversations (new threaded messaging system)
+    match /conversations/{conversationId} {
+      // Users can read conversations if they are participants
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Users can create conversations if they are one of the participants
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
+
+      // Users can update conversations if they are participants (for marking as read, archiving)
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Users can delete their own conversations
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Messages subcollection within conversations
+      match /messages/{messageId} {
+        // Users can read messages if they are participants of the parent conversation
+        allow read: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        // Users can create messages if they are participants and the message is from them
+        allow create: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants &&
+          request.resource.data.fromUserId == request.auth.uid;
+
+        // Users can update their own messages (for editing/read receipts)
+        allow update: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        // Users can delete their own messages
+        allow delete: if isSignedIn() &&
+          resource.data.fromUserId == request.auth.uid;
+      }
+    }
+
     match /communityFigures/{figureId} {
       allow read: if true;
       allow create: if isSignedIn();
