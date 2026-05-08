@@ -1192,6 +1192,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
       {/* Suggested Collectors Tab */}
       {feedTab === 'collectors' && (
+        <>
         <div className="mb-8 bg-purple-100/70 dark:bg-purple-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <UserPlus className="h-6 w-6 text-purple-600" />
@@ -1260,37 +1261,145 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           </>
           )}
         </div>
-      )}
 
-      {/* Recently Added Tab */}
-      {feedTab === 'recent' && (
-        <div className="mb-8 bg-indigo-100/70 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-6">
+        {/* Random Collectors Section */}
+        <div className="mb-8 bg-teal-100/70 dark:bg-teal-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-6 w-6 text-purple-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Added (Past Week)</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">({recentPublicFigures.length})</span>
+            <Users className="h-6 w-6 text-teal-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Random Collectors</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">({randomCollectors.length})</span>
           </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Discover collectors from the community
+          </p>
 
-          {recentPublicFigures.length === 0 ? (
+          {randomCollectors.length === 0 ? (
             <div className="text-center py-12">
-              <Sparkles className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No recently added figures</p>
+              <Users className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No collectors found</p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                Check back later to see what collectors are adding!
+                Check back later to discover new collectors!
               </p>
             </div>
           ) : (
             <>
           <Pagination
-            currentPage={recentFiguresPage}
-            totalItems={recentPublicFigures.length}
-            pageSize={recentFiguresPageSize}
-            onPageChange={setRecentFiguresPage}
-            onPageSizeChange={setRecentFiguresPageSize}
+            currentPage={randomCollectorsPage}
+            totalItems={randomCollectors.length}
+            pageSize={randomCollectorsPageSize}
+            onPageChange={setRandomCollectorsPage}
+            onPageSizeChange={setRandomCollectorsPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+            {paginatedRandomCollectors.map(collector => (
+              <div key={collector.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow">
+                {/* User info */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                    {collector.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {collector.displayName}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      @{collector.username}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sample figures - 4 small thumbnails in a grid */}
+                {collector.sampleFigures.length > 0 && (
+                  <div className="grid grid-cols-4 gap-1 mb-3">
+                    {collector.sampleFigures.map(fig => {
+                      const img = fig.imageUrl || fig.customImageUrl;
+                      return (
+                        <div key={fig.id} className="aspect-square bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+                          {img ? (
+                            <img src={img} alt={fig.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-4 w-4 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleAdmire(collector.id)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Send Request
+                  </Button>
+                  {onNavigateToBrowse && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onNavigateToBrowse(collector.id)}
+                    >
+                      View
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={randomCollectorsPage}
+            totalItems={randomCollectors.length}
+            pageSize={randomCollectorsPageSize}
+            onPageChange={setRandomCollectorsPage}
+            onPageSizeChange={setRandomCollectorsPageSize}
+          />
+          </>
+          )}
+        </div>
+        </>
+      )}
+
+      {/* Recently Added Tab */}
+      {feedTab === 'recent' && (
+        <>
+        {/* 7 Days Section */}
+        <div className="mb-8 bg-pink-100/70 dark:bg-pink-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-6 w-6 text-pink-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Added - Last 7 Days</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">({recentFigures7Days.length})</span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Figures added or made public in the past week
+          </p>
+
+          {recentFigures7Days.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No recently added figures in the past 7 days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Check back later as collectors add new figures!
+              </p>
+            </div>
+          ) : (
+            <>
+          <Pagination
+            currentPage={recent7DaysPage}
+            totalItems={recentFigures7Days.length}
+            pageSize={recent7DaysPageSize}
+            onPageChange={setRecent7DaysPage}
+            onPageSizeChange={setRecent7DaysPageSize}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
-            {paginatedRecentFigures.map(figure => {
+            {paginatedRecent7Days.map(figure => {
               const mainImage = getMainImage(figure);
 
               return (
@@ -1370,15 +1479,266 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           </div>
 
           <Pagination
-            currentPage={recentFiguresPage}
-            totalItems={recentPublicFigures.length}
-            pageSize={recentFiguresPageSize}
-            onPageChange={setRecentFiguresPage}
-            onPageSizeChange={setRecentFiguresPageSize}
+            currentPage={recent7DaysPage}
+            totalItems={recentFigures7Days.length}
+            pageSize={recent7DaysPageSize}
+            onPageChange={setRecent7DaysPage}
+            onPageSizeChange={setRecent7DaysPageSize}
           />
           </>
           )}
         </div>
+
+        {/* 30 Days Section */}
+        <div className="mb-8 bg-blue-100/70 dark:bg-blue-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-6 w-6 text-blue-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Added - Last Month</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">({recentFigures30Days.length})</span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Figures added or made public in the past 30 days
+          </p>
+
+          {recentFigures30Days.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No recently added figures in the past 30 days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Check back later as collectors add new figures!
+              </p>
+            </div>
+          ) : (
+            <>
+          <Pagination
+            currentPage={recent30DaysPage}
+            totalItems={recentFigures30Days.length}
+            pageSize={recent30DaysPageSize}
+            onPageChange={setRecent30DaysPage}
+            onPageSizeChange={setRecent30DaysPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+            {paginatedRecent30Days.map(figure => {
+              const mainImage = getMainImage(figure);
+
+              return (
+                <div
+                  key={figure.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => setSelectedFigure(figure)}
+                >
+                  <div className="relative h-36 bg-gray-100 dark:bg-gray-700">
+                    {mainImage ? (
+                      <WatermarkedImage
+                        src={mainImage}
+                        alt={figure.name}
+                        watermarkText="SAMPLE"
+                        ownerId={figure.userId}
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: figure.imagePosition || 'center center' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    {figure.version && (
+                      <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-semibold">
+                        {figure.version}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 truncate">
+                      {figure.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      by {figure.ownerDisplayName}
+                    </p>
+
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'fire') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'fire')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Flame className="h-3 w-3 mr-0.5" />
+                        Fire
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'love') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'love')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Heart className="h-3 w-3 mr-0.5" />
+                        Love
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'appreciate') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'appreciate')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <ThumbsUp className="h-3 w-3 mr-0.5" />
+                        Like
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={recent30DaysPage}
+            totalItems={recentFigures30Days.length}
+            pageSize={recent30DaysPageSize}
+            onPageChange={setRecent30DaysPage}
+            onPageSizeChange={setRecent30DaysPageSize}
+          />
+          </>
+          )}
+        </div>
+
+        {/* Custom Period Section */}
+        <div className="mb-8 bg-green-100/70 dark:bg-green-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-green-600" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recently Added - Custom Period</h2>
+              <span className="text-sm text-gray-500 dark:text-gray-400">({recentFiguresCustom.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="recent-custom-days" className="text-sm text-gray-700 dark:text-gray-300">Days back:</label>
+              <Input
+                id="recent-custom-days"
+                type="number"
+                min="1"
+                max="365"
+                value={recentCustomDaysBack}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (value > 0 && value <= 365) {
+                    setRecentCustomDaysBack(value);
+                  }
+                }}
+                onBlur={loadFeedData}
+                className="w-20"
+              />
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Figures added or made public in the past {recentCustomDaysBack} days
+          </p>
+
+          {recentFiguresCustom.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No recently added figures in the past {recentCustomDaysBack} days</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Try a different time period or check back later!
+              </p>
+            </div>
+          ) : (
+            <>
+          <Pagination
+            currentPage={recentCustomPage}
+            totalItems={recentFiguresCustom.length}
+            pageSize={recentCustomPageSize}
+            onPageChange={setRecentCustomPage}
+            onPageSizeChange={setRecentCustomPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+            {paginatedRecentCustom.map(figure => {
+              const mainImage = getMainImage(figure);
+
+              return (
+                <div
+                  key={figure.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => setSelectedFigure(figure)}
+                >
+                  <div className="relative h-36 bg-gray-100 dark:bg-gray-700">
+                    {mainImage ? (
+                      <WatermarkedImage
+                        src={mainImage}
+                        alt={figure.name}
+                        watermarkText="SAMPLE"
+                        ownerId={figure.userId}
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: figure.imagePosition || 'center center' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    {figure.version && (
+                      <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-semibold">
+                        {figure.version}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 truncate">
+                      {figure.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      by {figure.ownerDisplayName}
+                    </p>
+
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'fire') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'fire')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Flame className="h-3 w-3 mr-0.5" />
+                        Fire
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'love') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'love')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <Heart className="h-3 w-3 mr-0.5" />
+                        Love
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={hasReacted(figure.id, figure.userId!, 'appreciate') ? 'default' : 'outline'}
+                        onClick={() => handleReaction(figure.id, figure.userId!, 'appreciate')}
+                        className="flex-1 h-7 px-1 text-xs"
+                      >
+                        <ThumbsUp className="h-3 w-3 mr-0.5" />
+                        Like
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={recentCustomPage}
+            totalItems={recentFiguresCustom.length}
+            pageSize={recentCustomPageSize}
+            onPageChange={setRecentCustomPage}
+            onPageSizeChange={setRecentCustomPageSize}
+          />
+          </>
+          )}
+        </div>
+        </>
       )}
 
       {/* Global Statistics Tab */}
