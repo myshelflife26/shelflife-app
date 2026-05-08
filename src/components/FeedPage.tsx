@@ -1747,7 +1747,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       )}
 
       {/* Empty state */}
-      {risingStars7Days.length === 0 && risingStars30Days.length === 0 && risingStarsCustom.length === 0 && recentPublicFigures.length === 0 && suggestedUsers.length === 0 && topJealousyFigures.length === 0 && (
+      {risingStars7Days.length === 0 && risingStars30Days.length === 0 && risingStarsCustom.length === 0 && recentFigures7Days.length === 0 && recentFigures30Days.length === 0 && recentFiguresCustom.length === 0 && suggestedUsers.length === 0 && randomCollectors.length === 0 && topJealousyFigures.length === 0 && (
         <div className="text-center py-12">
           <Sparkles className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
