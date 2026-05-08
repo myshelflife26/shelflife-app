@@ -50,7 +50,7 @@ export class FirebaseConversationsService {
       }
 
       // Create new conversation
-      const conversationData: Omit<Conversation, 'id'> = {
+      const conversationData: any = {
         participants: sortedParticipants,
         participantNames,
         lastMessage: '',
@@ -60,11 +60,17 @@ export class FirebaseConversationsService {
           acc[userId] = 0;
           return acc;
         }, {} as { [userId: string]: number }),
-        figureId,
-        figureName,
         archived: {},
         createdAt: Date.now()
       };
+
+      // Only add optional fields if they have values (Firestore doesn't accept undefined)
+      if (figureId) {
+        conversationData.figureId = figureId;
+      }
+      if (figureName) {
+        conversationData.figureName = figureName;
+      }
 
       const docRef = await addDoc(collection(db, CONVERSATIONS_COLLECTION), conversationData);
       return docRef.id;
