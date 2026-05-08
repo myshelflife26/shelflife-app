@@ -646,6 +646,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               );
             })}
           </div>
+          </>
           )}
         </div>
       )}
