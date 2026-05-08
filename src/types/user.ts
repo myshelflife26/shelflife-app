@@ -31,17 +31,38 @@ export interface AuthState {
   currentUser: User | null;
 }
 
+// Conversation for threaded messaging
+export interface Conversation {
+  id: string;
+  participants: string[]; // Array of user IDs (2 for direct messages, 3+ for group)
+  participantNames: { [userId: string]: string }; // Cached display names
+  lastMessage: string; // Preview text of last message
+  lastMessageTimestamp: number;
+  lastMessageSenderId: string;
+  unreadCount: { [userId: string]: number }; // Per-user unread count
+  figureId?: string; // If conversation is about a specific figure
+  figureName?: string; // Cached figure name
+  archived?: { [userId: string]: boolean }; // Per-user archive status
+  createdAt: number;
+}
+
+// Message within a conversation
 export interface Message {
   id: string;
+  conversationId: string; // Links message to conversation
   fromUserId: string;
   fromDisplayName: string; // Cached for display
-  toUserId: string;
+  toUserId?: string; // Optional - for backwards compatibility with old messages
   figureId?: string; // Optional - if message is about a specific figure
   figureName?: string; // Cached figure name for display
-  subject: string;
+  subject?: string; // Optional - for backwards compatibility with old messages
   message: string;
   timestamp: number;
-  read: boolean;
+  read?: boolean; // Deprecated - use readBy instead
+  readBy: string[]; // Array of user IDs who have read this message
+  replyToMessageId?: string; // For reply threading within conversation
+  edited?: boolean; // Track if message was edited
+  editedAt?: number; // When message was edited
 }
 
 export type ReactionType = 'appreciate' | 'love' | 'fire';

@@ -26,7 +26,7 @@ import { BlockedUsersPage } from './components/BlockedUsersPage';
 import { AdminReportsPage } from './components/AdminReportsPage';
 import { UserManagementPage } from './components/UserManagementPage';
 import { BrowsePage } from './components/BrowsePage';
-import { MessagesPage } from './components/MessagesPage';
+import { MessagesPageNew } from './components/MessagesPageNew';
 import { MarketplacePage } from './components/MarketplacePage';
 import { FilterSheet } from './components/FilterSheet';
 import { TableView } from './components/TableView';
@@ -1508,7 +1508,7 @@ function MainApp() {
           onClearInitialUserId={() => setBrowseInitialUserId(null)}
         />
       ) : currentPage === 'messages' ? (
-        <MessagesPage currentUser={currentUser} />
+        <MessagesPageNew currentUser={currentUser} />
       ) : currentPage === 'marketplace' ? (
         <MarketplacePage currentUser={currentUser} />
       ) : (
