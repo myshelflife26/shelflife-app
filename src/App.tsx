@@ -37,6 +37,7 @@ import { Pagination } from './components/Pagination';
 import { LoginPage } from './components/LoginPage';
 import { ProfileImageEditor } from './components/ProfileImageEditor';
 import { FirebaseMessagesService } from './utils/firebaseMessages';
+import { FirebaseConversationsService } from './utils/firebaseConversations';
 import { BlockingService } from './utils/blocking';
 import { MarketplaceService } from './utils/marketplaceService';
 import { Logo } from './components/Logo';
@@ -644,7 +645,7 @@ function MainApp() {
     if (!currentUser) return;
 
     const updateUnreadCount = async () => {
-      const count = await FirebaseMessagesService.getUnreadCount(currentUser.id);
+      const count = await FirebaseConversationsService.getTotalUnreadCount(currentUser.id);
       setUnreadMessageCount(count);
     };
 
