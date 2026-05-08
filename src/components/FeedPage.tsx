@@ -1224,7 +1224,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             {paginatedSuggestedUsers.map(user => (
               <div
                 key={user.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => onNavigateToBrowse && onNavigateToBrowse(user.id)}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
@@ -1242,7 +1243,10 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                 <Button
                   size="sm"
                   className="w-full"
-                  onClick={() => handleAdmire(user.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdmire(user.id);
+                  }}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Send Admirer Request
@@ -1293,7 +1297,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {paginatedRandomCollectors.map(collector => (
-              <div key={collector.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow">
+              <div
+                key={collector.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => onNavigateToBrowse && onNavigateToBrowse(collector.id)}
+              >
                 {/* User info */}
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
@@ -1330,7 +1338,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                 )}
 
                 {/* Action buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
                     className="flex-1"
