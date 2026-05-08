@@ -150,16 +150,20 @@ export class FirebaseConversationsService {
     replyToMessageId?: string
   ): Promise<Message | null> {
     try {
-      const messageData: Omit<Message, 'id'> = {
+      const messageData: any = {
         conversationId,
         fromUserId,
         fromDisplayName,
         message,
         timestamp: Date.now(),
         readBy: [fromUserId], // Sender has automatically read it
-        replyToMessageId,
         edited: false
       };
+
+      // Only add optional field if it has a value (Firestore doesn't accept undefined)
+      if (replyToMessageId) {
+        messageData.replyToMessageId = replyToMessageId;
+      }
 
       // Add message to conversation's messages subcollection
       const messagesRef = collection(db, CONVERSATIONS_COLLECTION, conversationId, MESSAGES_SUBCOLLECTION);
