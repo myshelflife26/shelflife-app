@@ -51,6 +51,11 @@ export function MessagesPageNew({ currentUser }: MessagesPageProps) {
     return () => unsubscribe();
   }, [currentUser.id]);
 
+  // Reload conversations when filter mode changes
+  useEffect(() => {
+    loadConversations();
+  }, [filterMode]);
+
   const loadConversations = async () => {
     setLoading(true);
     try {
