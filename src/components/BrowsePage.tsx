@@ -163,7 +163,8 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
         const targetUser = allUsers.find(u => u.id === initialUserId);
         if (targetUser) {
           setViewMode('all');
-          setSearchQuery(targetUser.displayName);
+          // Search by username since ownerName field uses username
+          setSearchQuery(targetUser.username);
         }
         // Clear the initial user ID after using it
         if (onClearInitialUserId) {
@@ -263,6 +264,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
         if (figure.manufacturer?.toLowerCase().includes(query)) return true;
         if (figure.category?.toLowerCase().includes(query)) return true;
         if (figure.ownerName.toLowerCase().includes(query)) return true;
+        if (figure.ownerDisplayName?.toLowerCase().includes(query)) return true;
 
         // Notes content
         if (figure.notes?.toLowerCase().includes(query)) return true;
