@@ -207,6 +207,12 @@ export interface ActionFigure {
   // Marketplace
   marketplaceListing?: MarketplaceListing; // If listed in marketplace
   isListed?: boolean; // Quick flag for marketplace queries (true if forSale or forTrade)
+  // Comments
+  commentsEnabled?: boolean; // Whether comments are allowed on this figure (default: true)
+  commentsLocked?: boolean; // Whether new comments are disabled (default: false)
+  requireCommentApproval?: boolean; // Whether comments need owner approval before showing (default: false)
+  blockedFromCommenting?: string[]; // User IDs blocked from commenting
+  commentCount?: number; // Number of comments on this figure
   // Timestamps
   createdAt?: number; // When the figure was first added
   updatedAt?: number; // When the figure was last modified
@@ -309,4 +315,23 @@ export interface SetCompletion {
   completionPercentage: number;
   ownedFigures: string[]; // Figure names
   missingFigures: string[]; // Missing figure names
+}
+
+// Comments and Discussion System
+
+export interface Comment {
+  id: string;
+  figureId: string;
+  userId: string;
+  userDisplayName: string;
+  userUsername?: string;
+  text: string;
+  timestamp: number;
+  edited: boolean;
+  editedAt?: number;
+  likes: string[]; // User IDs who liked this comment
+  hidden: boolean; // Whether owner has hidden this comment
+  hiddenBy?: string; // User ID of owner who hidden it
+  approved: boolean; // For pre-moderation mode
+  pinned: boolean; // Whether owner has pinned this comment
 }

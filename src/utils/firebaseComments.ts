@@ -6,6 +6,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
@@ -13,10 +14,16 @@ import {
   Timestamp,
   arrayUnion,
   arrayRemove,
+  onSnapshot,
 } from 'firebase/firestore';
 import type { Comment } from '../types/comment';
 
 const COMMENTS_COLLECTION = 'comments';
+const FIGURES_COLLECTION = 'figures';
+
+// Rate limiting constants
+const RATE_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_COMMENTS_PER_PERIOD = 5;
 
 export class FirebaseCommentsService {
   /**
@@ -243,5 +250,164 @@ export class FirebaseCommentsService {
       console.error('Failed to get recent comments:', error);
       return [];
     }
+  }
+
+  // ========== MODERATION FEATURES ==========
+
+  /**
+   * Pin or unpin a comment (owner only)
+   */
+  static async pinComment(commentId: string, pinned: boolean): Promise<void> {
+    try {
+      const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
+      await updateDoc(commentRef, { pinned });
+    } catch (error) {
+      console.error('Failed to pin comment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hide or unhide a comment (owner only)
+   */
+  static async hideComment(commentId: string, hidden: boolean, hiddenBy?: string): Promise<void> {
+    try {
+      const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
+      await updateDoc(commentRef, {
+        hidden,
+        hiddenBy: hidden ? hiddenBy : null,
+      });
+    } catch (error) {
+      console.error('Failed to hide comment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve a comment for pre-moderation mode
+   */
+  static async approveComment(commentId: string, figureId: string): Promise<void> {
+    try {
+      const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
+      await updateDoc(commentRef, { approved: true });
+
+      // Update figure comment count
+      const figureRef = doc(db, FIGURES_COLLECTION, figureId);
+      const figureDoc = await getDoc(figureRef);
+      if (figureDoc.exists()) {
+        const currentCount = figureDoc.data().commentCount || 0;
+        await updateDoc(figureRef, { commentCount: currentCount + 1 });
+      }
+    } catch (error) {
+      console.error('Failed to approve comment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending comments awaiting approval
+   */
+  static async getPendingComments(figureId: string): Promise<Comment[]> {
+    try {
+      const q = query(
+        collection(db, COMMENTS_COLLECTION),
+        where('figureId', '==', figureId),
+        where('approved', '==', false),
+        orderBy('timestamp', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const comments: Comment[] = [];
+
+      querySnapshot.forEach((doc) => {
+        comments.push({
+          id: doc.id,
+          ...doc.data(),
+        } as Comment);
+      });
+
+      return comments;
+    } catch (error) {
+      console.error('Failed to get pending comments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Block a user from commenting on a figure
+   */
+  static async blockUserFromFigure(figureId: string, userId: string): Promise<void> {
+    try {
+      const figureRef = doc(db, FIGURES_COLLECTION, figureId);
+      await updateDoc(figureRef, {
+        blockedFromCommenting: arrayUnion(userId),
+      });
+    } catch (error) {
+      console.error('Failed to block user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unblock a user from commenting on a figure
+   */
+  static async unblockUserFromFigure(figureId: string, userId: string): Promise<void> {
+    try {
+      const figureRef = doc(db, FIGURES_COLLECTION, figureId);
+      await updateDoc(figureRef, {
+        blockedFromCommenting: arrayRemove(userId),
+      });
+    } catch (error) {
+      console.error('Failed to unblock user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update figure comment settings
+   */
+  static async updateFigureCommentSettings(
+    figureId: string,
+    settings: {
+      commentsEnabled?: boolean;
+      commentsLocked?: boolean;
+      requireCommentApproval?: boolean;
+    }
+  ): Promise<void> {
+    try {
+      const figureRef = doc(db, FIGURES_COLLECTION, figureId);
+      await updateDoc(figureRef, settings);
+    } catch (error) {
+      console.error('Failed to update comment settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to comments in real-time
+   */
+  static subscribeToComments(
+    figureId: string,
+    includeHidden: boolean,
+    callback: (comments: Comment[]) => void
+  ): () => void {
+    const q = query(
+      collection(db, COMMENTS_COLLECTION),
+      where('figureId', '==', figureId),
+      orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const comments = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Comment))
+        .filter(comment => {
+          // Filter out hidden comments unless includeHidden is true
+          if (!includeHidden && comment.hidden) return false;
+          // Only show approved comments (or all if approved field doesn't exist)
+          return comment.approved !== false;
+        });
+
+      callback(comments);
+    });
   }
 }

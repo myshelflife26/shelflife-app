@@ -9,6 +9,11 @@ export interface Comment {
   likes: string[]; // Array of user IDs who liked this comment
   edited: boolean;
   editedAt?: number;
+  // Moderation fields
+  hidden?: boolean; // Whether owner has hidden this comment
+  hiddenBy?: string; // User ID of owner who hidden it
+  approved?: boolean; // For pre-moderation mode (default: true if not set)
+  pinned?: boolean; // Whether owner has pinned this comment
 }
 
 export interface CommentWithOwner extends Comment {

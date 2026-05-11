@@ -10,7 +10,7 @@ import type { ReportCategory } from '../utils/reporting';
 import { toastManager } from '../utils/toastManager';
 import type { ActionFigure } from '../types/index';
 import type { User } from '../types/user';
-import { TrendingUp, Users, Sparkles, Flame, Heart, ThumbsUp, UserPlus, ShieldOff, Flag, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Activity, Clock, Package } from 'lucide-react';
+import { TrendingUp, Users, Sparkles, Flame, Heart, ThumbsUp, UserPlus, ShieldOff, Flag, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Activity, Clock, Package, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { FigureDetailModal } from './FigureDetailModal';

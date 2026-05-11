@@ -3,7 +3,7 @@ import type { ActionFigure, Filters } from '../types/index';
 import { FilterSheet } from './FilterSheet';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
-import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X, Star, Tag } from 'lucide-react';
+import { Package, ArrowUpDown, ChevronLeft, ChevronRight, X, Star, Tag, MessageSquare } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { AuthService } from '../utils/auth';
 
@@ -248,6 +248,21 @@ export function GalleryPage({
                 {hasMultipleImages && (
                   <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium">
                     +{imageCount - 1} more
+                  </div>
+                )}
+
+                {/* Comment Count Badge (for owners) */}
+                {item.figure.commentCount !== undefined && item.figure.commentCount > 0 && (
+                  <div
+                    className="absolute bottom-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 hover:bg-blue-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageClick(item.figure);
+                    }}
+                    title="View comments"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    {item.figure.commentCount}
                   </div>
                 )}
 

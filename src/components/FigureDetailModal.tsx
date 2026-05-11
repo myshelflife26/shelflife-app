@@ -19,6 +19,7 @@ interface FigureDetailModalProps {
   onReactionChange?: () => void;
   onBlockUser?: (userId: string, username: string) => void;
   onReportUser?: (userId: string, username: string) => void;
+  onFigureUpdate?: (figureId: string, updates: Partial<ActionFigure>) => void;
 }
 
 export function FigureDetailModal({
@@ -29,7 +30,8 @@ export function FigureDetailModal({
   onViewOwnerCollection,
   onReactionChange,
   onBlockUser,
-  onReportUser
+  onReportUser,
+  onFigureUpdate
 }: FigureDetailModalProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(figure.mainImageIndex ?? 0);
   const [reactionKey, setReactionKey] = useState(0); // Key to force re-render
@@ -425,6 +427,8 @@ export function FigureDetailModal({
                 figureId={figure.id}
                 currentUser={currentUser}
                 figureOwnerId={figure.userId!}
+                figure={figure}
+                onFigureUpdate={(updates) => onFigureUpdate?.(figure.id, updates)}
               />
             </div>
           )}

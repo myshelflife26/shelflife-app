@@ -181,5 +181,20 @@ service cloud.firestore {
       allow create: if isManagement();
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
+
+    // Comments System
+    match /comments/{commentId} {
+      // Allow anyone to read comments (client-side will filter hidden/unapproved)
+      allow read: if true;
+
+      // Create: Must be signed in and set userId to self
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Update: Own comment OR figure owner (for moderation)
+      allow update: if isSignedIn();
+
+      // Delete: Own comment OR must be signed in (figure owner check on client)
+      allow delete: if isSignedIn();
+    }
   }
 }
