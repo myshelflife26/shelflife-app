@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ActionFigure, Comment } from '../types';
+import { ActionFigure } from '../types';
+import { Comment } from '../types/comment';
 import { Button } from './ui/button';
 import { Settings, X, Lock, Unlock, CheckSquare, Square, UserX } from 'lucide-react';
 import { CommentsService } from '../utils/comments';
