@@ -1,5 +1,5 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, getDocs, getDoc, Timestamp, writeBatch } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../config/firebase';
 import { Comment } from '../types';
 
 export class CommentsService {
