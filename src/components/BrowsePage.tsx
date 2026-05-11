@@ -24,6 +24,7 @@ import { UserRatingBadge } from './UserRatingBadge';
 import { FilterSheet } from './FilterSheet';
 import { ResponseTimeBadge } from './ResponseTimeBadge';
 import { BookmarksService } from '../utils/bookmarks';
+import { CommentsSection } from './CommentsSection';
 
 interface BrowsePageProps {
   currentUser: User;
@@ -1364,8 +1365,22 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
                 </div>
               )}
 
+              {/* Comments Section */}
+              <div className="border-t pt-6 mt-6">
+                <CommentsSection
+                  figureId={selectedFigure.id}
+                  currentUser={currentUser}
+                  figureOwnerId={selectedFigure.userId!}
+                  figure={selectedFigure}
+                  onFigureUpdate={(updates) => {
+                    // Update selected figure with new comment settings
+                    setSelectedFigure(prev => prev ? { ...prev, ...updates } : null);
+                  }}
+                />
+              </div>
+
               {/* Contact and Action Buttons */}
-              <div className="border-t pt-4 flex gap-2">
+              <div className="border-t pt-4 mt-4 flex gap-2">
                 {/* Show Admire button only if not your own figure */}
                 {selectedFigure.userId && selectedFigure.userId !== currentUser.id && (() => {
                   const isAdmiring = admiringUserIds.includes(selectedFigure.userId);
