@@ -33,6 +33,12 @@ interface FigureWithOwner extends ActionFigure {
   ownerDisplayName: string;
 }
 
+interface SuggestedUser extends User {
+  suggestionScore: number;
+  matchedManufacturers: string[];
+  matchedCategories: string[];
+}
+
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
@@ -47,7 +53,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [recentFigures7Days, setRecentFigures7Days] = useState<FigureWithOwner[]>([]);
   const [recentFigures30Days, setRecentFigures30Days] = useState<FigureWithOwner[]>([]);
   const [recentFiguresCustom, setRecentFiguresCustom] = useState<FigureWithOwner[]>([]);
-  const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [randomCollectors, setRandomCollectors] = useState<Array<User & { sampleFigures: FigureWithOwner[] }>>([]);
   const [admiringUsers, setAdmiringUsers] = useState<string[]>([]);
   const [selectedFigure, setSelectedFigure] = useState<FigureWithOwner | null>(null);
@@ -282,13 +288,18 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     allUsers: User[],
     currentUserId: string,
     publicFiguresWithOwners: FigureWithOwner[]
-  ): Promise<User[]> => {
+  ): Promise<SuggestedUser[]> => {
     try {
       const myFigures = await FirebaseStorage.getFigures(currentUserId);
       const myManufacturers = new Set(myFigures.map(f => f.manufacturer).filter(Boolean));
       const myCategories = new Set(myFigures.map(f => f.category).filter(Boolean));
 
-      const userScores: Array<{ user: User; score: number }> = [];
+      const userScores: Array<{
+        user: User;
+        score: number;
+        matchedManufacturers: Set<string>;
+        matchedCategories: Set<string>;
+      }> = [];
 
       allUsers
         .filter(u => u.id !== currentUserId && !BlockingService.isUserBlocked(currentUserId, u.id))
@@ -297,26 +308,40 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           if (userFigures.length === 0) return;
 
           let score = 0;
+          const matchedManufacturers = new Set<string>();
+          const matchedCategories = new Set<string>();
 
-          // Score based on matching manufacturers
+          // Score based on matching manufacturers and categories
           userFigures.forEach(figure => {
             if (figure.manufacturer && myManufacturers.has(figure.manufacturer)) {
+              matchedManufacturers.add(figure.manufacturer);
               score += 2;
             }
             if (figure.category && myCategories.has(figure.category)) {
+              matchedCategories.add(figure.category);
               score += 1;
             }
           });
 
           if (score > 0) {
-            userScores.push({ user, score });
+            userScores.push({
+              user,
+              score,
+              matchedManufacturers,
+              matchedCategories
+            });
           }
         });
 
       return userScores
         .sort((a, b) => b.score - a.score)
         .slice(0, 5)
-        .map(us => us.user);
+        .map(us => ({
+          ...us.user,
+          suggestionScore: us.score,
+          matchedManufacturers: Array.from(us.matchedManufacturers),
+          matchedCategories: Array.from(us.matchedCategories)
+        }));
     } catch (error) {
       console.error('Failed to get suggested users:', error);
       return [];
@@ -1240,6 +1265,27 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     </p>
                   </div>
                 </div>
+
+                {/* Matching Info */}
+                <div className="mb-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  {user.matchedManufacturers.length > 0 && (
+                    <div className="flex items-start gap-1">
+                      <Package className="h-3 w-3 mt-0.5 flex-shrink-0 text-purple-500" />
+                      <span className="line-clamp-2">
+                        {user.matchedManufacturers.length} manufacturer{user.matchedManufacturers.length !== 1 ? 's' : ''}: {user.matchedManufacturers.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {user.matchedCategories.length > 0 && (
+                    <div className="flex items-start gap-1">
+                      <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0 text-purple-500" />
+                      <span className="line-clamp-2">
+                        {user.matchedCategories.length} categor{user.matchedCategories.length !== 1 ? 'ies' : 'y'}: {user.matchedCategories.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   size="sm"
                   className="w-full"
