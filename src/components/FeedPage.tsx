@@ -370,11 +370,19 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           !admiringUserIds.includes(u.id)
         );
       console.log('Eligible users for suggestions:', eligibleUsers.length, 'out of', allUsers.length);
+      console.log('Eligible user IDs:', eligibleUsers.map(u => `${u.username}:${u.id}`));
+
+      const publicFigureOwners = new Set(publicFiguresWithOwners.map(f => f.userId));
+      console.log('Public figure owner IDs:', Array.from(publicFigureOwners));
 
       eligibleUsers
         .forEach(user => {
           const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
-          if (userFigures.length === 0) return;
+          console.log(`User ${user.username} (${user.id}): ${userFigures.length} public figures`);
+          if (userFigures.length === 0) {
+            console.log(`  Skipping ${user.username} - no public figures`);
+            return;
+          }
 
           const theirTotal = userFigures.length;
           let score = 0;
