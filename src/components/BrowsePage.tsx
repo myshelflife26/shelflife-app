@@ -821,7 +821,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
 
                   <div className="space-y-2 mb-3">
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      {user.count || user.admirerCount || 0} figure{(user.count || user.admirerCount) !== 1 ? 's' : ''} in collection
+                      {user.figureCount || user.count || 0} figure{(user.figureCount || user.count) !== 1 ? 's' : ''} in collection
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-sm flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500" />
@@ -841,7 +841,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
                         } else {
                           // If viewing someone else's collection, filter browse page
                           setViewMode('all');
-                          setSearchQuery(user.displayName);
+                          setSearchQuery(user.username); // Use username for filtering
                         }
                       }}
                     >
