@@ -55,6 +55,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [recentFigures30Days, setRecentFigures30Days] = useState<FigureWithOwner[]>([]);
   const [recentFiguresCustom, setRecentFiguresCustom] = useState<FigureWithOwner[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [risingSuggestedUsers, setRisingSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [jealousSuggestedUsers, setJealousSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [randomCollectors, setRandomCollectors] = useState<Array<User & { sampleFigures: FigureWithOwner[] }>>([]);
   const [admiringUsers, setAdmiringUsers] = useState<string[]>([]);
   const [selectedFigure, setSelectedFigure] = useState<FigureWithOwner | null>(null);
@@ -73,6 +75,10 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [admiredFiguresPageSize, setAdmiredFiguresPageSize] = useState(25);
   const [suggestedUsersPage, setSuggestedUsersPage] = useState(1);
   const [suggestedUsersPageSize, setSuggestedUsersPageSize] = useState(25);
+  const [risingSuggestedPage, setRisingSuggestedPage] = useState(1);
+  const [risingSuggestedPageSize, setRisingSuggestedPageSize] = useState(25);
+  const [jealousSuggestedPage, setJealousSuggestedPage] = useState(1);
+  const [jealousSuggestedPageSize, setJealousSuggestedPageSize] = useState(25);
   const [randomCollectorsPage, setRandomCollectorsPage] = useState(1);
   const [randomCollectorsPageSize, setRandomCollectorsPageSize] = useState(25);
   const [recent7DaysPage, setRecent7DaysPage] = useState(1);
@@ -274,8 +280,27 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     setRecentFiguresCustom(getRecentFigures(customDaysAgoTime));
 
     // Get suggested users based on matching figures
-    const suggestions = await getSuggestedUsers(allUsers, currentUser.id, publicFiguresWithOwners);
+    const suggestions = await getSuggestedUsers(allUsers, currentUser.id, publicFiguresWithOwners, admiring);
     setSuggestedUsers(suggestions);
+
+    // Get rising suggested users (users with rising star figures)
+    const risingSuggestions = await getRisingSuggestedUsers(
+      allUsers,
+      currentUser.id,
+      publicFiguresWithOwners,
+      admiring,
+      [...risingFigures7Days, ...risingFigures30Days, ...risingFiguresCustom]
+    );
+    setRisingSuggestedUsers(risingSuggestions);
+
+    // Get jealous suggested users (users with high jealousy figures)
+    const jealousSuggestions = await getJealousSuggestedUsers(
+      allUsers,
+      currentUser.id,
+      publicFiguresWithOwners,
+      admiring
+    );
+    setJealousSuggestedUsers(jealousSuggestions);
 
     // Get random collectors with sample figures
     const randomUsers = await getRandomCollectors(allUsers, currentUser.id, publicFiguresWithOwners);
@@ -288,7 +313,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const getSuggestedUsers = async (
     allUsers: User[],
     currentUserId: string,
-    publicFiguresWithOwners: FigureWithOwner[]
+    publicFiguresWithOwners: FigureWithOwner[],
+    admiringUserIds: string[]
   ): Promise<SuggestedUser[]> => {
     try {
       const myFigures = await FirebaseStorage.getFigures(currentUserId);
@@ -319,7 +345,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       });
 
       allUsers
-        .filter(u => u.id !== currentUserId && !BlockingService.isUserBlocked(currentUserId, u.id))
+        .filter(u =>
+          u.id !== currentUserId &&
+          !BlockingService.isUserBlocked(currentUserId, u.id) &&
+          !admiringUserIds.includes(u.id)
+        )
         .forEach(user => {
           const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
           if (userFigures.length === 0) return;
@@ -467,6 +497,95 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     }
   };
 
+  const getRisingSuggestedUsers = async (
+    allUsers: User[],
+    currentUserId: string,
+    publicFiguresWithOwners: FigureWithOwner[],
+    admiringUserIds: string[],
+    risingFigures: Array<FigureWithOwner & { increase: number }>
+  ): Promise<SuggestedUser[]> => {
+    try {
+      // Get users who own rising star figures
+      const userRisingScores = new Map<string, { user: User; totalIncrease: number; risingCount: number }>();
+
+      risingFigures.forEach(figure => {
+        if (!figure.userId) return;
+        const user = allUsers.find(u => u.id === figure.userId);
+        if (!user) return;
+        if (figure.userId === currentUserId) return;
+        if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
+        if (admiringUserIds.includes(figure.userId)) return;
+
+        if (!userRisingScores.has(figure.userId)) {
+          userRisingScores.set(figure.userId, { user, totalIncrease: 0, risingCount: 0 });
+        }
+        const entry = userRisingScores.get(figure.userId)!;
+        entry.totalIncrease += figure.increase;
+        entry.risingCount++;
+      });
+
+      return Array.from(userRisingScores.values())
+        .sort((a, b) => b.totalIncrease - a.totalIncrease)
+        .slice(0, 10)
+        .map(entry => ({
+          ...entry.user,
+          suggestionScore: entry.totalIncrease,
+          matchedManufacturers: [],
+          matchedCategories: [],
+          matchReason: `${entry.risingCount} rising star figure${entry.risingCount !== 1 ? 's' : ''} (+${entry.totalIncrease} total momentum)`
+        }));
+    } catch (error) {
+      console.error('Failed to get rising suggested users:', error);
+      return [];
+    }
+  };
+
+  const getJealousSuggestedUsers = async (
+    allUsers: User[],
+    currentUserId: string,
+    publicFiguresWithOwners: FigureWithOwner[],
+    admiringUserIds: string[]
+  ): Promise<SuggestedUser[]> => {
+    try {
+      // Get users with highest jealousy scores
+      const userJealousyScores = new Map<string, { user: User; totalJealousy: number; jealousCount: number }>();
+
+      publicFiguresWithOwners.forEach(figure => {
+        if (!figure.userId) return;
+        if (figure.userId === currentUserId) return;
+        if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
+        if (admiringUserIds.includes(figure.userId)) return;
+
+        const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
+        if (jealousyScore === 0) return;
+
+        const user = allUsers.find(u => u.id === figure.userId);
+        if (!user) return;
+
+        if (!userJealousyScores.has(figure.userId)) {
+          userJealousyScores.set(figure.userId, { user, totalJealousy: 0, jealousCount: 0 });
+        }
+        const entry = userJealousyScores.get(figure.userId)!;
+        entry.totalJealousy += jealousyScore;
+        entry.jealousCount++;
+      });
+
+      return Array.from(userJealousyScores.values())
+        .sort((a, b) => b.totalJealousy - a.totalJealousy)
+        .slice(0, 10)
+        .map(entry => ({
+          ...entry.user,
+          suggestionScore: entry.totalJealousy,
+          matchedManufacturers: [],
+          matchedCategories: [],
+          matchReason: `${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with ${entry.totalJealousy} total jealousy points`
+        }));
+    } catch (error) {
+      console.error('Failed to get jealous suggested users:', error);
+      return [];
+    }
+  };
+
   const getRandomCollectors = async (
     allUsers: User[],
     currentUserId: string,
@@ -541,6 +660,18 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     const endIndex = startIndex + suggestedUsersPageSize;
     return suggestedUsers.slice(startIndex, endIndex);
   }, [suggestedUsers, suggestedUsersPage, suggestedUsersPageSize]);
+
+  const paginatedRisingSuggested = useMemo(() => {
+    const startIndex = (risingSuggestedPage - 1) * risingSuggestedPageSize;
+    const endIndex = startIndex + risingSuggestedPageSize;
+    return risingSuggestedUsers.slice(startIndex, endIndex);
+  }, [risingSuggestedUsers, risingSuggestedPage, risingSuggestedPageSize]);
+
+  const paginatedJealousSuggested = useMemo(() => {
+    const startIndex = (jealousSuggestedPage - 1) * jealousSuggestedPageSize;
+    const endIndex = startIndex + jealousSuggestedPageSize;
+    return jealousSuggestedUsers.slice(startIndex, endIndex);
+  }, [jealousSuggestedUsers, jealousSuggestedPage, jealousSuggestedPageSize]);
 
   const paginatedRandomCollectors = useMemo(() => {
     const startIndex = (randomCollectorsPage - 1) * randomCollectorsPageSize;
@@ -1419,6 +1550,182 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             pageSize={suggestedUsersPageSize}
             onPageChange={setSuggestedUsersPage}
             onPageSizeChange={setSuggestedUsersPageSize}
+          />
+          </>
+          )}
+        </div>
+
+        {/* High Rising Suggested Collectors Section */}
+        <div className="mb-8 bg-orange-100/70 dark:bg-orange-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-6 w-6 text-orange-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">High Rising Suggested Collectors</h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Collectors with the most rising star figures gaining momentum
+          </p>
+
+          {risingSuggestedUsers.length === 0 ? (
+            <div className="text-center py-12">
+              <TrendingUp className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No rising collectors found</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Collectors with trending figures will appear here!
+              </p>
+            </div>
+          ) : (
+            <>
+          <Pagination
+            currentPage={risingSuggestedPage}
+            totalItems={risingSuggestedUsers.length}
+            pageSize={risingSuggestedPageSize}
+            onPageChange={setRisingSuggestedPage}
+            onPageSizeChange={setRisingSuggestedPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+            {paginatedRisingSuggested.map(user => (
+              <div
+                key={user.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => onNavigateToBrowse && onNavigateToBrowse(user.id)}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold text-lg">
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {user.displayName}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      @{user.username}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Match Reason */}
+                <div className="mb-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2 border border-orange-200 dark:border-orange-700">
+                  <div className="flex items-start gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {user.matchReason}
+                    </p>
+                  </div>
+                  <div className="mt-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                    Momentum Score: {user.suggestionScore}
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdmire(user.id);
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Send Admirer Request
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={risingSuggestedPage}
+            totalItems={risingSuggestedUsers.length}
+            pageSize={risingSuggestedPageSize}
+            onPageChange={setRisingSuggestedPage}
+            onPageSizeChange={setRisingSuggestedPageSize}
+          />
+          </>
+          )}
+        </div>
+
+        {/* Most Jealous Suggested Collectors Section */}
+        <div className="mb-8 bg-red-100/70 dark:bg-red-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="h-6 w-6 text-red-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Most Jealous Suggested Collectors</h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Collectors with figures generating the most jealousy from the community
+          </p>
+
+          {jealousSuggestedUsers.length === 0 ? (
+            <div className="text-center py-12">
+              <Flame className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No jealous collectors found</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                Collectors with highly jealousy-inducing figures will appear here!
+              </p>
+            </div>
+          ) : (
+            <>
+          <Pagination
+            currentPage={jealousSuggestedPage}
+            totalItems={jealousSuggestedUsers.length}
+            pageSize={jealousSuggestedPageSize}
+            onPageChange={setJealousSuggestedPage}
+            onPageSizeChange={setJealousSuggestedPageSize}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+            {paginatedJealousSuggested.map(user => (
+              <div
+                key={user.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => onNavigateToBrowse && onNavigateToBrowse(user.id)}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {user.displayName}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      @{user.username}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Match Reason */}
+                <div className="mb-3 bg-red-50 dark:bg-red-900/20 rounded-lg p-2 border border-red-200 dark:border-red-700">
+                  <div className="flex items-start gap-2">
+                    <Flame className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400" />
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {user.matchReason}
+                    </p>
+                  </div>
+                  <div className="mt-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                    Jealousy Score: {user.suggestionScore}
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdmire(user.id);
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Send Admirer Request
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={jealousSuggestedPage}
+            totalItems={jealousSuggestedUsers.length}
+            pageSize={jealousSuggestedPageSize}
+            onPageChange={setJealousSuggestedPage}
+            onPageSizeChange={setJealousSuggestedPageSize}
           />
           </>
           )}
