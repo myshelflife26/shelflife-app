@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FirebaseCommentsService } from '../utils/firebaseComments';
 import type { Comment } from '../types/comment';
 import type { User } from '../types/user';
@@ -34,6 +34,9 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId, figure, 
   const isBlocked = (figure?.blockedFromCommenting || []).includes(currentUser.id);
   const canComment = commentsEnabled && !commentsLocked && !isBlocked;
 
+  // Ref for click-away detection on menu
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     // Subscribe to real-time comments
     const unsubscribe = FirebaseCommentsService.subscribeToComments(
@@ -47,6 +50,22 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId, figure, 
 
     return () => unsubscribe();
   }, [figureId, isOwner]);
+
+  // Click away listener for comment actions menu
+  useEffect(() => {
+    if (!commentActions) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setCommentActions(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [commentActions]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
@@ -396,7 +415,7 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId, figure, 
                   </div>
 
                   {!isEditing && (
-                    <div className="relative">
+                    <div className="relative" ref={showActions ? menuRef : null}>
                       <button
                         onClick={() => setCommentActions(showActions ? null : comment.id)}
                         className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
