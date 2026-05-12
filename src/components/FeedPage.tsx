@@ -395,6 +395,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             if (f.category) matchedCategories.add(f.category);
           });
 
+          console.log(`Checking user ${user.username}:`, {
+            figures: theirTotal,
+            franchises: Array.from(theirFranchises.keys()),
+            years: Array.from(theirYears.keys()),
+            sizes: Array.from(theirSizes.keys())
+          });
+
           // FRANCHISE/IP MATCHING (bidirectional high %/count)
           myFranchises.forEach((myCount, franchise) => {
             const myPercent = (myCount / myTotal) * 100;
@@ -520,6 +527,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             score += 3; // At least 1 figure with multi-attribute match
           }
 
+          console.log(`User ${user.username} final score:`, score, 'reasons:', reasons);
+
           if (score > 0) {
             userScores.push({
               user,
@@ -528,6 +537,8 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               matchedCategories,
               matchReason: reasons.slice(0, 2).join('; ') || 'Similar collection interests'
             });
+          } else {
+            console.log(`User ${user.username} scored 0 - no matching franchises/years/sizes`);
           }
         });
 
