@@ -176,15 +176,36 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
     }
   }, [initialUserId, onClearInitialUserId]);
 
-  // Get users with public collections (TODO: Update to use Firebase)
+  // Get users with public collections
   const publicUsers = useMemo(() => {
-    return [];
-  }, [currentUser.id, refreshKey]);
+    const uniqueUserIds = new Set<string>();
+    const usersMap = new Map<string, any>();
 
-  // Get collections you're admiring (TODO: Update to use Firebase)
+    allPublicFigures.forEach(figure => {
+      if (figure.userId && !uniqueUserIds.has(figure.userId)) {
+        uniqueUserIds.add(figure.userId);
+        usersMap.set(figure.userId, {
+          id: figure.userId,
+          username: figure.ownerUsername,
+          displayName: figure.ownerDisplayName,
+          figureCount: 0
+        });
+      }
+      if (figure.userId) {
+        const user = usersMap.get(figure.userId);
+        if (user) {
+          user.figureCount++;
+        }
+      }
+    });
+
+    return Array.from(usersMap.values());
+  }, [allPublicFigures]);
+
+  // Get collections you're admiring
   const admiringCollections = useMemo(() => {
-    return [];
-  }, [currentUser.id, refreshKey]);
+    return publicUsers.filter(user => admiringUserIds.includes(user.id));
+  }, [publicUsers, admiringUserIds]);
 
   // Get recent figures (last 20)
   const recentFigures = useMemo(() => {
