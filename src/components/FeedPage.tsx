@@ -37,6 +37,7 @@ interface SuggestedUser extends User {
   suggestionScore: number;
   matchedManufacturers: string[];
   matchedCategories: string[];
+  matchReason: string; // Human-readable explanation of why suggested
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -291,15 +292,31 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   ): Promise<SuggestedUser[]> => {
     try {
       const myFigures = await FirebaseStorage.getFigures(currentUserId);
-      const myManufacturers = new Set(myFigures.map(f => f.manufacturer).filter(Boolean));
-      const myCategories = new Set(myFigures.map(f => f.category).filter(Boolean));
+      if (myFigures.length === 0) return [];
 
       const userScores: Array<{
         user: User;
         score: number;
         matchedManufacturers: Set<string>;
         matchedCategories: Set<string>;
+        matchReason: string;
       }> = [];
+
+      // Calculate my collection breakdowns
+      const myTotal = myFigures.length;
+      const myFranchises = new Map<string, number>();
+      const myYears = new Map<number, number>();
+      const mySizes = new Map<string, number>();
+      const myManufacturers = new Set<string>();
+      const myCategories = new Set<string>();
+
+      myFigures.forEach(f => {
+        if (f.franchise) myFranchises.set(f.franchise, (myFranchises.get(f.franchise) || 0) + 1);
+        if (f.year) myYears.set(f.year, (myYears.get(f.year) || 0) + 1);
+        if (f.size) mySizes.set(f.size, (mySizes.get(f.size) || 0) + 1);
+        if (f.manufacturer) myManufacturers.add(f.manufacturer);
+        if (f.category) myCategories.add(f.category);
+      });
 
       allUsers
         .filter(u => u.id !== currentUserId && !BlockingService.isUserBlocked(currentUserId, u.id))
@@ -307,40 +324,142 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
           if (userFigures.length === 0) return;
 
+          const theirTotal = userFigures.length;
           let score = 0;
           const matchedManufacturers = new Set<string>();
           const matchedCategories = new Set<string>();
+          const reasons: string[] = [];
 
-          // Score based on matching manufacturers and categories
-          userFigures.forEach(figure => {
-            if (figure.manufacturer && myManufacturers.has(figure.manufacturer)) {
-              matchedManufacturers.add(figure.manufacturer);
-              score += 2;
+          // Calculate their collection breakdowns
+          const theirFranchises = new Map<string, number>();
+          const theirYears = new Map<number, number>();
+          const theirSizes = new Map<string, number>();
+
+          userFigures.forEach(f => {
+            if (f.franchise) theirFranchises.set(f.franchise, (theirFranchises.get(f.franchise) || 0) + 1);
+            if (f.year) theirYears.set(f.year, (theirYears.get(f.year) || 0) + 1);
+            if (f.size) theirSizes.set(f.size, (theirSizes.get(f.size) || 0) + 1);
+            if (f.manufacturer) matchedManufacturers.add(f.manufacturer);
+            if (f.category) matchedCategories.add(f.category);
+          });
+
+          // FRANCHISE/IP MATCHING (bidirectional high %/count)
+          myFranchises.forEach((myCount, franchise) => {
+            const myPercent = (myCount / myTotal) * 100;
+            const theirCount = theirFranchises.get(franchise) || 0;
+            const theirPercent = theirCount > 0 ? (theirCount / theirTotal) * 100 : 0;
+
+            if (theirCount === 0) return;
+
+            // High % in my collection + high count in theirs
+            if (myPercent >= 30 && theirCount >= 15) {
+              score += 50;
+              reasons.push(`${Math.round(myPercent)}% of your collection is ${franchise} (${theirCount} in theirs)`);
             }
-            if (figure.category && myCategories.has(figure.category)) {
-              matchedCategories.add(figure.category);
-              score += 1;
+            // High count in my collection + high % in theirs
+            else if (myCount >= 15 && theirPercent >= 30) {
+              score += 50;
+              reasons.push(`${myCount} ${franchise} figures in yours (${Math.round(theirPercent)}% of theirs)`);
+            }
+            // Both have high percentages
+            else if (myPercent >= 25 && theirPercent >= 25) {
+              score += 40;
+              reasons.push(`${Math.round(myPercent)}% yours, ${Math.round(theirPercent)}% theirs: ${franchise}`);
+            }
+            // Moderate matching
+            else if (myPercent >= 15 || theirPercent >= 15 || myCount >= 10 || theirCount >= 10) {
+              score += 15;
             }
           });
+
+          // YEAR MATCHING (bidirectional high %/count)
+          myYears.forEach((myCount, year) => {
+            const myPercent = (myCount / myTotal) * 100;
+            const theirCount = theirYears.get(year) || 0;
+            const theirPercent = theirCount > 0 ? (theirCount / theirTotal) * 100 : 0;
+
+            if (theirCount === 0) return;
+
+            if (myPercent >= 20 && theirCount >= 10) {
+              score += 25;
+              reasons.push(`${Math.round(myPercent)}% of yours from ${year} (${theirCount} in theirs)`);
+            } else if (myCount >= 10 && theirPercent >= 20) {
+              score += 25;
+              reasons.push(`${myCount} from ${year} in yours (${Math.round(theirPercent)}% of theirs)`);
+            } else if (myPercent >= 15 && theirPercent >= 15) {
+              score += 20;
+            } else if (myCount >= 5 && theirCount >= 5) {
+              score += 8;
+            }
+          });
+
+          // SIZE MATCHING (bidirectional high %/count)
+          mySizes.forEach((myCount, size) => {
+            const myPercent = (myCount / myTotal) * 100;
+            const theirCount = theirSizes.get(size) || 0;
+            const theirPercent = theirCount > 0 ? (theirCount / theirTotal) * 100 : 0;
+
+            if (theirCount === 0) return;
+
+            if (myPercent >= 30 && theirCount >= 15) {
+              score += 30;
+              reasons.push(`${Math.round(myPercent)}% of yours are ${size} (${theirCount} in theirs)`);
+            } else if (myCount >= 15 && theirPercent >= 30) {
+              score += 30;
+              reasons.push(`${myCount} ${size} figures in yours (${Math.round(theirPercent)}% of theirs)`);
+            } else if (myPercent >= 20 && theirPercent >= 20) {
+              score += 25;
+            } else if (myCount >= 8 && theirCount >= 8) {
+              score += 10;
+            }
+          });
+
+          // COLLECTION OVERLAP (figures matching on multiple attributes)
+          let overlapCount = 0;
+          myFigures.forEach(myFig => {
+            const hasMatch = userFigures.some(theirFig => {
+              let matches = 0;
+              if (myFig.franchise && myFig.franchise === theirFig.franchise) matches++;
+              if (myFig.year && myFig.year === theirFig.year) matches++;
+              if (myFig.size && myFig.size === theirFig.size) matches++;
+              return matches >= 2; // Match on at least 2 attributes
+            });
+            if (hasMatch) overlapCount++;
+          });
+
+          const myOverlapPercent = (overlapCount / myTotal) * 100;
+          const theirOverlapPercent = (overlapCount / theirTotal) * 100;
+
+          // High overlap bonus
+          if (myOverlapPercent >= 40 && theirOverlapPercent >= 40) {
+            score += 60;
+            reasons.push(`${Math.round(myOverlapPercent)}% of your collection overlaps with ${Math.round(theirOverlapPercent)}% of theirs`);
+          } else if (myOverlapPercent >= 30 || theirOverlapPercent >= 30) {
+            score += 30;
+          } else if (myOverlapPercent >= 20 || theirOverlapPercent >= 20) {
+            score += 15;
+          }
 
           if (score > 0) {
             userScores.push({
               user,
               score,
               matchedManufacturers,
-              matchedCategories
+              matchedCategories,
+              matchReason: reasons.slice(0, 2).join('; ') || 'Similar collection interests'
             });
           }
         });
 
       return userScores
         .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
+        .slice(0, 10)
         .map(us => ({
           ...us.user,
           suggestionScore: us.score,
           matchedManufacturers: Array.from(us.matchedManufacturers),
-          matchedCategories: Array.from(us.matchedCategories)
+          matchedCategories: Array.from(us.matchedCategories),
+          matchReason: us.matchReason
         }));
     } catch (error) {
       console.error('Failed to get suggested users:', error);
@@ -1224,7 +1343,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Suggested Collectors</h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Users with similar figures to your collection
+            Collectors matched based on franchise/IP, release years, figure sizes, and collection overlap
           </p>
 
           {suggestedUsers.length === 0 ? (
@@ -1266,24 +1385,17 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   </div>
                 </div>
 
-                {/* Matching Info */}
-                <div className="mb-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                  {user.matchedManufacturers.length > 0 && (
-                    <div className="flex items-start gap-1">
-                      <Package className="h-3 w-3 mt-0.5 flex-shrink-0 text-purple-500" />
-                      <span className="line-clamp-2">
-                        {user.matchedManufacturers.length} manufacturer{user.matchedManufacturers.length !== 1 ? 's' : ''}: {user.matchedManufacturers.join(', ')}
-                      </span>
-                    </div>
-                  )}
-                  {user.matchedCategories.length > 0 && (
-                    <div className="flex items-start gap-1">
-                      <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0 text-purple-500" />
-                      <span className="line-clamp-2">
-                        {user.matchedCategories.length} categor{user.matchedCategories.length !== 1 ? 'ies' : 'y'}: {user.matchedCategories.join(', ')}
-                      </span>
-                    </div>
-                  )}
+                {/* Match Reason */}
+                <div className="mb-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-purple-600 dark:text-purple-400" />
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {user.matchReason}
+                    </p>
+                  </div>
+                  <div className="mt-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                    Match Score: {user.suggestionScore}
+                  </div>
                 </div>
 
                 <Button
