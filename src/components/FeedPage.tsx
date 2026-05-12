@@ -555,6 +555,30 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         console.log('Top 3 scores:', userScores.slice(0, 3).map(us => ({ user: us.user.username, score: us.score, reason: us.matchReason })));
       }
 
+      // If no matches found, include users with most public figures (even if already admiring)
+      if (userScores.length === 0) {
+        console.log('No matches found, falling back to top collectors by figure count');
+        const usersWithFigures = allUsers
+          .filter(u => u.id !== currentUserId && !BlockingService.isUserBlocked(currentUserId, u.id))
+          .map(user => {
+            const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
+            return { user, figureCount: userFigures.length };
+          })
+          .filter(uf => uf.figureCount > 0)
+          .sort((a, b) => b.figureCount - a.figureCount)
+          .slice(0, 10);
+
+        return usersWithFigures.map(uf => ({
+          ...uf.user,
+          suggestionScore: uf.figureCount,
+          matchedManufacturers: [],
+          matchedCategories: [],
+          matchReason: admiringUserIds.includes(uf.user.id)
+            ? `Already admiring - ${uf.figureCount} public figures`
+            : `Active collector with ${uf.figureCount} public figures`
+        }));
+      }
+
       return userScores
         .sort((a, b) => b.score - a.score)
         .slice(0, 10)
@@ -605,7 +629,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         console.log('Top 3 rising users:', topUsers.map(u => ({ user: u.user.username, total: u.totalIncrease, count: u.risingCount })));
       }
 
-      return Array.from(userRisingScores.values())
+      const results = Array.from(userRisingScores.values())
         .sort((a, b) => b.totalIncrease - a.totalIncrease)
         .slice(0, 10)
         .map(entry => ({
@@ -615,6 +639,40 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           matchedCategories: [],
           matchReason: `${entry.risingCount} rising star figure${entry.risingCount !== 1 ? 's' : ''} (+${entry.totalIncrease} total momentum)`
         }));
+
+      // Fallback: if no rising users found (all were filtered), include users you're admiring
+      if (results.length === 0 && risingFigures.length > 0) {
+        console.log('No rising users after filter, including admiring users');
+        const allUserRisingScores = new Map<string, { user: User; totalIncrease: number; risingCount: number }>();
+
+        risingFigures.forEach(figure => {
+          if (!figure.userId || figure.userId === currentUserId) return;
+          const user = allUsers.find(u => u.id === figure.userId);
+          if (!user || BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
+
+          if (!allUserRisingScores.has(figure.userId)) {
+            allUserRisingScores.set(figure.userId, { user, totalIncrease: 0, risingCount: 0 });
+          }
+          const entry = allUserRisingScores.get(figure.userId)!;
+          entry.totalIncrease += figure.increase;
+          entry.risingCount++;
+        });
+
+        return Array.from(allUserRisingScores.values())
+          .sort((a, b) => b.totalIncrease - a.totalIncrease)
+          .slice(0, 10)
+          .map(entry => ({
+            ...entry.user,
+            suggestionScore: entry.totalIncrease,
+            matchedManufacturers: [],
+            matchedCategories: [],
+            matchReason: admiringUserIds.includes(entry.user.id)
+              ? `Already admiring - ${entry.risingCount} rising figure${entry.risingCount !== 1 ? 's' : ''}`
+              : `${entry.risingCount} rising star figure${entry.risingCount !== 1 ? 's' : ''} (+${entry.totalIncrease} total momentum)`
+          }));
+      }
+
+      return results;
     } catch (error) {
       console.error('Failed to get rising suggested users:', error);
       return [];
@@ -658,7 +716,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         console.log('Top 3 jealous users:', topUsers.map(u => ({ user: u.user.username, total: u.totalJealousy, count: u.jealousCount })));
       }
 
-      return Array.from(userJealousyScores.values())
+      const results = Array.from(userJealousyScores.values())
         .sort((a, b) => b.totalJealousy - a.totalJealousy)
         .slice(0, 10)
         .map(entry => ({
@@ -668,6 +726,45 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           matchedCategories: [],
           matchReason: `${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with ${entry.totalJealousy} total jealousy points`
         }));
+
+      // Fallback: if no jealous users found (all were filtered), include users you're admiring
+      if (results.length === 0) {
+        console.log('No jealous users after filter, including admiring users with figures');
+        const allUserJealousyScores = new Map<string, { user: User; totalJealousy: number; jealousCount: number }>();
+
+        publicFiguresWithOwners.forEach(figure => {
+          if (!figure.userId || figure.userId === currentUserId) return;
+          if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
+
+          const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
+          if (jealousyScore === 0) return;
+
+          const user = allUsers.find(u => u.id === figure.userId);
+          if (!user) return;
+
+          if (!allUserJealousyScores.has(figure.userId)) {
+            allUserJealousyScores.set(figure.userId, { user, totalJealousy: 0, jealousCount: 0 });
+          }
+          const entry = allUserJealousyScores.get(figure.userId)!;
+          entry.totalJealousy += jealousyScore;
+          entry.jealousCount++;
+        });
+
+        return Array.from(allUserJealousyScores.values())
+          .sort((a, b) => b.totalJealousy - a.totalJealousy)
+          .slice(0, 10)
+          .map(entry => ({
+            ...entry.user,
+            suggestionScore: entry.totalJealousy,
+            matchedManufacturers: [],
+            matchedCategories: [],
+            matchReason: admiringUserIds.includes(entry.user.id)
+              ? `Already admiring - ${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with jealousy`
+              : `${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with ${entry.totalJealousy} total jealousy points`
+          }));
+      }
+
+      return results;
     } catch (error) {
       console.error('Failed to get jealous suggested users:', error);
       return [];
