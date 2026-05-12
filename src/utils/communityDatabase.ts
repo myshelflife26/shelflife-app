@@ -5,6 +5,7 @@ export interface CommunityFigure {
   id: string;
   name: string;
   manufacturer: string;
+  franchise?: string; // Franchise/IP (e.g., G.I. Joe, Marvel, Star Wars)
   year: string;
   productLine?: string;
   subProductLine?: string;
@@ -35,6 +36,7 @@ export class CommunityDatabaseService {
         (fig) =>
           fig.name.toLowerCase().includes(lowerQuery) ||
           fig.manufacturer.toLowerCase().includes(lowerQuery) ||
+          fig.franchise?.toLowerCase().includes(lowerQuery) ||
           fig.productLine?.toLowerCase().includes(lowerQuery) ||
           fig.subProductLine?.toLowerCase().includes(lowerQuery) ||
           fig.year.includes(lowerQuery)

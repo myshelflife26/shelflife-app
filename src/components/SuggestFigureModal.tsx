@@ -17,6 +17,7 @@ export function SuggestFigureModal({ open, onClose, currentUser }: SuggestFigure
   const [formData, setFormData] = useState({
     name: '',
     manufacturer: '',
+    franchise: '',
     year: '',
     productLine: '',
     subProductLine: '',
@@ -43,6 +44,7 @@ export function SuggestFigureModal({ open, onClose, currentUser }: SuggestFigure
       const newFigure = CommunityDatabaseService.add({
         name: formData.name,
         manufacturer: formData.manufacturer,
+        franchise: formData.franchise || undefined,
         year: formData.year,
         productLine: formData.productLine || undefined,
         subProductLine: formData.subProductLine || undefined,
@@ -63,6 +65,7 @@ export function SuggestFigureModal({ open, onClose, currentUser }: SuggestFigure
         setFormData({
           name: '',
           manufacturer: '',
+          franchise: '',
           year: '',
           productLine: '',
           subProductLine: '',
@@ -141,6 +144,22 @@ export function SuggestFigureModal({ open, onClose, currentUser }: SuggestFigure
                 onChange={(e) => handleChange('manufacturer', e.target.value)}
                 required
               />
+            </div>
+
+            {/* Franchise/IP (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="franchise" className="text-sm font-medium">
+                Franchise / IP (Optional)
+              </Label>
+              <Input
+                id="franchise"
+                placeholder="e.g., G.I. Joe, Marvel, Star Wars, Transformers"
+                value={formData.franchise}
+                onChange={(e) => handleChange('franchise', e.target.value)}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                The intellectual property or brand this figure belongs to
+              </p>
             </div>
 
             {/* Year (Required) */}
