@@ -280,26 +280,33 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     setRecentFiguresCustom(getRecentFigures(customDaysAgoTime));
 
     // Get suggested users based on matching figures
+    console.log('Getting suggestions:', { totalUsers: allUsers.length, publicFigures: publicFiguresWithOwners.length, admiring: admiring.length });
     const suggestions = await getSuggestedUsers(allUsers, currentUser.id, publicFiguresWithOwners, admiring);
+    console.log('Suggested users result:', suggestions.length);
     setSuggestedUsers(suggestions);
 
     // Get rising suggested users (users with rising star figures)
+    const allRisingFigures = [...risingFigures7Days, ...risingFigures30Days, ...risingFiguresCustom];
+    console.log('Rising figures for suggestions:', allRisingFigures.length);
     const risingSuggestions = await getRisingSuggestedUsers(
       allUsers,
       currentUser.id,
       publicFiguresWithOwners,
       admiring,
-      [...risingFigures7Days, ...risingFigures30Days, ...risingFiguresCustom]
+      allRisingFigures
     );
+    console.log('Rising suggested users result:', risingSuggestions.length);
     setRisingSuggestedUsers(risingSuggestions);
 
     // Get jealous suggested users (users with high jealousy figures)
+    console.log('Getting jealous suggestions from', publicFiguresWithOwners.length, 'public figures');
     const jealousSuggestions = await getJealousSuggestedUsers(
       allUsers,
       currentUser.id,
       publicFiguresWithOwners,
       admiring
     );
+    console.log('Jealous suggested users result:', jealousSuggestions.length);
     setJealousSuggestedUsers(jealousSuggestions);
 
     // Get random collectors with sample figures
@@ -318,7 +325,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   ): Promise<SuggestedUser[]> => {
     try {
       const myFigures = await FirebaseStorage.getFigures(currentUserId);
-      if (myFigures.length === 0) return [];
+      console.log('getSuggestedUsers: myFigures count:', myFigures.length);
+      if (myFigures.length === 0) {
+        console.log('getSuggestedUsers: No figures, returning empty');
+        return [];
+      }
 
       const userScores: Array<{
         user: User;
@@ -344,12 +355,23 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         if (f.category) myCategories.add(f.category);
       });
 
-      allUsers
+      console.log('My collection breakdown:', {
+        franchises: Array.from(myFranchises.keys()),
+        years: Array.from(myYears.keys()),
+        sizes: Array.from(mySizes.keys()),
+        manufacturers: Array.from(myManufacturers),
+        categories: Array.from(myCategories)
+      });
+
+      const eligibleUsers = allUsers
         .filter(u =>
           u.id !== currentUserId &&
           !BlockingService.isUserBlocked(currentUserId, u.id) &&
           !admiringUserIds.includes(u.id)
-        )
+        );
+      console.log('Eligible users for suggestions:', eligibleUsers.length, 'out of', allUsers.length);
+
+      eligibleUsers
         .forEach(user => {
           const userFigures = publicFiguresWithOwners.filter(f => f.userId === user.id);
           if (userFigures.length === 0) return;
@@ -481,6 +503,11 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           }
         });
 
+      console.log('User scores found:', userScores.length);
+      if (userScores.length > 0) {
+        console.log('Top 3 scores:', userScores.slice(0, 3).map(us => ({ user: us.user.username, score: us.score, reason: us.matchReason })));
+      }
+
       return userScores
         .sort((a, b) => b.score - a.score)
         .slice(0, 10)
@@ -505,6 +532,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     risingFigures: Array<FigureWithOwner & { increase: number }>
   ): Promise<SuggestedUser[]> => {
     try {
+      console.log('getRisingSuggestedUsers: rising figures count:', risingFigures.length);
       // Get users who own rising star figures
       const userRisingScores = new Map<string, { user: User; totalIncrease: number; risingCount: number }>();
 
@@ -523,6 +551,12 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         entry.totalIncrease += figure.increase;
         entry.risingCount++;
       });
+
+      console.log('getRisingSuggestedUsers: userRisingScores size:', userRisingScores.size);
+      if (userRisingScores.size > 0) {
+        const topUsers = Array.from(userRisingScores.values()).slice(0, 3);
+        console.log('Top 3 rising users:', topUsers.map(u => ({ user: u.user.username, total: u.totalIncrease, count: u.risingCount })));
+      }
 
       return Array.from(userRisingScores.values())
         .sort((a, b) => b.totalIncrease - a.totalIncrease)
@@ -547,6 +581,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     admiringUserIds: string[]
   ): Promise<SuggestedUser[]> => {
     try {
+      console.log('getJealousSuggestedUsers: public figures count:', publicFiguresWithOwners.length);
       // Get users with highest jealousy scores
       const userJealousyScores = new Map<string, { user: User; totalJealousy: number; jealousCount: number }>();
 
@@ -569,6 +604,12 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         entry.totalJealousy += jealousyScore;
         entry.jealousCount++;
       });
+
+      console.log('getJealousSuggestedUsers: userJealousyScores size:', userJealousyScores.size);
+      if (userJealousyScores.size > 0) {
+        const topUsers = Array.from(userJealousyScores.values()).slice(0, 3);
+        console.log('Top 3 jealous users:', topUsers.map(u => ({ user: u.user.username, total: u.totalJealousy, count: u.jealousCount })));
+      }
 
       return Array.from(userJealousyScores.values())
         .sort((a, b) => b.totalJealousy - a.totalJealousy)
