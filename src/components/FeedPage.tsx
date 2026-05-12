@@ -418,9 +418,21 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               score += 40;
               reasons.push(`${Math.round(myPercent)}% yours, ${Math.round(theirPercent)}% theirs: ${franchise}`);
             }
-            // Moderate matching
-            else if (myPercent >= 15 || theirPercent >= 15 || myCount >= 10 || theirCount >= 10) {
+            // Moderate matching (lowered thresholds for smaller collections)
+            else if (myPercent >= 15 || theirPercent >= 15 || myCount >= 5 || theirCount >= 5) {
               score += 15;
+            }
+            // Small collection matching - any shared franchise
+            else if (myCount >= 2 || theirCount >= 2) {
+              score += 10;
+              if (myPercent >= 20 || theirPercent >= 20) {
+                score += 5; // Bonus if significant portion
+                reasons.push(`Both collect ${franchise}`);
+              }
+            }
+            // Even single figure matches count for small collections
+            else {
+              score += 5;
             }
           });
 
@@ -440,8 +452,12 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               reasons.push(`${myCount} from ${year} in yours (${Math.round(theirPercent)}% of theirs)`);
             } else if (myPercent >= 15 && theirPercent >= 15) {
               score += 20;
-            } else if (myCount >= 5 && theirCount >= 5) {
+            } else if (myCount >= 3 && theirCount >= 3) {
               score += 8;
+            } else if (myCount >= 2 || theirCount >= 2) {
+              score += 5;
+            } else {
+              score += 2; // Even single year matches
             }
           });
 
@@ -461,8 +477,14 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               reasons.push(`${myCount} ${size} figures in yours (${Math.round(theirPercent)}% of theirs)`);
             } else if (myPercent >= 20 && theirPercent >= 20) {
               score += 25;
-            } else if (myCount >= 8 && theirCount >= 8) {
+            } else if (myCount >= 5 && theirCount >= 5) {
               score += 10;
+            } else if (myCount >= 3 || theirCount >= 3) {
+              score += 6;
+            } else if (myCount >= 2 || theirCount >= 2) {
+              score += 4;
+            } else {
+              score += 2; // Even single size matches
             }
           });
 
@@ -490,6 +512,12 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             score += 30;
           } else if (myOverlapPercent >= 20 || theirOverlapPercent >= 20) {
             score += 15;
+          } else if (myOverlapPercent >= 10 || theirOverlapPercent >= 10) {
+            score += 10;
+          } else if (overlapCount >= 2) {
+            score += 5; // At least 2 figures with multi-attribute match
+          } else if (overlapCount >= 1) {
+            score += 3; // At least 1 figure with multi-attribute match
           }
 
           if (score > 0) {
