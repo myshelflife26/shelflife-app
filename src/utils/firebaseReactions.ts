@@ -327,9 +327,9 @@ export class FirebaseReactionsService {
   }
 
   /**
-   * Migrate localStorage reactions to Firestore
+   * Migrate localStorage reactions to Firestore (current user's reactions only)
    */
-  static async migrateFromLocalStorage(): Promise<{ success: number; failed: number }> {
+  static async migrateFromLocalStorage(currentUserId: string): Promise<{ success: number; failed: number }> {
     try {
       const localStorageKey = 'app-reactions';
       const data = localStorage.getItem(localStorageKey);
@@ -339,56 +339,83 @@ export class FirebaseReactionsService {
         return { success: 0, failed: 0 };
       }
 
-      const reactions: Reaction[] = JSON.parse(data);
-      console.log(`Found ${reactions.length} reactions to migrate`);
+      const allReactions: Reaction[] = JSON.parse(data);
+
+      // Filter to only include current user's reactions
+      const userReactions = allReactions.filter(r => r.userId === currentUserId);
+      console.log(`Found ${userReactions.length} reactions from current user to migrate (${allReactions.length} total)`);
+
+      if (userReactions.length === 0) {
+        console.log('No reactions from current user to migrate');
+        return { success: 0, failed: 0 };
+      }
 
       let success = 0;
       let failed = 0;
 
-      // Batch write for efficiency
-      const batchSize = 500;
-      for (let i = 0; i < reactions.length; i += batchSize) {
-        const batch = writeBatch(db);
-        const batchReactions = reactions.slice(i, i + batchSize);
+      // Get unique figure IDs to query for ownerIds
+      const figureIds = [...new Set(userReactions.map(r => r.figureId))];
+      const figureOwners = new Map<string, string>();
 
-        for (const reaction of batchReactions) {
-          try {
-            // Check if reaction already exists in Firestore
-            const q = query(
-              collection(db, REACTIONS_COLLECTION),
-              where('figureId', '==', reaction.figureId),
-              where('userId', '==', reaction.userId)
-            );
-            const snapshot = await getDocs(q);
-
-            if (snapshot.empty) {
-              // Add to batch
-              const docRef = doc(collection(db, REACTIONS_COLLECTION));
-              batch.set(docRef, {
-                figureId: reaction.figureId,
-                ownerId: reaction.figureId.split('-')[0] || '', // Try to extract ownerId, fallback to empty
-                userId: reaction.userId,
-                displayName: reaction.displayName,
-                reactionType: reaction.reactionType,
-                timestamp: reaction.timestamp
-              });
-              success++;
-            } else {
-              console.log(`Reaction already exists for figure ${reaction.figureId} by user ${reaction.userId}`);
-            }
-          } catch (error) {
-            console.error('Failed to prepare reaction for batch:', error);
-            failed++;
-          }
-        }
-
+      // Query figures to get ownerIds (batch in groups of 10 for Firestore 'in' limit)
+      console.log(`Querying ${figureIds.length} figures to get owner IDs...`);
+      for (let i = 0; i < figureIds.length; i += 10) {
+        const batch = figureIds.slice(i, i + 10);
         try {
-          await batch.commit();
-          console.log(`Batch ${i / batchSize + 1} committed successfully`);
+          const q = query(
+            collection(db, 'figures'),
+            where('__name__', 'in', batch)
+          );
+          const snapshot = await getDocs(q);
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.userId) {
+              figureOwners.set(doc.id, data.userId);
+            }
+          });
         } catch (error) {
-          console.error('Failed to commit batch:', error);
-          failed += batchReactions.length;
-          success -= batchReactions.length;
+          console.error('Failed to query figures batch:', error);
+        }
+      }
+
+      console.log(`Found ${figureOwners.size} figure owners`);
+
+      // Migrate reactions one by one (not in batch to avoid permission issues)
+      for (const reaction of userReactions) {
+        try {
+          const ownerId = figureOwners.get(reaction.figureId);
+
+          if (!ownerId) {
+            console.log(`Skipping reaction - figure ${reaction.figureId} not found or no owner`);
+            failed++;
+            continue;
+          }
+
+          // Check if reaction already exists in Firestore
+          const q = query(
+            collection(db, REACTIONS_COLLECTION),
+            where('figureId', '==', reaction.figureId),
+            where('userId', '==', reaction.userId)
+          );
+          const snapshot = await getDocs(q);
+
+          if (snapshot.empty) {
+            // Create reaction
+            await addDoc(collection(db, REACTIONS_COLLECTION), {
+              figureId: reaction.figureId,
+              ownerId: ownerId,
+              userId: reaction.userId,
+              displayName: reaction.displayName,
+              reactionType: reaction.reactionType,
+              timestamp: reaction.timestamp
+            });
+            success++;
+          } else {
+            console.log(`Reaction already exists for figure ${reaction.figureId}`);
+          }
+        } catch (error) {
+          console.error('Failed to migrate reaction:', error);
+          failed++;
         }
       }
 

@@ -3,8 +3,13 @@ import { Button } from './ui/button';
 import { FirebaseReactionsService } from '../utils/firebaseReactions';
 import { toastManager } from '../utils/toastManager';
 import { Database, AlertCircle, CheckCircle } from 'lucide-react';
+import type { User } from '../types/user';
 
-export function MigrateReactionsButton() {
+interface MigrateReactionsButtonProps {
+  currentUser: User;
+}
+
+export function MigrateReactionsButton({ currentUser }: MigrateReactionsButtonProps) {
   const [migrating, setMigrating] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
 
@@ -12,7 +17,7 @@ export function MigrateReactionsButton() {
     if (migrating || migrationComplete) return;
 
     const confirmed = window.confirm(
-      'This will migrate all localStorage reactions to Firestore. This process cannot be undone. Continue?'
+      'This will migrate YOUR reactions from localStorage to Firestore. This process cannot be undone. Continue?'
     );
 
     if (!confirmed) return;
@@ -21,7 +26,7 @@ export function MigrateReactionsButton() {
     toastManager.info('Starting migration...');
 
     try {
-      const result = await FirebaseReactionsService.migrateFromLocalStorage();
+      const result = await FirebaseReactionsService.migrateFromLocalStorage(currentUser.id);
 
       if (result.success > 0) {
         toastManager.success(

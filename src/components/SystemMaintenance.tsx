@@ -220,7 +220,7 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
               <li>Calculate jealousy score changes over time</li>
             </ul>
 
-            <MigrateReactionsButton />
+            <MigrateReactionsButton currentUser={currentUser} />
           </div>
         </div>
       </div>
