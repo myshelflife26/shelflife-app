@@ -25,6 +25,7 @@ import { TabbedSettingsPage } from './components/TabbedSettingsPage';
 import { BlockedUsersPage } from './components/BlockedUsersPage';
 import { AdminReportsPage } from './components/AdminReportsPage';
 import { UserManagementPage } from './components/UserManagementPage';
+import { MigrateReactionsButton } from './components/MigrateReactionsButton';
 import { BrowsePage } from './components/BrowsePage';
 import { MessagesPageNew } from './components/MessagesPageNew';
 import { MarketplacePage } from './components/MarketplacePage';

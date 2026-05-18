@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { AdmirersService } from '../utils/admirers';
-import { JealousyTrackingService } from '../utils/jealousyTracking';
+import { FirebaseJealousyTrackingService } from '../utils/firebaseJealousyTracking';
+import { FirebaseReactionsService } from '../utils/firebaseReactions';
 import { ReactionsService } from '../utils/reactions';
 import { BlockingService } from '../utils/blocking';
 import { ReportingService } from '../utils/reporting';
@@ -123,26 +124,25 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         })
         .filter(Boolean) as FigureWithOwner[];
 
-    // Record current jealousy scores for tracking
-    JealousyTrackingService.recordSnapshots(
-      publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! }))
+    // Get top jealousy figures using Firebase (by current score)
+    const topJealousyData = await FirebaseJealousyTrackingService.getTopJealousyFigures(
+      publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
+      100
     );
 
-    // Get top jealousy figures (by current score)
-    const topJealousy = publicFiguresWithOwners
-      .map(figure => {
-        const score = ReactionsService.getJealousyScore(figure.id, figure.userId!);
-        return { ...figure, jealousyScore: score };
+    const topJealousy = topJealousyData
+      .map(item => {
+        const figure = publicFiguresWithOwners.find(f => f.id === item.figureId && f.userId === item.ownerId);
+        if (!figure) return null;
+        return { ...figure, jealousyScore: item.jealousyScore };
       })
-      .filter(f => f.jealousyScore > 0)
-      .sort((a, b) => b.jealousyScore - a.jealousyScore);
+      .filter(Boolean) as Array<FigureWithOwner & { jealousyScore: number }>;
 
     setTopJealousyFigures(topJealousy);
 
-    // Get rising stars for 7 days - no limit, show all with positive increases
-    const rises7Days = JealousyTrackingService.getRisingStars(
+    // Get rising stars for 7 days using Firebase - no limit, show all with positive increases
+    const rises7Days = await FirebaseJealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      999999,
       7
     );
 
@@ -161,10 +161,9 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     // Show all figures with positive increases, sorted max to min (already sorted by getRisingStars)
     setRisingStars7Days(risingFigures7Days);
 
-    // Get rising stars for 30 days - no limit, show all with positive increases
-    const rises30Days = JealousyTrackingService.getRisingStars(
+    // Get rising stars for 30 days using Firebase - no limit, show all with positive increases
+    const rises30Days = await FirebaseJealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      999999,
       30
     );
 
@@ -183,10 +182,9 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     // Show all figures with positive increases, sorted max to min (already sorted by getRisingStars)
     setRisingStars30Days(risingFigures30Days);
 
-    // Get rising stars for custom period (default 365 days) - no limit, show all with positive increases
-    const risesCustom = JealousyTrackingService.getRisingStars(
+    // Get rising stars for custom period using Firebase (default 365 days) - no limit, show all with positive increases
+    const risesCustom = await FirebaseJealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      999999,
       customDaysBack
     );
 
