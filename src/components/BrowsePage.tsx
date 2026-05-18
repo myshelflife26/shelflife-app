@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { FirebaseMessagesService } from '../utils/firebaseMessages';
+import { FirebaseConversationsService } from '../utils/firebaseConversations';
 import { ReactionsService } from '../utils/reactions';
 import { AdmirersService } from '../utils/admirers';
 import { BlockingService } from '../utils/blocking';
@@ -81,12 +82,26 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
   const [tradeRequestOpen, setTradeRequestOpen] = useState(false);
   const [tradeRequestMode, setTradeRequestMode] = useState<'trade' | 'sale'>('trade');
   const [bookmarkedFigureIds, setBookmarkedFigureIds] = useState<Set<string>>(new Set());
+  const [responseTime, setResponseTime] = useState<number | null>(null);
 
   // Load bookmarks on mount
   useEffect(() => {
     const bookmarks = BookmarksService.getBookmarkedFigureIds();
     setBookmarkedFigureIds(new Set(bookmarks));
   }, []);
+
+  // Calculate response time when figure is selected
+  useEffect(() => {
+    if (selectedFigure?.userId) {
+      setResponseTime(null); // Reset while loading
+      FirebaseConversationsService.calculateAverageResponseTime(selectedFigure.userId)
+        .then(time => setResponseTime(time))
+        .catch(err => {
+          console.error('Failed to calculate response time:', err);
+          setResponseTime(null);
+        });
+    }
+  }, [selectedFigure?.userId]);
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -1111,8 +1126,7 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
                   {selectedFigure.userId && (
                     <UserRatingBadge userId={selectedFigure.userId} size="md" />
                   )}
-                  {/* TODO: Calculate actual response time from message history */}
-                  <ResponseTimeBadge responseTimeHours={null} />
+                  <ResponseTimeBadge responseTimeHours={responseTime} />
                 </div>
               </DialogDescription>
             </DialogHeader>

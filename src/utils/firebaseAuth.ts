@@ -18,7 +18,8 @@ import {
   query,
   where,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import type { User, UserRole } from '../types/user';
@@ -360,8 +361,9 @@ export class FirebaseAuthService {
 
   /**
    * Delete user (admin only)
+   * Cascades deletion to user's personal data while preserving historical/shared data
    */
-  static async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
+  static async deleteUser(userId: string, options?: { deleteReactions?: boolean; deleteTrades?: boolean }): Promise<{ success: boolean; error?: string }> {
     try {
       // Prevent deleting yourself
       const currentUser = await this.getCurrentUser();
@@ -369,11 +371,155 @@ export class FirebaseAuthService {
         return { success: false, error: 'Cannot delete your own account' };
       }
 
-      // Delete Firestore document
-      await deleteDoc(doc(db, USERS_COLLECTION, userId));
+      console.log('Starting cascading delete for user:', userId);
+      console.log('Options:', options);
 
-      // TODO: Delete user's figures, reactions, messages, etc.
-      // TODO: Delete Firebase Auth user (requires Admin SDK on backend)
+      // 1. Delete user's figures
+      const figuresQuery = query(collection(db, 'figures'), where('userId', '==', userId));
+      const figuresSnapshot = await getDocs(figuresQuery);
+      const figureDeletions = figuresSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(figureDeletions);
+      console.log(`Deleted ${figuresSnapshot.size} figures`);
+
+      // 2. Anonymize user's comments (keep comment history but remove user association)
+      const commentsQuery = query(collection(db, 'comments'), where('userId', '==', userId));
+      const commentsSnapshot = await getDocs(commentsQuery);
+      const batch = writeBatch(db);
+      commentsSnapshot.docs.forEach(docSnap => {
+        batch.update(docSnap.ref, {
+          userId: 'deleted_user',
+          userDisplayName: '[Deleted User]',
+          userName: 'deleted'
+        });
+      });
+      await batch.commit();
+      console.log(`Anonymized ${commentsSnapshot.size} comments`);
+
+      // 3. Delete comment reports by or for this user (no longer relevant)
+      const reportsByUserQuery = query(collection(db, 'commentReports'), where('reportedBy', '==', userId));
+      const reportsForUserQuery = query(collection(db, 'commentReports'), where('figureOwnerId', '==', userId));
+      const [reportsBySnapshot, reportsForSnapshot] = await Promise.all([
+        getDocs(reportsByUserQuery),
+        getDocs(reportsForUserQuery)
+      ]);
+      const reportDeletions = [
+        ...reportsBySnapshot.docs.map(doc => deleteDoc(doc.ref)),
+        ...reportsForSnapshot.docs.map(doc => deleteDoc(doc.ref))
+      ];
+      await Promise.all(reportDeletions);
+      console.log(`Deleted ${reportsBySnapshot.size + reportsForSnapshot.size} comment reports`);
+
+      // 4. Delete user's personal notifications
+      const notificationsQuery = query(collection(db, 'notifications'), where('userId', '==', userId));
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationDeletions = notificationsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(notificationDeletions);
+      console.log(`Deleted ${notificationsSnapshot.size} notifications`);
+
+      // 5. Anonymize messages in conversations (preserve conversation history)
+      const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', userId));
+      const conversationsSnapshot = await getDocs(conversationsQuery);
+
+      for (const convDoc of conversationsSnapshot.docs) {
+        const messagesQuery = collection(db, 'conversations', convDoc.id, 'messages');
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const messageBatch = writeBatch(db);
+
+        messagesSnapshot.docs.forEach(msgDoc => {
+          const msgData = msgDoc.data();
+          if (msgData.fromUserId === userId) {
+            messageBatch.update(msgDoc.ref, {
+              fromUserId: 'deleted_user',
+              fromDisplayName: '[Deleted User]'
+            });
+          }
+        });
+
+        await messageBatch.commit();
+      }
+      console.log(`Anonymized messages in ${conversationsSnapshot.size} conversations`);
+
+      // 6. OPTIONAL: Delete reactions (only if explicitly requested)
+      if (options?.deleteReactions) {
+        const reactionsQuery = query(collection(db, 'reactions'), where('userId', '==', userId));
+        const reactionsSnapshot = await getDocs(reactionsQuery);
+        const reactionDeletions = reactionsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(reactionDeletions);
+        console.log(`Deleted ${reactionsSnapshot.size} reactions`);
+      } else {
+        console.log('Preserved reactions (historical data)');
+      }
+
+      // 7. Delete admirer relationships (relationship-based, not historical)
+      const admirerQuery1 = query(collection(db, 'admirers'), where('admirerId', '==', userId));
+      const admirerQuery2 = query(collection(db, 'admirers'), where('targetUserId', '==', userId));
+      const [admirerSnapshot1, admirerSnapshot2] = await Promise.all([
+        getDocs(admirerQuery1),
+        getDocs(admirerQuery2)
+      ]);
+      const admirerDeletions = [
+        ...admirerSnapshot1.docs.map(doc => deleteDoc(doc.ref)),
+        ...admirerSnapshot2.docs.map(doc => deleteDoc(doc.ref))
+      ];
+      await Promise.all(admirerDeletions);
+      console.log(`Deleted ${admirerSnapshot1.size + admirerSnapshot2.size} admirer relationships`);
+
+      // 8. Delete admirer requests (pending relationships)
+      const requestQuery1 = query(collection(db, 'admirer_requests'), where('admirerId', '==', userId));
+      const requestQuery2 = query(collection(db, 'admirer_requests'), where('targetUserId', '==', userId));
+      const [requestSnapshot1, requestSnapshot2] = await Promise.all([
+        getDocs(requestQuery1),
+        getDocs(requestQuery2)
+      ]);
+      const requestDeletions = [
+        ...requestSnapshot1.docs.map(doc => deleteDoc(doc.ref)),
+        ...requestSnapshot2.docs.map(doc => deleteDoc(doc.ref))
+      ];
+      await Promise.all(requestDeletions);
+      console.log(`Deleted ${requestSnapshot1.size + requestSnapshot2.size} admirer requests`);
+
+      // 9. OPTIONAL: Delete trades (only if explicitly requested, otherwise preserve history)
+      if (options?.deleteTrades) {
+        const tradesQuery1 = query(collection(db, 'trades'), where('fromUserId', '==', userId));
+        const tradesQuery2 = query(collection(db, 'trades'), where('toUserId', '==', userId));
+        const [tradesSnapshot1, tradesSnapshot2] = await Promise.all([
+          getDocs(tradesQuery1),
+          getDocs(tradesQuery2)
+        ]);
+        const tradeDeletions = [
+          ...tradesSnapshot1.docs.map(doc => deleteDoc(doc.ref)),
+          ...tradesSnapshot2.docs.map(doc => deleteDoc(doc.ref))
+        ];
+        await Promise.all(tradeDeletions);
+        console.log(`Deleted ${tradesSnapshot1.size + tradesSnapshot2.size} trades`);
+      } else {
+        console.log('Preserved trades (historical data)');
+      }
+
+      // 10. Delete user's personal shelves
+      const shelvesQuery = query(collection(db, 'shelves'), where('userId', '==', userId));
+      const shelvesSnapshot = await getDocs(shelvesQuery);
+      const shelfDeletions = shelvesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(shelfDeletions);
+      console.log(`Deleted ${shelvesSnapshot.size} shelves`);
+
+      // 11. Delete user's personal wishlist
+      const wishlistQuery = query(collection(db, 'wishlist'), where('userId', '==', userId));
+      const wishlistSnapshot = await getDocs(wishlistQuery);
+      const wishlistDeletions = wishlistSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(wishlistDeletions);
+      console.log(`Deleted ${wishlistSnapshot.size} wishlist items`);
+
+      // 12. Keep user ratings (affects other users' reputation - historical data)
+      console.log('Preserved user ratings (historical data affecting other users)');
+
+      // Finally, delete the user document
+      await deleteDoc(doc(db, USERS_COLLECTION, userId));
+      console.log('Deleted user document');
+
+      // NOTE: Firebase Auth user deletion requires Admin SDK on backend
+      // This would need to be implemented as a Cloud Function or backend endpoint
+      console.warn('Firebase Auth user not deleted - requires Admin SDK on backend');
 
       return { success: true };
     } catch (error: any) {

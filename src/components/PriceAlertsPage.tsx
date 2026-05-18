@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { PriceAlertsService, type PriceAlert } from '../utils/priceAlertsService';
 import type { User } from '../types/user';
+import type { ActionFigure } from '../types';
 import { TrendingUp, TrendingDown, Bell, BellOff, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toastManager } from '../utils/toastManager';
+import { FirebaseStorage } from '../utils/firebaseStorage';
+import { FigureDetailModal } from './FigureDetailModal';
 
 interface PriceAlertsPageProps {
   currentUser: User;
@@ -12,6 +15,8 @@ interface PriceAlertsPageProps {
 export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [showOnlyUnseen, setShowOnlyUnseen] = useState(false);
+  const [selectedFigure, setSelectedFigure] = useState<ActionFigure | null>(null);
+  const [loadingFigure, setLoadingFigure] = useState(false);
 
   useEffect(() => {
     loadAlerts();
@@ -32,6 +37,23 @@ export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
     PriceAlertsService.clearOldAlerts(currentUser.id);
     loadAlerts();
     toastManager.success('Old price alerts cleared');
+  };
+
+  const handleAlertClick = async (alert: PriceAlert) => {
+    setLoadingFigure(true);
+    try {
+      const figure = await FirebaseStorage.getFigure(alert.figureId);
+      if (figure) {
+        setSelectedFigure(figure);
+      } else {
+        toastManager.error('Figure not found');
+      }
+    } catch (error) {
+      console.error('Failed to load figure:', error);
+      toastManager.error('Failed to load figure details');
+    } finally {
+      setLoadingFigure(false);
+    }
   };
 
   const formatDate = (timestamp: number): string => {
@@ -156,11 +178,12 @@ export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
           {filteredAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg p-4 border ${
+              onClick={() => handleAlertClick(alert)}
+              className={`bg-white dark:bg-gray-800 rounded-lg p-4 border cursor-pointer transition-all hover:shadow-lg ${
                 alert.seen
-                  ? 'border-gray-200 dark:border-gray-700'
-                  : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30'
-              }`}
+                  ? 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 hover:border-blue-400 dark:hover:border-blue-600'
+              } ${loadingFigure ? 'opacity-50 cursor-wait' : ''}`}
             >
               <div className="flex items-start justify-between gap-4">
                 {/* Icon and Content */}
@@ -220,8 +243,21 @@ export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
           <li>• Or when the value changes by 10% or more</li>
           <li>• Alerts are kept for 30 days, then automatically removed</li>
           <li>• Green trends indicate price increases, red indicates decreases</li>
+          <li>• Click on any alert to view the figure details</li>
         </ul>
       </div>
+
+      {/* Figure Detail Modal */}
+      {selectedFigure && (
+        <FigureDetailModal
+          figure={selectedFigure}
+          currentUser={currentUser}
+          onClose={() => setSelectedFigure(null)}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          onUpdate={() => {}}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ interface JealousySnapshot {
 }
 
 const STORAGE_KEY = 'jealousy-snapshots';
-const SNAPSHOT_RETENTION_DAYS = 7;
+const SNAPSHOT_RETENTION_DAYS = 365;
 
 export class JealousyTrackingService {
   // Get all snapshots
@@ -44,18 +44,29 @@ export class JealousyTrackingService {
     this.cleanupOldSnapshots();
     const snapshots = this.getSnapshots();
     const now = Date.now();
+    const oneDayAgo = now - (24 * 60 * 60 * 1000);
 
     publicFigures.forEach(figure => {
       const score = ReactionsService.getJealousyScore(figure.id, figure.userId);
 
       // Only record if score > 0
       if (score > 0) {
-        snapshots.push({
-          figureId: figure.id,
-          ownerId: figure.userId,
-          score,
-          timestamp: now
-        });
+        // Check if we already have a recent snapshot (within last 24 hours) for this figure
+        const hasRecentSnapshot = snapshots.some(s =>
+          s.figureId === figure.id &&
+          s.ownerId === figure.userId &&
+          s.timestamp > oneDayAgo
+        );
+
+        // Only record if no recent snapshot exists
+        if (!hasRecentSnapshot) {
+          snapshots.push({
+            figureId: figure.id,
+            ownerId: figure.userId,
+            score,
+            timestamp: now
+          });
+        }
       }
     });
 
@@ -99,14 +110,28 @@ export class JealousyTrackingService {
         .sort((a, b) => a.timestamp - b.timestamp);
 
       if (figureSnapshots.length === 0) {
-        // No history in this time period, treat as new with full score as increase
-        rises.push({
-          figureId: figure.id,
-          ownerId: figure.userId,
-          currentScore,
-          previousScore: 0,
-          increase: currentScore
-        });
+        // No history in this time period
+        // Check if figure has ANY historical snapshots at all
+        const anySnapshots = snapshots.filter(s =>
+          s.figureId === figure.id &&
+          s.ownerId === figure.userId
+        );
+
+        if (anySnapshots.length > 0) {
+          // Has history in a different time period, skip this figure
+          // (it didn't have activity in the selected period)
+          return;
+        } else {
+          // No history at all - treat as new figure with full score as increase
+          // This helps populate the list while historical data builds up
+          rises.push({
+            figureId: figure.id,
+            ownerId: figure.userId,
+            currentScore,
+            previousScore: 0,
+            increase: currentScore
+          });
+        }
       } else {
         // Use oldest snapshot as baseline
         const oldestSnapshot = figureSnapshots[0];
@@ -144,5 +169,39 @@ export class JealousyTrackingService {
       .sort((a, b) => a.timestamp - b.timestamp);
 
     return relevantSnapshots.length > 0 ? relevantSnapshots[0].score : null;
+  }
+
+  // Get snapshot statistics for debugging
+  static getSnapshotStats(): {
+    totalSnapshots: number;
+    uniqueFigures: number;
+    oldestSnapshot: number | null;
+    newestSnapshot: number | null;
+    snapshotsByAge: {
+      last7Days: number;
+      last30Days: number;
+      last365Days: number;
+    };
+  } {
+    const snapshots = this.getSnapshots();
+    const now = Date.now();
+
+    const uniqueFigures = new Set(snapshots.map(s => `${s.figureId}-${s.ownerId}`)).size;
+    const oldestSnapshot = snapshots.length > 0 ? Math.min(...snapshots.map(s => s.timestamp)) : null;
+    const newestSnapshot = snapshots.length > 0 ? Math.max(...snapshots.map(s => s.timestamp)) : null;
+
+    const snapshotsByAge = {
+      last7Days: snapshots.filter(s => s.timestamp > now - (7 * 24 * 60 * 60 * 1000)).length,
+      last30Days: snapshots.filter(s => s.timestamp > now - (30 * 24 * 60 * 60 * 1000)).length,
+      last365Days: snapshots.filter(s => s.timestamp > now - (365 * 24 * 60 * 60 * 1000)).length,
+    };
+
+    return {
+      totalSnapshots: snapshots.length,
+      uniqueFigures,
+      oldestSnapshot,
+      newestSnapshot,
+      snapshotsByAge
+    };
   }
 }

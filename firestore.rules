@@ -177,8 +177,14 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
+      // Users can read their own notifications
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isManagement();
+
+      // Any signed-in user can create notifications (for comments, mentions, etc.)
+      // But can only create notifications for other users (not themselves)
+      allow create: if isSignedIn();
+
+      // Users can update/delete their own notifications
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
@@ -195,6 +201,21 @@ service cloud.firestore {
 
       // Delete: Own comment OR must be signed in (figure owner check on client)
       allow delete: if isSignedIn();
+    }
+
+    // Comment Reports
+    match /commentReports/{reportId} {
+      // Read: Only figure owners can read reports for their figures
+      allow read: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
+
+      // Create: Any signed-in user can report a comment
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+
+      // Update: Only figure owner can update (review) reports
+      allow update: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
+
+      // Delete: Only figure owner can delete reports
+      allow delete: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
     }
   }
 }

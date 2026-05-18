@@ -139,10 +139,10 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
 
     setTopJealousyFigures(topJealousy);
 
-    // Get rising stars for 7 days
+    // Get rising stars for 7 days - no limit, show all with positive increases
     const rises7Days = JealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      100,
+      999999,
       7
     );
 
@@ -158,21 +158,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
 
-    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
-    const filtered7Days = risingFigures7Days.filter(f => f.increase >= 3);
-    if (filtered7Days.length > 0) {
-      risingFigures7Days = filtered7Days;
-    } else if (risingFigures7Days.length > 0) {
-      // Show top 10 biggest bumps even if under 3 points
-      risingFigures7Days = risingFigures7Days.slice(0, 10);
-    }
-
+    // Show all figures with positive increases, sorted max to min (already sorted by getRisingStars)
     setRisingStars7Days(risingFigures7Days);
 
-    // Get rising stars for 30 days
+    // Get rising stars for 30 days - no limit, show all with positive increases
     const rises30Days = JealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      100,
+      999999,
       30
     );
 
@@ -188,21 +180,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
 
-    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
-    const filtered30Days = risingFigures30Days.filter(f => f.increase >= 3);
-    if (filtered30Days.length > 0) {
-      risingFigures30Days = filtered30Days;
-    } else if (risingFigures30Days.length > 0) {
-      // Show top 10 biggest bumps even if under 3 points
-      risingFigures30Days = risingFigures30Days.slice(0, 10);
-    }
-
+    // Show all figures with positive increases, sorted max to min (already sorted by getRisingStars)
     setRisingStars30Days(risingFigures30Days);
 
-    // Get rising stars for custom period (default 365 days)
+    // Get rising stars for custom period (default 365 days) - no limit, show all with positive increases
     const risesCustom = JealousyTrackingService.getRisingStars(
       publicFiguresWithOwners.map(f => ({ id: f.id, userId: f.userId! })),
-      100,
+      999999,
       customDaysBack
     );
 
@@ -218,15 +202,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       })
       .filter(Boolean) as Array<FigureWithOwner & { increase: number; previousScore: number }>;
 
-    // Filter to figures with at least 3 point bump, or show top bumps if none meet threshold
-    const filteredCustom = risingFiguresCustom.filter(f => f.increase >= 3);
-    if (filteredCustom.length > 0) {
-      risingFiguresCustom = filteredCustom;
-    } else if (risingFiguresCustom.length > 0) {
-      // Show top 10 biggest bumps even if under 3 points
-      risingFiguresCustom = risingFiguresCustom.slice(0, 10);
-    }
-
+    // Show all figures with positive increases, sorted max to min (already sorted by getRisingStars)
     setRisingStarsCustom(risingFiguresCustom);
 
     // Get figures from admired users (last 7 days)
@@ -310,7 +286,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     setJealousSuggestedUsers(jealousSuggestions);
 
     // Get random collectors with sample figures
-    const randomUsers = await getRandomCollectors(allUsers, currentUser.id, publicFiguresWithOwners);
+    const randomUsers = await getRandomCollectors(allUsers, currentUser.id, publicFiguresWithOwners, admiring);
     setRandomCollectors(randomUsers);
     } catch (error) {
       console.error('Failed to load feed data:', error);
@@ -604,7 +580,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   ): Promise<SuggestedUser[]> => {
     try {
       console.log('getRisingSuggestedUsers: rising figures count:', risingFigures.length);
-      // Get users who own rising star figures
+      // Get users who own rising star figures (include users you're already following)
       const userRisingScores = new Map<string, { user: User; totalIncrease: number; risingCount: number }>();
 
       risingFigures.forEach(figure => {
@@ -613,7 +589,6 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         if (!user) return;
         if (figure.userId === currentUserId) return;
         if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
-        if (admiringUserIds.includes(figure.userId)) return;
 
         if (!userRisingScores.has(figure.userId)) {
           userRisingScores.set(figure.userId, { user, totalIncrease: 0, risingCount: 0 });
@@ -629,7 +604,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         console.log('Top 3 rising users:', topUsers.map(u => ({ user: u.user.username, total: u.totalIncrease, count: u.risingCount })));
       }
 
-      const results = Array.from(userRisingScores.values())
+      return Array.from(userRisingScores.values())
         .sort((a, b) => b.totalIncrease - a.totalIncrease)
         .slice(0, 10)
         .map(entry => ({
@@ -639,40 +614,6 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           matchedCategories: [],
           matchReason: `${entry.risingCount} rising star figure${entry.risingCount !== 1 ? 's' : ''} (+${entry.totalIncrease} total momentum)`
         }));
-
-      // Fallback: if no rising users found (all were filtered), include users you're admiring
-      if (results.length === 0 && risingFigures.length > 0) {
-        console.log('No rising users after filter, including admiring users');
-        const allUserRisingScores = new Map<string, { user: User; totalIncrease: number; risingCount: number }>();
-
-        risingFigures.forEach(figure => {
-          if (!figure.userId || figure.userId === currentUserId) return;
-          const user = allUsers.find(u => u.id === figure.userId);
-          if (!user || BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
-
-          if (!allUserRisingScores.has(figure.userId)) {
-            allUserRisingScores.set(figure.userId, { user, totalIncrease: 0, risingCount: 0 });
-          }
-          const entry = allUserRisingScores.get(figure.userId)!;
-          entry.totalIncrease += figure.increase;
-          entry.risingCount++;
-        });
-
-        return Array.from(allUserRisingScores.values())
-          .sort((a, b) => b.totalIncrease - a.totalIncrease)
-          .slice(0, 10)
-          .map(entry => ({
-            ...entry.user,
-            suggestionScore: entry.totalIncrease,
-            matchedManufacturers: [],
-            matchedCategories: [],
-            matchReason: admiringUserIds.includes(entry.user.id)
-              ? `Already admiring - ${entry.risingCount} rising figure${entry.risingCount !== 1 ? 's' : ''}`
-              : `${entry.risingCount} rising star figure${entry.risingCount !== 1 ? 's' : ''} (+${entry.totalIncrease} total momentum)`
-          }));
-      }
-
-      return results;
     } catch (error) {
       console.error('Failed to get rising suggested users:', error);
       return [];
@@ -687,14 +628,13 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   ): Promise<SuggestedUser[]> => {
     try {
       console.log('getJealousSuggestedUsers: public figures count:', publicFiguresWithOwners.length);
-      // Get users with highest jealousy scores
+      // Get users with highest jealousy scores (include users you're already following)
       const userJealousyScores = new Map<string, { user: User; totalJealousy: number; jealousCount: number }>();
 
       publicFiguresWithOwners.forEach(figure => {
         if (!figure.userId) return;
         if (figure.userId === currentUserId) return;
         if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
-        if (admiringUserIds.includes(figure.userId)) return;
 
         const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
         if (jealousyScore === 0) return;
@@ -716,7 +656,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         console.log('Top 3 jealous users:', topUsers.map(u => ({ user: u.user.username, total: u.totalJealousy, count: u.jealousCount })));
       }
 
-      const results = Array.from(userJealousyScores.values())
+      return Array.from(userJealousyScores.values())
         .sort((a, b) => b.totalJealousy - a.totalJealousy)
         .slice(0, 10)
         .map(entry => ({
@@ -726,45 +666,6 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           matchedCategories: [],
           matchReason: `${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with ${entry.totalJealousy} total jealousy points`
         }));
-
-      // Fallback: if no jealous users found (all were filtered), include users you're admiring
-      if (results.length === 0) {
-        console.log('No jealous users after filter, including admiring users with figures');
-        const allUserJealousyScores = new Map<string, { user: User; totalJealousy: number; jealousCount: number }>();
-
-        publicFiguresWithOwners.forEach(figure => {
-          if (!figure.userId || figure.userId === currentUserId) return;
-          if (BlockingService.isUserBlocked(currentUserId, figure.userId)) return;
-
-          const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
-          if (jealousyScore === 0) return;
-
-          const user = allUsers.find(u => u.id === figure.userId);
-          if (!user) return;
-
-          if (!allUserJealousyScores.has(figure.userId)) {
-            allUserJealousyScores.set(figure.userId, { user, totalJealousy: 0, jealousCount: 0 });
-          }
-          const entry = allUserJealousyScores.get(figure.userId)!;
-          entry.totalJealousy += jealousyScore;
-          entry.jealousCount++;
-        });
-
-        return Array.from(allUserJealousyScores.values())
-          .sort((a, b) => b.totalJealousy - a.totalJealousy)
-          .slice(0, 10)
-          .map(entry => ({
-            ...entry.user,
-            suggestionScore: entry.totalJealousy,
-            matchedManufacturers: [],
-            matchedCategories: [],
-            matchReason: admiringUserIds.includes(entry.user.id)
-              ? `Already admiring - ${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with jealousy`
-              : `${entry.jealousCount} figure${entry.jealousCount !== 1 ? 's' : ''} with ${entry.totalJealousy} total jealousy points`
-          }));
-      }
-
-      return results;
     } catch (error) {
       console.error('Failed to get jealous suggested users:', error);
       return [];
@@ -774,13 +675,15 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const getRandomCollectors = async (
     allUsers: User[],
     currentUserId: string,
-    publicFiguresWithOwners: FigureWithOwner[]
+    publicFiguresWithOwners: FigureWithOwner[],
+    admiringUserIds: string[]
   ): Promise<Array<User & { sampleFigures: FigureWithOwner[] }>> => {
     try {
-      // Get users with public figures, excluding current user and blocked users
+      // Get users with public figures, excluding current user, blocked users, and already following
       const eligibleUsers = allUsers.filter(u =>
         u.id !== currentUserId &&
         !BlockingService.isUserBlocked(currentUserId, u.id) &&
+        !admiringUserIds.includes(u.id) &&
         publicFiguresWithOwners.some(f => f.userId === u.id)
       );
 
@@ -1802,17 +1705,28 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAdmire(user.id);
-                  }}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Send Admirer Request
-                </Button>
+                {admiringUsers.includes(user.id) ? (
+                  <Button
+                    size="sm"
+                    className="w-full bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                    disabled
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Already Following
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAdmire(user.id);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Send Admirer Request
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -1890,17 +1804,28 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAdmire(user.id);
-                  }}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Send Admirer Request
-                </Button>
+                {admiringUsers.includes(user.id) ? (
+                  <Button
+                    size="sm"
+                    className="w-full bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                    disabled
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Already Following
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAdmire(user.id);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Send Admirer Request
+                  </Button>
+                )}
               </div>
             ))}
           </div>

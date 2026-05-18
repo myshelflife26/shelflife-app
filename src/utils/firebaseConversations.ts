@@ -422,4 +422,78 @@ export class FirebaseConversationsService {
       console.error('Failed to delete message:', error);
     }
   }
+
+  /**
+   * Calculate average response time for a user in hours
+   * Returns null if insufficient data
+   */
+  static async calculateAverageResponseTime(userId: string): Promise<number | null> {
+    try {
+      // Get all conversations where user is a participant
+      const conversationsQuery = query(
+        collection(db, CONVERSATIONS_COLLECTION),
+        where('participants', 'array-contains', userId)
+      );
+
+      const conversationsSnapshot = await getDocs(conversationsQuery);
+
+      if (conversationsSnapshot.empty) {
+        return null; // No conversations
+      }
+
+      const responseTimes: number[] = [];
+
+      // Analyze each conversation
+      for (const convDoc of conversationsSnapshot.docs) {
+        const conversationId = convDoc.id;
+        const participants = convDoc.data().participants as string[];
+        const otherUserId = participants.find(p => p !== userId);
+
+        if (!otherUserId) continue; // Skip if no other participant
+
+        // Get all messages in this conversation
+        const messagesQuery = query(
+          collection(db, CONVERSATIONS_COLLECTION, conversationId, MESSAGES_SUBCOLLECTION),
+          orderBy('timestamp', 'asc')
+        );
+
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const messages = messagesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Message));
+
+        // Calculate response times: time from other user's message to this user's reply
+        for (let i = 0; i < messages.length - 1; i++) {
+          const currentMessage = messages[i];
+          const nextMessage = messages[i + 1];
+
+          // If current message is from other user and next message is from this user
+          if (currentMessage.fromUserId === otherUserId && nextMessage.fromUserId === userId) {
+            const responseTimeMs = nextMessage.timestamp - currentMessage.timestamp;
+            const responseTimeHours = responseTimeMs / (1000 * 60 * 60);
+
+            // Only count reasonable response times (< 7 days)
+            if (responseTimeHours < 168) {
+              responseTimes.push(responseTimeHours);
+            }
+          }
+        }
+      }
+
+      // Need at least 3 responses to calculate average
+      if (responseTimes.length < 3) {
+        return null;
+      }
+
+      // Calculate average
+      const totalTime = responseTimes.reduce((sum, time) => sum + time, 0);
+      const averageHours = totalTime / responseTimes.length;
+
+      return Math.round(averageHours * 10) / 10; // Round to 1 decimal place
+    } catch (error) {
+      console.error('Failed to calculate response time:', error);
+      return null;
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, getDocs, getDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Comment } from '../types/comment';
+import { FirebaseNotifications } from './firebaseNotifications';
 
 export class CommentsService {
   private static readonly COMMENTS_COLLECTION = 'comments';
@@ -79,6 +80,28 @@ export class CommentsService {
     // Update figure comment count if auto-approved
     if (commentData.approved) {
       await this.updateCommentCount(figureId, 1);
+
+      // Create notification for figure owner (if not commenting on own figure)
+      if (figureData.userId && figureData.userId !== userId) {
+        await FirebaseNotifications.createCommentNotification(
+          figureData.userId,
+          figureId,
+          figureData.name || 'your figure',
+          figureData.images?.[0],
+          docRef.id,
+          text,
+          userId,
+          userDisplayName,
+          userUsername
+        );
+      }
+
+      // Extract and notify @mentioned users
+      const mentions = FirebaseNotifications.extractMentions(text);
+      for (const mentionedUsername of mentions) {
+        // TODO: Look up user ID by username
+        // For now, we'll skip mention notifications until we have a username-to-userId mapping
+      }
     }
 
     return {

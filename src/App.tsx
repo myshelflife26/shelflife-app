@@ -18,7 +18,7 @@ import { ShelfLifeValueService } from './utils/shelfLifeValue';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
-import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload } from 'lucide-react';
+import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload, Bell, Flag } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { TabbedSettingsPage } from './components/TabbedSettingsPage';
@@ -58,6 +58,9 @@ import { ShelfViewPage } from './components/ShelfViewPage';
 import { CollectionGrowthPage } from './components/CollectionGrowthPage';
 import { TopJealousFigures } from './components/TopJealousFigures';
 import { PublicProfilePage } from './components/PublicProfilePage';
+import { NotificationBell } from './components/NotificationBell';
+import { CommentReportsPage } from './components/CommentReportsPage';
+import { CommentReportsService } from './utils/commentReports';
 import { Grid3x3 } from 'lucide-react';
 import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
 import { OnboardingTour, useOnboardingTour, type TourStep } from './components/OnboardingTour';
@@ -105,6 +108,8 @@ function MainApp() {
   const [admirerRequestCount, setAdmirerRequestCount] = useState(0);
   const [blockedUserCount, setBlockedUserCount] = useState(0);
   const [activeTradeCount, setActiveTradeCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [commentReportsOpen, setCommentReportsOpen] = useState(false);
   const [paginationPage, setPaginationPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [viewingShelfId, setViewingShelfId] = useState<string | null>(null);
@@ -670,6 +675,10 @@ function MainApp() {
       // Update blocked user count
       setBlockedUserCount(BlockingService.getBlockedCount(currentUser.id));
 
+      // Update pending comment reports count
+      const reportsCount = await CommentReportsService.getPendingReportCount(currentUser.id);
+      setPendingReportsCount(reportsCount);
+
       // Check for new notifications
       const notifications = await NotificationsService.detectAllNewNotifications(currentUser.id);
 
@@ -1063,6 +1072,21 @@ function MainApp() {
                 {unreadMessageCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
                     {unreadMessageCount}
+                  </span>
+                )}
+              </Button>
+              <NotificationBell currentUser={currentUser} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCommentReportsOpen(true)}
+                title="Comment Reports"
+                className="relative"
+              >
+                <Flag className="h-5 w-5" />
+                {pendingReportsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                    {pendingReportsCount}
                   </span>
                 )}
               </Button>
@@ -2051,6 +2075,14 @@ function MainApp() {
         onClose={() => setProfileImageEditorOpen(false)}
         onSave={handleProfileImageSave}
       />
+
+      {/* Comment Reports Modal */}
+      {commentReportsOpen && (
+        <CommentReportsPage
+          currentUser={currentUser}
+          onClose={() => setCommentReportsOpen(false)}
+        />
+      )}
 
       {/* Share Collection Dialog */}
       <ShareCollectionDialog

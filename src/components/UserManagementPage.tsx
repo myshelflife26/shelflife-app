@@ -29,6 +29,12 @@ export function UserManagementPage({ currentUser }: UserManagementPageProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [paginationPage, setPaginationPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleteOptions, setDeleteOptions] = useState({
+    deleteReactions: false,
+    deleteTrades: false
+  });
 
   useEffect(() => {
     loadUsers();
@@ -157,28 +163,36 @@ export function UserManagementPage({ currentUser }: UserManagementPageProps) {
     handleClose();
   };
 
-  const handleDelete = async (user: User) => {
+  const handleDelete = (user: User) => {
     if (user.id === currentUser.id) {
       alert('You cannot delete your own account');
       return;
     }
 
-    const confirmMessage = user.role === 'management'
-      ? `Are you sure you want to delete admin user "${user.displayName}"? This will permanently delete their account and all their data.`
-      : `Are you sure you want to delete user "${user.displayName}"? This will permanently delete their account and all their data.`;
+    setUserToDelete(user);
+    setDeleteOptions({ deleteReactions: false, deleteTrades: false });
+    setDeleteDialogOpen(true);
+  };
 
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
 
-    const result = await FirebaseAuthService.deleteUser(user.id);
+    const result = await FirebaseAuthService.deleteUser(userToDelete.id, deleteOptions);
 
     if (!result.success) {
       alert(result.error || 'Failed to delete user');
       return;
     }
 
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
     await loadUsers();
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
+    setDeleteOptions({ deleteReactions: false, deleteTrades: false });
   };
 
   // Check if current user is admin
@@ -448,7 +462,123 @@ export function UserManagementPage({ currentUser }: UserManagementPageProps) {
             </div>
           </div>
         </DialogContent>
-        </Dialog>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <Trash2 className="h-5 w-5" />
+              Delete User Account
+            </DialogTitle>
+            <DialogDescription>
+              {userToDelete && (
+                <>
+                  You are about to permanently delete <strong>{userToDelete.displayName}</strong> (@{userToDelete.username}).
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* What will be deleted */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                ✓ Always Deleted:
+              </h4>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 ml-4">
+                <li>• User account & profile</li>
+                <li>• Personal figures collection</li>
+                <li>• Personal notifications</li>
+                <li>• Shelves & wishlist</li>
+                <li>• Admirer relationships & requests</li>
+                <li>• Comment reports</li>
+              </ul>
+            </div>
+
+            {/* What will be preserved */}
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+                ✓ Always Preserved (Historical Data):
+              </h4>
+              <ul className="text-xs text-green-700 dark:text-green-300 space-y-1 ml-4">
+                <li>• Comments (anonymized as [Deleted User])</li>
+                <li>• Messages (anonymized as [Deleted User])</li>
+                <li>• User ratings (affects other users)</li>
+              </ul>
+            </div>
+
+            {/* Optional deletions */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                Optional (Choose):
+              </h4>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteOptions.deleteReactions}
+                  onChange={(e) => setDeleteOptions({ ...deleteOptions, deleteReactions: e.target.checked })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    Delete reactions
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Remove all likes/loves/fire reactions they gave to figures. This will affect reaction counts on other users' figures.
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteOptions.deleteTrades}
+                  onChange={(e) => setDeleteOptions({ ...deleteOptions, deleteTrades: e.target.checked })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    Delete trade history
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Remove all trade records involving this user. This will affect other users' trade history.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Warning */}
+            <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-800 dark:text-red-200">
+                This action cannot be undone. The user's personal data will be permanently deleted.
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={confirmDelete}
+                variant="default"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete User
+              </Button>
+              <Button
+                onClick={cancelDelete}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { CompletenessBadge } from './CompletenessBadge';
 import { AdmirersService } from '../utils/admirers';
 import { UserRatingBadge } from './UserRatingBadge';
 import { CommentsSection } from './CommentsSection';
+import { FirebaseNotifications } from '../utils/firebaseNotifications';
 import type { User } from '../types/user';
 
 interface FigureDetailModalProps {
@@ -353,10 +354,24 @@ export function FigureDetailModal({
                             size="sm"
                             variant="outline"
                             className="border-purple-300 dark:border-purple-700"
-                            onClick={() => {
-                              // TODO: Implement request access functionality
-                              setCustomFormulaAccessRequested(true);
-                              alert('Request sent! The owner will be notified.');
+                            onClick={async () => {
+                              if (!currentUser) return;
+
+                              try {
+                                await FirebaseNotifications.createFormulaAccessRequestNotification(
+                                  figure.userId,
+                                  figure.id,
+                                  figure.name,
+                                  figure.images?.[0],
+                                  currentUser.id,
+                                  currentUser.displayName,
+                                  currentUser.username
+                                );
+                                setCustomFormulaAccessRequested(true);
+                              } catch (error) {
+                                console.error('Failed to send access request:', error);
+                                alert('Failed to send request. Please try again.');
+                              }
                             }}
                           >
                             Request Access

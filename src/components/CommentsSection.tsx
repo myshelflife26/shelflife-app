@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FirebaseCommentsService } from '../utils/firebaseComments';
+import { CommentReportsService } from '../utils/commentReports';
 import type { Comment } from '../types/comment';
 import type { User } from '../types/user';
 import type { ActionFigure } from '../types';
@@ -164,22 +165,32 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId, figure, 
     }
   };
 
-  const handleReportComment = (comment: Comment) => {
+  const handleReportComment = async (comment: Comment) => {
     const reason = prompt(
       `Report this comment by ${comment.userDisplayName}?\n\nPlease provide a reason (optional):`
     );
 
     if (reason !== null) {
-      // For now, just show a confirmation. Later this could be saved to a reports collection
-      console.log('Comment reported:', {
-        commentId: comment.id,
-        reportedBy: currentUser.id,
-        reason: reason || 'No reason provided',
-        commentText: comment.text,
-        commentAuthor: comment.userId
-      });
-      toastManager.success('Comment reported. Thank you for helping keep the community safe.');
-      setCommentActions(null);
+      try {
+        await CommentReportsService.createReport(
+          comment.id,
+          figureId,
+          figure?.name || 'Figure',
+          figureOwnerId,
+          comment.text,
+          comment.userId,
+          comment.userDisplayName,
+          currentUser.id,
+          currentUser.displayName,
+          currentUser.username,
+          reason || 'No reason provided'
+        );
+        toastManager.success('Comment reported. Thank you for helping keep the community safe.');
+        setCommentActions(null);
+      } catch (error) {
+        console.error('Failed to submit report:', error);
+        toastManager.error('Failed to submit report. Please try again.');
+      }
     }
   };
 
