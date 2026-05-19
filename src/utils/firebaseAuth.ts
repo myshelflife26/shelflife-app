@@ -3,7 +3,7 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User as FirebaseUser,
+  User,
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,

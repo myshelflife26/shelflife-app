@@ -12,7 +12,7 @@ import {
   setDoc,
   Timestamp,
   onSnapshot,
-  Unsubscribe
+  type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { BlockingService } from './blocking';
