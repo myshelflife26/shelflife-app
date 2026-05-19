@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { WantListService, type WantListItem, type WantListAlert } from '../utils/wantList';
 import { AuthService } from '../utils/auth';
+import { FirebaseStorage } from '../utils/firebaseStorage';
 import { toastManager } from '../utils/toastManager';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,6 +10,8 @@ import { Textarea } from './ui/textarea';
 import { Select } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Heart, Plus, Trash2, Edit, Bell, BellOff, AlertCircle, Star, Package, TrendingUp, X, Check } from 'lucide-react';
+import { FigureDetailModal } from './FigureDetailModal';
+import type { ActionFigure } from '../types/index';
 
 export function WantListPage() {
   const currentUser = AuthService.getCurrentUser();
@@ -18,6 +21,8 @@ export function WantListPage() {
   const [editingItem, setEditingItem] = useState<WantListItem | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'alerts'>('list');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [selectedFigure, setSelectedFigure] = useState<ActionFigure | null>(null);
+  const [loadingFigure, setLoadingFigure] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -190,14 +195,27 @@ export function WantListPage() {
     loadData();
   };
 
-  const handleViewAlert = (alert: WantListAlert) => {
+  const handleViewAlert = async (alert: WantListAlert) => {
     if (!currentUser) return;
 
     WantListService.markAlertViewed(currentUser.id, alert.id);
     loadData();
 
-    // TODO: Navigate to the figure detail or marketplace listing
-    toastManager.info('Opening figure details...');
+    // Fetch and display the figure
+    setLoadingFigure(true);
+    try {
+      const figure = await FirebaseStorage.getFigure(alert.figureId);
+      if (figure) {
+        setSelectedFigure(figure);
+      } else {
+        toastManager.error('Figure not found or no longer available');
+      }
+    } catch (error) {
+      console.error('Failed to load figure:', error);
+      toastManager.error('Failed to load figure details');
+    } finally {
+      setLoadingFigure(false);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -660,6 +678,18 @@ export function WantListPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Figure Detail Modal */}
+      {selectedFigure && currentUser && (
+        <FigureDetailModal
+          figure={selectedFigure}
+          currentUser={currentUser}
+          onClose={() => setSelectedFigure(null)}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          onUpdate={() => {}}
+        />
+      )}
     </div>
   );
 }

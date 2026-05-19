@@ -555,6 +555,42 @@ export class FirebaseAuthService {
   }
 
   /**
+   * Get user by username
+   */
+  static async getUserByUsername(username: string): Promise<User | null> {
+    try {
+      const q = query(
+        collection(db, USERS_COLLECTION),
+        where('username', '==', username)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const doc = snapshot.docs[0];
+      return {
+        id: doc.id,
+        username: doc.data().username,
+        password: '', // Don't expose
+        role: doc.data().role,
+        displayName: doc.data().displayName,
+        email: doc.data().email,
+        profileImage: doc.data().profileImage,
+        collectionPublic: doc.data().collectionPublic,
+        admirers: doc.data().admirers || [],
+        admirerRequests: doc.data().admirerRequests || [],
+        autoApproveAdmirers: doc.data().autoApproveAdmirers || false,
+        subscriptionTier: doc.data().subscriptionTier || 'free'
+      };
+    } catch (error) {
+      console.error('Failed to get user by username:', error);
+      return null;
+    }
+  }
+
+  /**
    * Update profile image
    */
   static async updateProfileImage(userId: string, profileImage: string | null): Promise<void> {

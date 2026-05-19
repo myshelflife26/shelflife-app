@@ -99,8 +99,23 @@ export class CommentsService {
       // Extract and notify @mentioned users
       const mentions = FirebaseNotifications.extractMentions(text);
       for (const mentionedUsername of mentions) {
-        // TODO: Look up user ID by username
-        // For now, we'll skip mention notifications until we have a username-to-userId mapping
+        // Look up user ID by username
+        const FirebaseAuthService = (await import('./firebaseAuth')).FirebaseAuthService;
+        const mentionedUser = await FirebaseAuthService.getUserByUsername(mentionedUsername);
+
+        if (mentionedUser && mentionedUser.id !== userId) {
+          // Send mention notification
+          await FirebaseNotifications.createMentionNotification(
+            mentionedUser.id,
+            figureId,
+            figureName,
+            figureImage,
+            userId,
+            userDisplayName,
+            userUsername,
+            text
+          );
+        }
       }
     }
 
