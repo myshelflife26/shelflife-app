@@ -34,6 +34,15 @@ jobs:
 
     - name: Build
       run: npm run build
+      env:
+        CI: false
+
+    - name: List build output
+      run: |
+        echo "Contents of dist folder:"
+        ls -la dist/
+        echo "Contents of dist/index.html:"
+        cat dist/index.html
 
     - name: Setup Pages
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
