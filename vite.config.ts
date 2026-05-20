@@ -10,5 +10,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: process.env.NODE_ENV === 'production' ? '/action-figure-tracker-dev/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/shelflife-app/' : '/',
 })
