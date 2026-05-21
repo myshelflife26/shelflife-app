@@ -66,6 +66,8 @@ import { CommentReportsService } from './utils/commentReports';
 import { Grid3x3 } from 'lucide-react';
 import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
 import { OnboardingTour, useOnboardingTour, type TourStep } from './components/OnboardingTour';
+import ErrorBoundary from './components/ErrorBoundary';
+import './utils/errorHandler'; // Initialize global error handling
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves' | 'import';
@@ -1536,22 +1538,28 @@ function MainApp() {
           }}
         />
       ) : currentPage === 'browse' ? (
-        <Suspense fallback={<PageLoader />}>
-          <BrowsePage
-            currentUser={currentUser}
-            setCurrentPage={setCurrentPage}
-            initialUserId={browseInitialUserId}
-            onClearInitialUserId={() => setBrowseInitialUserId(null)}
-          />
-        </Suspense>
+        <ErrorBoundary level="page">
+          <Suspense fallback={<PageLoader />}>
+            <BrowsePage
+              currentUser={currentUser}
+              setCurrentPage={setCurrentPage}
+              initialUserId={browseInitialUserId}
+              onClearInitialUserId={() => setBrowseInitialUserId(null)}
+            />
+          </Suspense>
+        </ErrorBoundary>
       ) : currentPage === 'messages' ? (
-        <Suspense fallback={<PageLoader />}>
-          <MessagesPageNew currentUser={currentUser} />
-        </Suspense>
+        <ErrorBoundary level="page">
+          <Suspense fallback={<PageLoader />}>
+            <MessagesPageNew currentUser={currentUser} />
+          </Suspense>
+        </ErrorBoundary>
       ) : currentPage === 'marketplace' ? (
-        <Suspense fallback={<PageLoader />}>
-          <MarketplacePage currentUser={currentUser} />
-        </Suspense>
+        <ErrorBoundary level="page">
+          <Suspense fallback={<PageLoader />}>
+            <MarketplacePage currentUser={currentUser} />
+          </Suspense>
+        </ErrorBoundary>
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full box-border">
         {/* Admin viewing another user's collection notification */}
@@ -1602,25 +1610,29 @@ function MainApp() {
             </div>
           </div>
         ) : collectionTab === 'stats' ? (
-          <Suspense fallback={<PageLoader />}>
-            <StatsView figures={filteredFigures} />
-          </Suspense>
+          <ErrorBoundary level="component">
+            <Suspense fallback={<PageLoader />}>
+              <StatsView figures={filteredFigures} />
+            </Suspense>
+          </ErrorBoundary>
         ) : collectionTab === 'gallery' ? (
-          <Suspense fallback={<PageLoader />}>
-            <GalleryPage
-              figures={filteredFigures}
-              filters={filters}
-              onFilterChange={setFilters}
-              manufacturers={uniqueManufacturers}
-              categories={uniqueCategories}
-              conditions={uniqueConditions}
-              sizes={uniqueSizes}
-              packaging={uniquePackaging}
-              productLines={uniqueProductLines}
-              locations={uniqueLocations}
-              onToggleFavorite={handleToggleFavorite}
-            />
-          </Suspense>
+          <ErrorBoundary level="component">
+            <Suspense fallback={<PageLoader />}>
+              <GalleryPage
+                figures={filteredFigures}
+                filters={filters}
+                onFilterChange={setFilters}
+                manufacturers={uniqueManufacturers}
+                categories={uniqueCategories}
+                conditions={uniqueConditions}
+                sizes={uniqueSizes}
+                packaging={uniquePackaging}
+                productLines={uniqueProductLines}
+                locations={uniqueLocations}
+                onToggleFavorite={handleToggleFavorite}
+              />
+            </Suspense>
+          </ErrorBoundary>
         ) : collectionTab === 'alerts' ? (
           <PriceAlertsPage currentUser={currentUser} />
         ) : collectionTab === 'growth' ? (
@@ -2167,12 +2179,28 @@ function MainApp() {
 // Routing wrapper
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/profile/:username" element={<PublicProfilePage />} />
-        <Route path="*" element={<MainApp />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary level="critical">
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/profile/:username"
+            element={
+              <ErrorBoundary level="page">
+                <PublicProfilePage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <ErrorBoundary level="page">
+                <MainApp />
+              </ErrorBoundary>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
