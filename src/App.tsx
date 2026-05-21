@@ -22,7 +22,9 @@ import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as User
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { OfflineNotification } from './components/OfflineNotification';
+import { PrivacyConsentBanner } from './components/PrivacyConsentBanner';
 import { registerSW } from './utils/serviceWorker';
+import { privacyAnalytics, trackPageView, trackFeatureUsage, trackUserAction } from './utils/privacyAnalytics';
 // Lazy load large page components
 const TabbedSettingsPage = lazy(() => import('./components/TabbedSettingsPage'));
 const BlockedUsersPage = lazy(() => import('./components/BlockedUsersPage'));
@@ -425,6 +427,14 @@ function MainApp() {
   const handleSaveFigure = async (figure: Omit<ActionFigure, 'id'>) => {
     if (!currentUser) return;
 
+    const isEditing = !!editingFigure;
+    trackUserAction(isEditing ? 'figure_edited' : 'figure_created', 'form_submit', {
+      hasImages: (figure.images && figure.images.length > 0),
+      hasStoragePhoto: !!figure.storagePhoto,
+      manufacturer: figure.manufacturer,
+      condition: figure.condition,
+    });
+
     try {
       // Upload images to Firebase Storage if they are base64 strings
       let imageUrls = figure.images || [];
@@ -505,6 +515,7 @@ function MainApp() {
 
   // Open add figure form
   const handleAddFigure = () => {
+    trackUserAction('add_figure_clicked', 'fab_button');
     setEditingFigure(undefined);
     setFormOpen(true);
   };
@@ -865,6 +876,37 @@ function MainApp() {
 
     initializeServiceWorker();
   }, []);
+
+  // Analytics page tracking
+  useEffect(() => {
+    const pageTitle = `${currentPage === 'collection' ? 'My Collection' :
+                       currentPage === 'feed' ? 'Feed' :
+                       currentPage === 'browse' ? 'Browse Collections' :
+                       currentPage === 'messages' ? 'Messages' :
+                       currentPage === 'marketplace' ? 'Marketplace' :
+                       currentPage === 'settings' ? 'Settings' : 'ShelfLife'}`;
+
+    trackPageView(currentPage, pageTitle);
+  }, [currentPage, collectionTab]);
+
+  // Navigation wrapper with analytics
+  const navigateToPage = (page: PageType, source?: string) => {
+    trackUserAction('navigate', `${page}_page`, { from: currentPage, source });
+    setCurrentPage(page);
+  };
+
+  // Dark mode toggle with analytics
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    trackFeatureUsage('theme', 'toggle_dark_mode', { enabled: newDarkMode });
+    setDarkMode(newDarkMode);
+  };
+
+  // Collection tab change with analytics
+  const changeCollectionTab = (tab: CollectionTab) => {
+    trackFeatureUsage('collection', 'tab_change', { tab, from: collectionTab });
+    setCollectionTab(tab);
+  };
 
   // Filter figures
   const filteredFigures = useMemo(() => {
@@ -2206,6 +2248,9 @@ function MainApp() {
 
       {/* Offline notifications and service worker UI */}
       <OfflineNotification />
+
+      {/* Privacy consent banner */}
+      <PrivacyConsentBanner />
     </div>
   );
 }
