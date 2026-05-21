@@ -1,6 +1,6 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, getDocs, getDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Comment } from '../types/comment';
+import type { Comment } from '../types/comment';
 import { FirebaseNotifications } from './firebaseNotifications';
 
 export class CommentsService {

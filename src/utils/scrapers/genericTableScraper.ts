@@ -1,6 +1,6 @@
 // Generic HTML table scraper - works with structured table data
 
-import { BaseScraper, ScraperConfig, ScrapeResult, ScrapedFigure } from './types';
+import { BaseScraper, type ScraperConfig, type ScrapeResult, type ScrapedFigure } from './types';
 
 export class GenericTableScraper extends BaseScraper {
   config: ScraperConfig = {

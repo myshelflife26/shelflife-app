@@ -1,6 +1,6 @@
 // CSV/TSV data scraper - for importing from paste data or URLs
 
-import { BaseScraper, ScraperConfig, ScrapeResult, ScrapedFigure } from './types';
+import { BaseScraper, type ScraperConfig, type ScrapeResult, type ScrapedFigure } from './types';
 
 export class CSVScraper extends BaseScraper {
   config: ScraperConfig = {

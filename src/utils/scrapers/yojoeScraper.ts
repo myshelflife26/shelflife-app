@@ -1,6 +1,6 @@
 // YoJoe.com scraper for G.I. Joe figures
 
-import { BaseScraper, ScraperConfig, ScrapeResult, ScrapedFigure } from './types';
+import { BaseScraper, type ScraperConfig, type ScrapeResult, type ScrapedFigure } from './types';
 
 export class YoJoeScraper extends BaseScraper {
   config: ScraperConfig = {
