@@ -40,13 +40,15 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     e.preventDefault();
     setError('');
 
-    if (!username || !password) {
+    const trimmedUsername = username.trim();
+
+    if (!trimmedUsername || !password) {
       setError('Please enter both username and password');
       return;
     }
 
     try {
-      const user = await FirebaseAuthService.login(username, password);
+      const user = await FirebaseAuthService.login(trimmedUsername, password);
 
       if (user) {
         onLogin(user);
@@ -90,8 +92,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     try {
+      const trimmedUsername = username.trim();
+      const trimmedDisplayName = displayName.trim();
+      const trimmedEmail = email?.trim();
+
       // Create the user account (always as regular user, not management)
-      const result = await FirebaseAuthService.createUser(username, password, displayName, 'user', email || undefined);
+      const result = await FirebaseAuthService.createUser(trimmedUsername, password, trimmedDisplayName, 'user', trimmedEmail || undefined);
 
       if (!result.success) {
         setError(result.error || 'Failed to create account');
@@ -101,7 +107,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       // Success - automatically log in the new user
       setSuccess('Account created successfully! Logging you in...');
       setTimeout(async () => {
-        const user = await FirebaseAuthService.login(username, password);
+        const user = await FirebaseAuthService.login(trimmedUsername, password);
         if (user) {
           onLogin(user);
         }
@@ -156,6 +162,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
                   className="mt-1"
+                  autoComplete="username"
                   autoFocus
                 />
               </div>
@@ -169,6 +176,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   className="mt-1"
+                  autoComplete="current-password"
                 />
               </div>
 
@@ -238,6 +246,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Choose a password"
                   className="mt-1"
+                  autoComplete="new-password"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Minimum 4 characters
@@ -253,6 +262,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter your password"
                   className="mt-1"
+                  autoComplete="new-password"
                 />
               </div>
 
