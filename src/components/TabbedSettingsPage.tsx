@@ -119,3 +119,5 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     </div>
   );
 }
+
+export default TabbedSettingsPage;

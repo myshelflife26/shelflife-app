@@ -2380,3 +2380,5 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     </div>
   );
 }
+
+export default FeedPage;

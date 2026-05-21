@@ -1174,3 +1174,5 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
     </div>
   );
 }
+
+export default MarketplacePage;

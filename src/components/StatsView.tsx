@@ -1445,3 +1445,5 @@ export function StatsView({ figures }: StatsViewProps) {
     </div>
   );
 }
+
+export default StatsView;

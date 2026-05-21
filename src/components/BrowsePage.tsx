@@ -1590,3 +1590,5 @@ export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClear
     </div>
   );
 }
+
+export default BrowsePage;

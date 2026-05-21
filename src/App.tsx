@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import type { ActionFigure, Filters } from './types/index';
 import type { User } from './types/user';
@@ -21,19 +21,20 @@ import { Checkbox } from './components/ui/checkbox';
 import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload, Bell, Flag } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
-import { TabbedSettingsPage } from './components/TabbedSettingsPage';
-import { BlockedUsersPage } from './components/BlockedUsersPage';
-import { AdminReportsPage } from './components/AdminReportsPage';
-import { UserManagementPage } from './components/UserManagementPage';
-import { MigrateReactionsButton } from './components/MigrateReactionsButton';
-import { BrowsePage } from './components/BrowsePage';
-import { MessagesPageNew } from './components/MessagesPageNew';
-import { MarketplacePage } from './components/MarketplacePage';
+// Lazy load large page components
+const TabbedSettingsPage = lazy(() => import('./components/TabbedSettingsPage'));
+const BlockedUsersPage = lazy(() => import('./components/BlockedUsersPage'));
+const AdminReportsPage = lazy(() => import('./components/AdminReportsPage'));
+const UserManagementPage = lazy(() => import('./components/UserManagementPage'));
+const MigrateReactionsButton = lazy(() => import('./components/MigrateReactionsButton'));
+const BrowsePage = lazy(() => import('./components/BrowsePage'));
+const MessagesPageNew = lazy(() => import('./components/MessagesPageNew'));
+const MarketplacePage = lazy(() => import('./components/MarketplacePage'));
 import { FilterSheet } from './components/FilterSheet';
 import { TableView } from './components/TableView';
-import { StatsView } from './components/StatsView';
-import { ExportImportMenu } from './components/ExportImportMenu';
-import { GalleryPage } from './components/GalleryPage';
+const StatsView = lazy(() => import('./components/StatsView'));
+const ExportImportMenu = lazy(() => import('./components/ExportImportMenu'));
+const GalleryPage = lazy(() => import('./components/GalleryPage'));
 import { Pagination } from './components/Pagination';
 import { LoginPage } from './components/LoginPage';
 import { ProfileImageEditor } from './components/ProfileImageEditor';
@@ -44,23 +45,23 @@ import { MarketplaceService } from './utils/marketplaceService';
 import { Logo } from './components/Logo';
 import { UserRatingBadge } from './components/UserRatingBadge';
 import { BrandedFooter } from './components/BrandedFooter';
-import { FeedPage } from './components/FeedPage';
-import { BetaGuidePage } from './components/BetaGuidePage';
-import { GlobalStatisticsPage } from './components/GlobalStatisticsPage';
-import { WishlistPage } from './components/WishlistPage';
-import { ShareCollectionDialog } from './components/ShareCollectionDialog';
-import { PriceTrend } from './components/PriceTrend';
-import { PriceAlertsPage } from './components/PriceAlertsPage';
+const FeedPage = lazy(() => import('./components/FeedPage'));
+const BetaGuidePage = lazy(() => import('./components/BetaGuidePage'));
+const GlobalStatisticsPage = lazy(() => import('./components/GlobalStatisticsPage'));
+const WishlistPage = lazy(() => import('./components/WishlistPage'));
+const ShareCollectionDialog = lazy(() => import('./components/ShareCollectionDialog'));
+const PriceTrend = lazy(() => import('./components/PriceTrend'));
+const PriceAlertsPage = lazy(() => import('./components/PriceAlertsPage'));
 import ToastContainer from './components/ToastContainer';
 import { toastManager } from './utils/toastManager';
 import { NotificationsService } from './utils/notificationsService';
-import { ShelvesPage } from './components/ShelvesPage';
-import { ShelfViewPage } from './components/ShelfViewPage';
-import { CollectionGrowthPage } from './components/CollectionGrowthPage';
-import { TopJealousFigures } from './components/TopJealousFigures';
-import { PublicProfilePage } from './components/PublicProfilePage';
-import { NotificationBell } from './components/NotificationBell';
-import { CommentReportsPage } from './components/CommentReportsPage';
+const ShelvesPage = lazy(() => import('./components/ShelvesPage'));
+const ShelfViewPage = lazy(() => import('./components/ShelfViewPage'));
+const CollectionGrowthPage = lazy(() => import('./components/CollectionGrowthPage'));
+const TopJealousFigures = lazy(() => import('./components/TopJealousFigures'));
+const PublicProfilePage = lazy(() => import('./components/PublicProfilePage'));
+const NotificationBell = lazy(() => import('./components/NotificationBell'));
+const CommentReportsPage = lazy(() => import('./components/CommentReportsPage'));
 import { CommentReportsService } from './utils/commentReports';
 import { Grid3x3 } from 'lucide-react';
 import { parseCSV, type ParsedFigure, type ParseResult } from './utils/csvParser';
@@ -68,6 +69,14 @@ import { OnboardingTour, useOnboardingTour, type TourStep } from './components/O
 
 type PageType = 'collection' | 'feed' | 'settings' | 'browse' | 'messages' | 'blocked' | 'reports' | 'help' | 'marketplace';
 type CollectionTab = 'collection' | 'table' | 'stats' | 'gallery' | 'alerts' | 'growth' | 'wishlist' | 'shelves' | 'import';
+
+// Loading component for lazy-loaded components
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    <span className="ml-3 text-gray-600 dark:text-gray-400">Loading...</span>
+  </div>
+);
 
 function MainApp() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -1527,16 +1536,22 @@ function MainApp() {
           }}
         />
       ) : currentPage === 'browse' ? (
-        <BrowsePage
-          currentUser={currentUser}
-          setCurrentPage={setCurrentPage}
-          initialUserId={browseInitialUserId}
-          onClearInitialUserId={() => setBrowseInitialUserId(null)}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <BrowsePage
+            currentUser={currentUser}
+            setCurrentPage={setCurrentPage}
+            initialUserId={browseInitialUserId}
+            onClearInitialUserId={() => setBrowseInitialUserId(null)}
+          />
+        </Suspense>
       ) : currentPage === 'messages' ? (
-        <MessagesPageNew currentUser={currentUser} />
+        <Suspense fallback={<PageLoader />}>
+          <MessagesPageNew currentUser={currentUser} />
+        </Suspense>
       ) : currentPage === 'marketplace' ? (
-        <MarketplacePage currentUser={currentUser} />
+        <Suspense fallback={<PageLoader />}>
+          <MarketplacePage currentUser={currentUser} />
+        </Suspense>
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full box-border">
         {/* Admin viewing another user's collection notification */}
@@ -1587,21 +1602,25 @@ function MainApp() {
             </div>
           </div>
         ) : collectionTab === 'stats' ? (
-          <StatsView figures={filteredFigures} />
+          <Suspense fallback={<PageLoader />}>
+            <StatsView figures={filteredFigures} />
+          </Suspense>
         ) : collectionTab === 'gallery' ? (
-          <GalleryPage
-            figures={filteredFigures}
-            filters={filters}
-            onFilterChange={setFilters}
-            manufacturers={uniqueManufacturers}
-            categories={uniqueCategories}
-            conditions={uniqueConditions}
-            sizes={uniqueSizes}
-            packaging={uniquePackaging}
-            productLines={uniqueProductLines}
-            locations={uniqueLocations}
-            onToggleFavorite={handleToggleFavorite}
-          />
+          <Suspense fallback={<PageLoader />}>
+            <GalleryPage
+              figures={filteredFigures}
+              filters={filters}
+              onFilterChange={setFilters}
+              manufacturers={uniqueManufacturers}
+              categories={uniqueCategories}
+              conditions={uniqueConditions}
+              sizes={uniqueSizes}
+              packaging={uniquePackaging}
+              productLines={uniqueProductLines}
+              locations={uniqueLocations}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          </Suspense>
         ) : collectionTab === 'alerts' ? (
           <PriceAlertsPage currentUser={currentUser} />
         ) : collectionTab === 'growth' ? (
