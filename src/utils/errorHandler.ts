@@ -111,11 +111,40 @@ class ErrorHandlerService {
     // - LogRocket: https://logrocket.com
     // - Bugsnag: https://bugsnag.com
 
+    // Check if we're online
+    if (!navigator.onLine) {
+      // Queue error for offline sync
+      this.queueErrorForOfflineSync(error);
+      return;
+    }
+
     // For now, we'll just queue them for potential batch sending
     if (this.errorQueue.length >= 5) {
       // Could batch send multiple errors
       console.log('Would send batch of errors to service:', this.errorQueue.slice(0, 5));
       this.errorQueue = this.errorQueue.slice(5);
+    }
+  }
+
+  private queueErrorForOfflineSync(error: ErrorReport) {
+    try {
+      const pendingErrors = JSON.parse(localStorage.getItem('shelflife_pending_errors') || '[]');
+      pendingErrors.push(error);
+
+      // Keep only the most recent pending errors
+      const recentPendingErrors = pendingErrors.slice(-10);
+      localStorage.setItem('shelflife_pending_errors', JSON.stringify(recentPendingErrors));
+
+      // Request background sync if service worker is available
+      if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+        navigator.serviceWorker.ready.then((registration) => {
+          return registration.sync.register('background-sync');
+        }).catch((error) => {
+          console.log('Background sync registration failed:', error);
+        });
+      }
+    } catch (error) {
+      console.error('Failed to queue error for offline sync:', error);
     }
   }
 

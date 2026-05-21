@@ -21,6 +21,8 @@ import { Checkbox } from './components/ui/checkbox';
 import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload, Bell, Flag } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
+import { OfflineNotification } from './components/OfflineNotification';
+import { registerSW } from './utils/serviceWorker';
 // Lazy load large page components
 const TabbedSettingsPage = lazy(() => import('./components/TabbedSettingsPage'));
 const BlockedUsersPage = lazy(() => import('./components/BlockedUsersPage'));
@@ -834,6 +836,35 @@ function MainApp() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Service Worker registration
+  useEffect(() => {
+    const initializeServiceWorker = async () => {
+      try {
+        await registerSW({
+          onSuccess: (registration) => {
+            console.log('Service Worker registered successfully');
+            // Dispatch custom event for OfflineNotification component
+            window.dispatchEvent(new CustomEvent('sw-offline-ready'));
+          },
+          onUpdate: (registration) => {
+            console.log('Service Worker update available');
+            // Dispatch custom event for OfflineNotification component
+            window.dispatchEvent(new CustomEvent('sw-update-available', {
+              detail: registration
+            }));
+          },
+          onError: (error) => {
+            console.error('Service Worker registration failed:', error);
+          },
+        });
+      } catch (error) {
+        console.error('Failed to initialize Service Worker:', error);
+      }
+    };
+
+    initializeServiceWorker();
+  }, []);
 
   // Filter figures
   const filteredFigures = useMemo(() => {
@@ -2172,6 +2203,9 @@ function MainApp() {
           onSkip={markOnboardingComplete}
         />
       )}
+
+      {/* Offline notifications and service worker UI */}
+      <OfflineNotification />
     </div>
   );
 }
