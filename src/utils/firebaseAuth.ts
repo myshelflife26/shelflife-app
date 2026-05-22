@@ -195,39 +195,58 @@ export class FirebaseAuthService {
    * Get user by ID from Firestore
    */
   static async getUserById(userId: string): Promise<User | null> {
-    // Validate input
-    if (!userId || typeof userId !== 'string') {
-      console.warn('getUserById called with invalid userId:', userId);
+    // Strict input validation
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      console.warn('[AUTH] getUserById called with invalid userId:', { userId, type: typeof userId });
       return null;
     }
 
     try {
+      console.log('[AUTH] Fetching user from Firestore:', userId);
       const userDoc = await getDoc(doc(db, USERS_COLLECTION, userId));
+
       if (!userDoc.exists()) {
-        console.warn(`User not found in Firestore: ${userId}`);
+        console.warn(`[AUTH] User not found in Firestore: ${userId}`);
         return null;
       }
 
       const data = userDoc.data();
-      if (!data) {
-        console.warn(`User document has no data: ${userId}`);
+      if (!data || typeof data !== 'object') {
+        console.warn(`[AUTH] User document has no data: ${userId}`);
         return null;
       }
 
-      return {
-        id: userDoc.id,
-        username: data.username || '',
+      // Validate essential fields
+      const docId = userDoc.id;
+      if (!docId || typeof docId !== 'string') {
+        console.error(`[AUTH] User document has invalid ID: ${docId}`);
+        return null;
+      }
+
+      // Construct user with validated fields
+      const user: User = {
+        id: docId,
+        username: (typeof data.username === 'string' ? data.username : '') || '',
         password: '', // Don't expose password
-        role: data.role || 'user',
-        displayName: data.displayName || '',
-        email: data.email || '',
-        profileImage: data.profileImage || '',
-        collectionPublic: data.collectionPublic ?? true,
-        admirers: data.admirers || [],
-        admirerRequests: data.admirerRequests || [],
-        autoApproveAdmirers: data.autoApproveAdmirers || false,
-        subscriptionTier: data.subscriptionTier || 'free'
+        role: (data.role === 'admin' ? 'admin' : 'user'),
+        displayName: (typeof data.displayName === 'string' ? data.displayName : '') || '',
+        email: (typeof data.email === 'string' ? data.email : '') || '',
+        profileImage: (typeof data.profileImage === 'string' ? data.profileImage : '') || '',
+        collectionPublic: Boolean(data.collectionPublic ?? true),
+        admirers: Array.isArray(data.admirers) ? data.admirers : [],
+        admirerRequests: Array.isArray(data.admirerRequests) ? data.admirerRequests : [],
+        autoApproveAdmirers: Boolean(data.autoApproveAdmirers || false),
+        subscriptionTier: (data.subscriptionTier === 'premium' ? 'premium' : 'free')
       };
+
+      // Final validation that user object has required fields
+      if (!user.id || !user.username || user.username.length === 0) {
+        console.error(`[AUTH] Created user object is invalid:`, user);
+        return null;
+      }
+
+      console.log(`[AUTH] Successfully created user object for: ${user.username} (${user.id})`);
+      return user;
     } catch (error) {
       console.error('Failed to get user:', error);
       return null;
@@ -240,30 +259,55 @@ export class FirebaseAuthService {
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       try {
-        if (firebaseUser && firebaseUser.uid) {
-          const user = await this.getUserById(firebaseUser.uid);
+        // Strict validation of callback
+        if (!callback || typeof callback !== 'function') {
+          console.error('onAuthStateChanged: Invalid callback provided');
+          return;
+        }
 
-          // Migrate localStorage settings to Firestore if user exists
-          if (user) {
-            try {
-              await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
-            } catch (migrationError) {
-              console.warn('Settings migration failed:', migrationError);
-              // Don't fail auth if migration fails
+        if (firebaseUser && firebaseUser.uid && typeof firebaseUser.uid === 'string' && firebaseUser.uid.trim()) {
+          console.log('[AUTH] Firebase user detected, fetching user data...');
+
+          try {
+            const user = await this.getUserById(firebaseUser.uid);
+
+            // Validate user data before proceeding
+            if (user && user.id && typeof user.id === 'string') {
+              // Migrate localStorage settings to Firestore if user exists
+              try {
+                await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
+              } catch (migrationError) {
+                console.warn('Settings migration failed:', migrationError);
+                // Don't fail auth if migration fails
+              }
+
+              this.currentUserCache = user;
+              console.log('[AUTH] User data validated, calling callback with user:', user.id);
+              callback(user);
+            } else {
+              console.warn('[AUTH] getUserById returned invalid user data:', user);
+              this.currentUserCache = null;
+              callback(null);
             }
+          } catch (getUserError) {
+            console.error('[AUTH] Error in getUserById:', getUserError);
+            this.currentUserCache = null;
+            callback(null);
           }
-
-          this.currentUserCache = user;
-          callback(user);
         } else {
+          console.log('[AUTH] No valid Firebase user, calling callback with null');
           this.currentUserCache = null;
           callback(null);
         }
       } catch (error) {
-        console.error('Auth state change error:', error);
-        // On error, still call callback to prevent hanging
-        this.currentUserCache = null;
-        callback(null);
+        console.error('[AUTH] Critical error in auth state change:', error);
+        // Ensure callback is always called to prevent hanging
+        try {
+          this.currentUserCache = null;
+          callback(null);
+        } catch (callbackError) {
+          console.error('[AUTH] Error calling callback:', callbackError);
+        }
       }
     });
   }

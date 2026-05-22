@@ -47,6 +47,15 @@ export function CommunityActivityFeed({
     activeUsers: number;
   } | null>(null);
 
+  // Validate props to prevent crashes
+  if (!currentUser || !currentUser.id) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <p>Please log in to view community activity</p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     loadActivities();
     loadStats();

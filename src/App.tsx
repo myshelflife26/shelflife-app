@@ -185,21 +185,34 @@ function MainApp() {
   useEffect(() => {
     const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (user) => {
       try {
+        console.log('[APP] Auth state changed, user:', user ? `${user.username} (${user.id})` : 'null');
+
+        // Validate user before setting state
+        if (user !== null && (!user || !user.id || typeof user.id !== 'string')) {
+          console.error('[APP] Received invalid user object, treating as null:', user);
+          setCurrentUser(null);
+          setFigures([]);
+          return;
+        }
+
         setCurrentUser(user);
+
         if (user && user.id) {
           // Load user's figures from Firebase
           try {
+            console.log('[APP] Loading figures for user:', user.id);
             const userFigures = await FirebaseStorage.getFigures(user.id);
-            setFigures(userFigures);
+            setFigures(Array.isArray(userFigures) ? userFigures : []);
           } catch (figureError) {
-            console.error('Failed to load user figures:', figureError);
+            console.error('[APP] Failed to load user figures:', figureError);
             setFigures([]); // Set empty array on error to prevent crashes
           }
         } else {
+          console.log('[APP] No user, clearing figures');
           setFigures([]);
         }
       } catch (authError) {
-        console.error('Auth state change error:', authError);
+        console.error('[APP] Critical error in auth state change:', authError);
         setCurrentUser(null);
         setFigures([]);
       }
