@@ -1,0 +1,77 @@
+{
+  "name": "ShelfLife - Action Figure Tracker",
+  "short_name": "ShelfLife",
+  "description": "Track, organize, and manage your action figure collection with comprehensive tools and community features.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["lifestyle", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Figure",
+      "short_name": "Add",
+      "description": "Quickly add a new action figure to your collection",
+      "url": "/?add=true"
+    },
+    {
+      "name": "Browse Collections",
+      "short_name": "Browse",
+      "description": "Browse other users' collections",
+      "url": "/?page=browse"
+    },
+    {
+      "name": "Marketplace",
+      "short_name": "Market",
+      "description": "View marketplace and trading opportunities",
+      "url": "/?page=marketplace"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 320
+  },
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+shelflife",
+      "url": "/?action=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  }
+}
