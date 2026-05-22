@@ -1,5 +1,6 @@
 import type { User } from '../types/user';
 import { FirebaseAuthService } from './firebaseAuth';
+import { ActivityRecorder } from './communityActivity';
 import {
   collection,
   addDoc,

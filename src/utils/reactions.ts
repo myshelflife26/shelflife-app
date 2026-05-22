@@ -1,5 +1,8 @@
 import type { Reaction, ReactionType } from '../types/user';
 import { AuthService } from './auth';
+import { ActivityRecorder } from './communityActivity';
+import { FirebaseStorage } from './firebaseStorage';
+import { FirebaseAuthService } from './firebaseAuth';
 
 const REACTIONS_KEY = 'app-reactions';
 
@@ -45,12 +48,14 @@ export class ReactionsService {
       r => r.figureId === figureId && r.userId === userId
     );
 
+    let reaction: Reaction;
+
     if (existingIndex !== -1) {
       // Update existing reaction
       reactions[existingIndex].reactionType = reactionType;
       reactions[existingIndex].timestamp = Date.now();
       this.saveAll(reactions);
-      return reactions[existingIndex];
+      reaction = reactions[existingIndex];
     } else {
       // Create new reaction
       const newReaction: Reaction = {
@@ -63,7 +68,40 @@ export class ReactionsService {
       };
       reactions.push(newReaction);
       this.saveAll(reactions);
-      return newReaction;
+      reaction = newReaction;
+
+      // Record community activity for new reactions only (not updates)
+      this.recordReactionActivity(figureId, userId, reactionType).catch(err => {
+        console.warn('Failed to record reaction activity:', err);
+      });
+    }
+
+    return reaction;
+  }
+
+  // Record activity when someone reacts to a figure (private helper)
+  private static async recordReactionActivity(
+    figureId: string,
+    userId: string,
+    reactionType: ReactionType
+  ): Promise<void> {
+    try {
+      // Get user info
+      const user = await FirebaseAuthService.getUserById(userId);
+      if (!user) return;
+
+      // Get figure info
+      const figure = await FirebaseStorage.getFigureById(figureId);
+      if (!figure) return;
+
+      // Get figure owner info
+      const figureOwner = await FirebaseAuthService.getUserById(figure.userId);
+      if (!figureOwner) return;
+
+      // Record as "figure admired" activity
+      ActivityRecorder.figureAdmired(user, figure, figureOwner);
+    } catch (error) {
+      console.error('Error recording reaction activity:', error);
     }
   }
 

@@ -15,6 +15,8 @@ import {
 import { db } from '../config/firebase';
 import type { ActionFigure } from '../types/index';
 import { MarketplaceService } from './marketplaceService';
+import { ActivityRecorder } from './communityActivity';
+import { FirebaseAuthService } from './firebaseAuth';
 
 const FIGURES_COLLECTION = 'figures';
 
@@ -186,6 +188,17 @@ export class FirebaseStorage {
       // Clear marketplace cache if figure is listed
       if (cleanedFigure.isListed) {
         MarketplaceService.clearListingsCache();
+      }
+
+      // Record community activity
+      try {
+        const user = await FirebaseAuthService.getUserById(userId);
+        if (user) {
+          const figureWithId = { ...cleanedFigure, id: newFigureRef.id } as ActionFigure;
+          ActivityRecorder.figureAdded(user, figureWithId);
+        }
+      } catch (activityError) {
+        console.warn('Failed to record figure added activity:', activityError);
       }
 
       return newFigureRef.id;

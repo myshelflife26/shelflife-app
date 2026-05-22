@@ -20,8 +20,9 @@ import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
 import { Pagination } from './Pagination';
 import { GlobalStatisticsPage } from './GlobalStatisticsPage';
+import { CommunityActivityFeed } from './CommunityActivityFeed';
 
-type FeedTab = 'rising' | 'jealous' | 'collectors' | 'recent' | 'stats';
+type FeedTab = 'rising' | 'jealous' | 'collectors' | 'recent' | 'activity' | 'stats';
 
 interface FeedPageProps {
   currentUser: User;
@@ -61,6 +62,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [randomCollectors, setRandomCollectors] = useState<Array<User & { sampleFigures: FigureWithOwner[] }>>([]);
   const [admiringUsers, setAdmiringUsers] = useState<string[]>([]);
   const [selectedFigure, setSelectedFigure] = useState<FigureWithOwner | null>(null);
+  const [activityMode, setActivityMode] = useState<'trending' | 'recent'>('trending');
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; username: string } | null>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -912,6 +914,17 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           Recently Added
         </button>
         <button
+          onClick={() => setFeedTab('activity')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            feedTab === 'activity'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Activity className="h-4 w-4 inline mr-2" />
+          Community Activity
+        </button>
+        <button
           onClick={() => setFeedTab('stats')}
           className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
             feedTab === 'stats'
@@ -919,7 +932,7 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
           }`}
         >
-          <Activity className="h-4 w-4 inline mr-2" />
+          <Package className="h-4 w-4 inline mr-2" />
           Global Statistics
         </button>
       </div>
@@ -2320,6 +2333,75 @@ export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           )}
         </div>
         </>
+      )}
+
+      {/* Community Activity Tab */}
+      {feedTab === 'activity' && (
+        <div className="mb-8 bg-blue-100/70 dark:bg-blue-900/20 rounded-lg p-3 sm:p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="h-6 w-6 text-blue-500" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Community Activity</h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            See what's happening in the community - recent additions, trades, milestones, and more!
+          </p>
+
+          {/* Activity Feed Tabs */}
+          <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 mb-6">
+            <button
+              onClick={() => setActivityMode('trending')}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activityMode === 'trending'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4 inline mr-1" />
+              Trending
+            </button>
+            <button
+              onClick={() => setActivityMode('recent')}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activityMode === 'recent'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+              }`}
+            >
+              <Clock className="h-4 w-4 inline mr-1" />
+              Recent
+            </button>
+          </div>
+
+          <CommunityActivityFeed
+            currentUser={currentUser}
+            onNavigateToUser={(userId) => {
+              if (onNavigateToBrowse) {
+                onNavigateToBrowse(userId);
+              }
+            }}
+            onNavigateToFigure={(figureId) => {
+              // Look for the figure in the current data and show modal
+              const allFigures = [
+                ...risingStars7Days,
+                ...risingStars30Days,
+                ...risingStarsCustom,
+                ...topJealousyFigures,
+                ...admiredFigures,
+                ...recentFigures7Days,
+                ...recentFigures30Days,
+                ...recentFiguresCustom
+              ];
+              const figure = allFigures.find(f => f.id === figureId);
+              if (figure) {
+                setSelectedFigure(figure);
+              }
+            }}
+            mode={activityMode}
+            limit={50}
+            showHeader={false}
+            showRefresh={true}
+          />
+        </div>
       )}
 
       {/* Global Statistics Tab */}

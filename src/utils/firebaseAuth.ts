@@ -24,6 +24,7 @@ import {
 import { auth, db } from '../config/firebase';
 import type { User, UserRole } from '../types/user';
 import { SettingsService } from './settings';
+import { ActivityRecorder } from './communityActivity';
 
 const USERS_COLLECTION = 'users';
 
@@ -346,6 +347,13 @@ export class FirebaseAuthService {
         email: userData.email,
         subscriptionTier: userData.subscriptionTier as 'free' | 'premium'
       };
+
+      // Record community activity for new user registration
+      try {
+        ActivityRecorder.userJoined(newUser);
+      } catch (activityError) {
+        console.warn('Failed to record user joined activity:', activityError);
+      }
 
       return { success: true, user: newUser };
     } catch (error: any) {
