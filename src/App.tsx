@@ -87,6 +87,7 @@ const PageLoader = () => (
 function MainApp() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true); // Add loading state for auth
+  const [error, setError] = useState<string>(''); // Add error state for login issues
   const [figures, setFigures] = useState<ActionFigure[]>([]);
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [darkMode, setDarkMode] = useState(false);
@@ -631,12 +632,36 @@ function MainApp() {
     setEditingFigure(undefined);
   };
 
-  // Login handler
+  // Login handler - Ultra defensive to prevent React crashes
   const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    setAuthLoading(false); // Ensure loading is cleared on manual login
-    // Migration happens in useEffect after user is set
-    loadFigures();
+    try {
+      // Validate user object before setting state
+      if (!user ||
+          typeof user !== 'object' ||
+          !user.id ||
+          typeof user.id !== 'string' ||
+          !user.username ||
+          typeof user.username !== 'string' ||
+          !user.displayName ||
+          typeof user.displayName !== 'string') {
+
+        console.error('[APP] handleLogin received invalid user object:', user);
+        setError('Login failed: Invalid user data received');
+        setAuthLoading(false);
+        return;
+      }
+
+      console.log('[APP] handleLogin: Setting valid user:', user.id);
+      setCurrentUser(user);
+      setAuthLoading(false); // Ensure loading is cleared on manual login
+      // Migration happens in useEffect after user is set
+      loadFigures();
+    } catch (loginError) {
+      console.error('[APP] handleLogin error:', loginError);
+      setCurrentUser(null);
+      setAuthLoading(false);
+      setError('Login failed: Please try again');
+    }
   };
 
   // Logout handler
@@ -927,10 +952,31 @@ function MainApp() {
     }
   }, [darkMode]);
 
-  // Service Worker registration - DISABLED due to React error #306
+  // Service Worker cleanup - Remove any existing service workers
   useEffect(() => {
-    // Service Worker completely disabled to prevent React crashes
-    console.log('Service Worker registration disabled to prevent React error #306');
+    const cleanupServiceWorkers = async () => {
+      try {
+        // Unregister any existing service workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            console.log('Unregistering existing service worker');
+            await registration.unregister();
+          }
+
+          // Clear any cached service worker
+          if (navigator.serviceWorker.controller) {
+            console.log('Service worker controller found, reloading to clear');
+            window.location.reload();
+          }
+        }
+        console.log('Service Worker cleanup complete');
+      } catch (error) {
+        console.warn('Service Worker cleanup failed:', error);
+      }
+    };
+
+    cleanupServiceWorkers();
   }, []);
 
   // Analytics page tracking
@@ -1146,7 +1192,18 @@ function MainApp() {
 
   // Show login page if not authenticated
   if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
+    return (
+      <ErrorBoundary>
+        <div>
+          {error && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
+              {error}
+            </div>
+          )}
+          <LoginPage onLogin={handleLogin} />
+        </div>
+      </ErrorBoundary>
+    );
   }
 
   return (
