@@ -30,6 +30,12 @@ export class CommunityActivityService {
    */
   static recordActivity(activity: Omit<CommunityActivity, 'id' | 'timestamp'>): void {
     try {
+      // Validate required fields
+      if (!activity?.type || !activity?.userId || !activity?.userName) {
+        console.warn('CommunityActivityService.recordActivity: Missing required activity data');
+        return;
+      }
+
       const activities = this.getAll();
 
       const newActivity: CommunityActivity = {
@@ -275,41 +281,59 @@ export class CommunityActivityService {
 // Helper functions to record common activities
 export class ActivityRecorder {
   static figureAdded(user: User, figure: ActionFigure): void {
+    // Add null safety checks
+    if (!user?.id || !figure?.id) {
+      console.warn('ActivityRecorder.figureAdded: Invalid user or figure data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'figure_added',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {
         figureId: figure.id,
-        figureName: figure.name,
-        figureImageUrl: figure.imageUrl
+        figureName: figure.name || 'Unnamed Figure',
+        figureImageUrl: figure.imageUrl || ''
       }
     });
   }
 
   static figureAdmired(user: User, figure: ActionFigure, targetUser: User): void {
+    // Add null safety checks
+    if (!user?.id || !figure?.id || !targetUser?.id) {
+      console.warn('ActivityRecorder.figureAdmired: Invalid user, figure, or target user data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'figure_admired',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {
         figureId: figure.id,
-        figureName: figure.name,
-        figureImageUrl: figure.imageUrl,
+        figureName: figure.name || 'Unnamed Figure',
+        figureImageUrl: figure.imageUrl || '',
         targetUserId: targetUser.id,
-        targetUserName: targetUser.username
+        targetUserName: targetUser.username || 'Unknown'
       }
     });
   }
 
   static collectionMilestone(user: User, milestone: string): void {
+    // Add null safety checks
+    if (!user?.id || !milestone) {
+      console.warn('ActivityRecorder.collectionMilestone: Invalid user or milestone data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'collection_milestone',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {
         milestone
       }
@@ -317,36 +341,54 @@ export class ActivityRecorder {
   }
 
   static tradeCompleted(user: User, tradePartner: User, tradeId: string): void {
+    // Add null safety checks
+    if (!user?.id || !tradePartner?.id || !tradeId) {
+      console.warn('ActivityRecorder.tradeCompleted: Invalid user, trade partner, or trade ID data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'trade_completed',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {
         tradeId,
-        tradedWith: tradePartner.username,
+        tradedWith: tradePartner.username || 'Unknown',
         targetUserId: tradePartner.id,
-        targetUserName: tradePartner.username
+        targetUserName: tradePartner.username || 'Unknown'
       }
     });
   }
 
   static userJoined(user: User): void {
+    // Add null safety checks
+    if (!user?.id) {
+      console.warn('ActivityRecorder.userJoined: Invalid user data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'user_joined',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {}
     });
   }
 
   static commentAdded(user: User, commentText: string, figure?: ActionFigure): void {
+    // Add null safety checks
+    if (!user?.id || !commentText) {
+      console.warn('ActivityRecorder.commentAdded: Invalid user or comment data');
+      return;
+    }
+
     CommunityActivityService.recordActivity({
       type: 'comment_added',
       userId: user.id,
-      userName: user.username,
-      userDisplayName: user.displayName,
+      userName: user.username || 'Unknown',
+      userDisplayName: user.displayName || 'Unknown User',
       data: {
         commentText: commentText.substring(0, 100), // Truncate long comments
         figureId: figure?.id,

@@ -91,7 +91,7 @@ export class ReactionsService {
       if (!user) return;
 
       // Get figure info
-      const figure = await FirebaseStorage.getFigureById(figureId);
+      const figure = await FirebaseStorage.getFigure(figureId);
       if (!figure) return;
 
       // Get figure owner info
