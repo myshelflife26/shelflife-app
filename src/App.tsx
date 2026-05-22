@@ -23,7 +23,7 @@ import { sampleFigures } from './data/sampleData';
 import { FigureForm } from './components/FigureForm';
 import { OfflineNotification } from './components/OfflineNotification';
 import { PrivacyConsentBanner } from './components/PrivacyConsentBanner';
-import { registerSW } from './utils/serviceWorker';
+// Service Worker import removed - completely disabled
 import { privacyAnalytics, trackPageView, trackFeatureUsage, trackUserAction } from './utils/privacyAnalytics';
 // Lazy load large page components
 const TabbedSettingsPage = lazy(() => import('./components/TabbedSettingsPage'));
@@ -952,31 +952,9 @@ function MainApp() {
     }
   }, [darkMode]);
 
-  // Service Worker cleanup - Remove any existing service workers
+  // Service Worker completely disabled - no cleanup needed
   useEffect(() => {
-    const cleanupServiceWorkers = async () => {
-      try {
-        // Unregister any existing service workers
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const registration of registrations) {
-            console.log('Unregistering existing service worker');
-            await registration.unregister();
-          }
-
-          // Clear any cached service worker
-          if (navigator.serviceWorker.controller) {
-            console.log('Service worker controller found, reloading to clear');
-            window.location.reload();
-          }
-        }
-        console.log('Service Worker cleanup complete');
-      } catch (error) {
-        console.warn('Service Worker cleanup failed:', error);
-      }
-    };
-
-    cleanupServiceWorkers();
+    // No service worker functionality
   }, []);
 
   // Analytics page tracking
