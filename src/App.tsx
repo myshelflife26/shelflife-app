@@ -183,39 +183,85 @@ function MainApp() {
 
   // Check authentication on mount with Firebase
   useEffect(() => {
-    const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (user) => {
-      try {
-        console.log('[APP] Auth state changed, user:', user ? `${user.username} (${user.id})` : 'null');
+    const unsubscribe = FirebaseAuthService.onAuthStateChanged((user) => {
+      // Ultra-defensive auth state handler to prevent React crashes
+      setTimeout(() => {
+        try {
+          console.log('[APP] Auth state changed, user:', user ? `${user.username} (${user.id})` : 'null');
 
-        // Validate user before setting state
-        if (user !== null && (!user || !user.id || typeof user.id !== 'string')) {
-          console.error('[APP] Received invalid user object, treating as null:', user);
-          setCurrentUser(null);
-          setFigures([]);
-          return;
-        }
+          // Extreme validation: check for any falsy or malformed values
+          if (user !== null && user !== undefined) {
+            // Validate all required user properties
+            if (!user ||
+                !user.id ||
+                typeof user.id !== 'string' ||
+                user.id.trim().length === 0 ||
+                !user.username ||
+                typeof user.username !== 'string' ||
+                user.username.trim().length === 0 ||
+                !user.displayName ||
+                typeof user.displayName !== 'string') {
 
-        setCurrentUser(user);
-
-        if (user && user.id) {
-          // Load user's figures from Firebase
-          try {
-            console.log('[APP] Loading figures for user:', user.id);
-            const userFigures = await FirebaseStorage.getFigures(user.id);
-            setFigures(Array.isArray(userFigures) ? userFigures : []);
-          } catch (figureError) {
-            console.error('[APP] Failed to load user figures:', figureError);
-            setFigures([]); // Set empty array on error to prevent crashes
+              console.error('[APP] Received malformed user object, treating as null:', user);
+              setCurrentUser(null);
+              setFigures([]);
+              return;
+            }
           }
-        } else {
-          console.log('[APP] No user, clearing figures');
-          setFigures([]);
+
+          // Set user state with extra safety
+          try {
+            setCurrentUser(user);
+          } catch (setUserError) {
+            console.error('[APP] Error setting current user:', setUserError);
+            setCurrentUser(null);
+            setFigures([]);
+            return;
+          }
+
+          if (user && user.id) {
+            // Load user's figures from Firebase with timeout
+            (async () => {
+              try {
+                console.log('[APP] Loading figures for user:', user.id);
+
+                // Add timeout to prevent hanging
+                const getFiguresPromise = FirebaseStorage.getFigures(user.id);
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error('getFigures timeout')), 15000)
+                );
+
+                const userFigures = await Promise.race([getFiguresPromise, timeoutPromise]);
+
+                if (Array.isArray(userFigures)) {
+                  setFigures(userFigures);
+                } else {
+                  console.warn('[APP] getFigures returned non-array:', userFigures);
+                  setFigures([]);
+                }
+              } catch (figureError) {
+                console.error('[APP] Failed to load user figures:', figureError);
+                setFigures([]); // Set empty array on error to prevent crashes
+              }
+            })();
+          } else {
+            console.log('[APP] No user, clearing figures');
+            try {
+              setFigures([]);
+            } catch (setFiguresError) {
+              console.error('[APP] Error clearing figures:', setFiguresError);
+            }
+          }
+        } catch (authError) {
+          console.error('[APP] Critical error in auth state change handler:', authError);
+          try {
+            setCurrentUser(null);
+            setFigures([]);
+          } catch (cleanupError) {
+            console.error('[APP] Error during cleanup:', cleanupError);
+          }
         }
-      } catch (authError) {
-        console.error('[APP] Critical error in auth state change:', authError);
-        setCurrentUser(null);
-        setFigures([]);
-      }
+      }, 0); // Defer to next tick
     });
 
     // Cleanup listener on unmount

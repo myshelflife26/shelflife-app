@@ -20,6 +20,10 @@ class ServiceWorkerManager {
   async register(config: ServiceWorkerConfig = {}): Promise<boolean> {
     this.config = config;
 
+    // TEMPORARILY DISABLED: Service Worker causing 404 errors
+    console.log('Service Worker: Registration disabled to prevent errors');
+    return false;
+
     if (!this.isSupported) {
       console.log('Service Worker: Not supported in this browser');
       return false;

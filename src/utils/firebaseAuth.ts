@@ -258,57 +258,111 @@ export class FirebaseAuthService {
    */
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        // Strict validation of callback
-        if (!callback || typeof callback !== 'function') {
-          console.error('onAuthStateChanged: Invalid callback provided');
-          return;
-        }
-
-        if (firebaseUser && firebaseUser.uid && typeof firebaseUser.uid === 'string' && firebaseUser.uid.trim()) {
-          console.log('[AUTH] Firebase user detected, fetching user data...');
-
-          try {
-            const user = await this.getUserById(firebaseUser.uid);
-
-            // Validate user data before proceeding
-            if (user && user.id && typeof user.id === 'string') {
-              // Migrate localStorage settings to Firestore if user exists
-              try {
-                await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
-              } catch (migrationError) {
-                console.warn('Settings migration failed:', migrationError);
-                // Don't fail auth if migration fails
-              }
-
-              this.currentUserCache = user;
-              console.log('[AUTH] User data validated, calling callback with user:', user.id);
-              callback(user);
-            } else {
-              console.warn('[AUTH] getUserById returned invalid user data:', user);
-              this.currentUserCache = null;
-              callback(null);
-            }
-          } catch (getUserError) {
-            console.error('[AUTH] Error in getUserById:', getUserError);
-            this.currentUserCache = null;
-            callback(null);
-          }
-        } else {
-          console.log('[AUTH] No valid Firebase user, calling callback with null');
-          this.currentUserCache = null;
-          callback(null);
-        }
-      } catch (error) {
-        console.error('[AUTH] Critical error in auth state change:', error);
-        // Ensure callback is always called to prevent hanging
+      // Ultra-defensive wrapper to prevent any React crashes
+      setTimeout(async () => {
         try {
+          // Strict validation of callback
+          if (!callback || typeof callback !== 'function') {
+            console.error('[AUTH] Invalid callback provided');
+            return;
+          }
+
+          // Validate firebaseUser parameter
+          if (firebaseUser === undefined) {
+            console.error('[AUTH] Received undefined firebaseUser - forcing to null');
+            firebaseUser = null;
+          }
+
+          if (firebaseUser && firebaseUser.uid && typeof firebaseUser.uid === 'string' && firebaseUser.uid.trim().length > 0) {
+            console.log('[AUTH] Firebase user detected, fetching user data...', firebaseUser.uid);
+
+            try {
+              // Add timeout to getUserById to prevent hanging
+              const getUserPromise = this.getUserById(firebaseUser.uid);
+              const timeoutPromise = new Promise<null>((_, reject) =>
+                setTimeout(() => reject(new Error('getUserById timeout')), 10000)
+              );
+
+              const user = await Promise.race([getUserPromise, timeoutPromise]);
+
+              // Ultra-strict validation of user data
+              if (user &&
+                  user.id &&
+                  typeof user.id === 'string' &&
+                  user.id.trim().length > 0 &&
+                  user.username &&
+                  typeof user.username === 'string' &&
+                  user.displayName &&
+                  typeof user.displayName === 'string') {
+
+                console.log('[AUTH] User data fully validated:', user.id);
+
+                // Migrate localStorage settings to Firestore if user exists
+                try {
+                  await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
+                } catch (migrationError) {
+                  console.warn('[AUTH] Settings migration failed:', migrationError);
+                  // Don't fail auth if migration fails
+                }
+
+                this.currentUserCache = user;
+
+                // Extra safety: delay callback to ensure React is ready
+                setTimeout(() => {
+                  try {
+                    console.log('[AUTH] Calling callback with validated user');
+                    callback(user);
+                  } catch (callbackError) {
+                    console.error('[AUTH] Callback error:', callbackError);
+                  }
+                }, 10);
+
+              } else {
+                console.warn('[AUTH] getUserById returned invalid user data:', user);
+                this.currentUserCache = null;
+                setTimeout(() => {
+                  try {
+                    callback(null);
+                  } catch (callbackError) {
+                    console.error('[AUTH] Callback error:', callbackError);
+                  }
+                }, 10);
+              }
+            } catch (getUserError) {
+              console.error('[AUTH] Error in getUserById:', getUserError);
+              this.currentUserCache = null;
+              setTimeout(() => {
+                try {
+                  callback(null);
+                } catch (callbackError) {
+                  console.error('[AUTH] Callback error:', callbackError);
+                }
+              }, 10);
+            }
+          } else {
+            console.log('[AUTH] No valid Firebase user, calling callback with null');
+            this.currentUserCache = null;
+            setTimeout(() => {
+              try {
+                callback(null);
+              } catch (callbackError) {
+                console.error('[AUTH] Callback error:', callbackError);
+              }
+            }, 10);
+          }
+        } catch (outerError) {
+          console.error('[AUTH] Critical error in auth state change handler:', outerError);
+          // Last resort: ensure callback is called
           this.currentUserCache = null;
-          callback(null);
-        } catch (callbackError) {
-          console.error('[AUTH] Error calling callback:', callbackError);
+          setTimeout(() => {
+            try {
+              callback(null);
+            } catch (callbackError) {
+              console.error('[AUTH] Final callback error:', callbackError);
+            }
+          }, 10);
         }
-      }
+      }, 0); // Defer execution to next tick
     });
   }
 
