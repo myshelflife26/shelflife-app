@@ -86,6 +86,7 @@ const PageLoader = () => (
 
 function MainApp() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true); // Add loading state for auth
   const [figures, setFigures] = useState<ActionFigure[]>([]);
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [darkMode, setDarkMode] = useState(false);
@@ -205,6 +206,7 @@ function MainApp() {
               console.error('[APP] Received malformed user object, treating as null:', user);
               setCurrentUser(null);
               setFigures([]);
+              setAuthLoading(false);
               return;
             }
           }
@@ -216,6 +218,7 @@ function MainApp() {
             console.error('[APP] Error setting current user:', setUserError);
             setCurrentUser(null);
             setFigures([]);
+            setAuthLoading(false);
             return;
           }
 
@@ -260,6 +263,9 @@ function MainApp() {
           } catch (cleanupError) {
             console.error('[APP] Error during cleanup:', cleanupError);
           }
+        } finally {
+          // Always clear loading state once auth check is complete
+          setAuthLoading(false);
         }
       }, 0); // Defer to next tick
     });
@@ -279,6 +285,7 @@ function MainApp() {
         setFigures([]);
         setSelectedFigureIds(new Set());
         setCurrentPage('collection');
+        setAuthLoading(false);
         alert('Your session has expired. Please login again.');
       }
     }, 60000); // Check every minute
@@ -627,6 +634,7 @@ function MainApp() {
   // Login handler
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    setAuthLoading(false); // Ensure loading is cleared on manual login
     // Migration happens in useEffect after user is set
     loadFigures();
   };
@@ -639,6 +647,7 @@ function MainApp() {
       setFigures([]);
       setSelectedFigureIds(new Set());
       setCurrentPage('collection');
+      setAuthLoading(false); // Ensure loading is cleared on logout
     }
   };
 
@@ -1145,6 +1154,18 @@ function MainApp() {
     [...new Set(figures.map(f => f.location))].filter(Boolean).sort(),
     [figures]
   );
+
+  // Show loading screen during auth check to prevent React crashes
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show login page if not authenticated
   if (!currentUser) {
