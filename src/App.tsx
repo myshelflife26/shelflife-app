@@ -927,33 +927,10 @@ function MainApp() {
     }
   }, [darkMode]);
 
-  // Service Worker registration
+  // Service Worker registration - DISABLED due to React error #306
   useEffect(() => {
-    const initializeServiceWorker = async () => {
-      try {
-        await registerSW({
-          onSuccess: (registration) => {
-            console.log('Service Worker registered successfully');
-            // Dispatch custom event for OfflineNotification component
-            window.dispatchEvent(new CustomEvent('sw-offline-ready'));
-          },
-          onUpdate: (registration) => {
-            console.log('Service Worker update available');
-            // Dispatch custom event for OfflineNotification component
-            window.dispatchEvent(new CustomEvent('sw-update-available', {
-              detail: registration
-            }));
-          },
-          onError: (error) => {
-            console.error('Service Worker registration failed:', error);
-          },
-        });
-      } catch (error) {
-        console.error('Failed to initialize Service Worker:', error);
-      }
-    };
-
-    initializeServiceWorker();
+    // Service Worker completely disabled to prevent React crashes
+    console.log('Service Worker registration disabled to prevent React error #306');
   }, []);
 
   // Analytics page tracking

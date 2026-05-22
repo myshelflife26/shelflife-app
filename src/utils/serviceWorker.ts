@@ -20,8 +20,8 @@ class ServiceWorkerManager {
   async register(config: ServiceWorkerConfig = {}): Promise<boolean> {
     this.config = config;
 
-    // TEMPORARILY DISABLED: Service Worker causing 404 errors
-    console.log('Service Worker: Registration disabled to prevent errors');
+    // COMPLETELY DISABLED: Service Worker causing React crashes and 404 errors
+    console.log('Service Worker: Registration permanently disabled to prevent React error #306');
     return false;
 
     if (!this.isSupported) {
