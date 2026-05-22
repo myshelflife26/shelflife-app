@@ -194,22 +194,34 @@ export class FirebaseAuthService {
    * Get user by ID from Firestore
    */
   static async getUserById(userId: string): Promise<User | null> {
+    // Validate input
+    if (!userId || typeof userId !== 'string') {
+      console.warn('getUserById called with invalid userId:', userId);
+      return null;
+    }
+
     try {
       const userDoc = await getDoc(doc(db, USERS_COLLECTION, userId));
       if (!userDoc.exists()) {
+        console.warn(`User not found in Firestore: ${userId}`);
         return null;
       }
 
       const data = userDoc.data();
+      if (!data) {
+        console.warn(`User document has no data: ${userId}`);
+        return null;
+      }
+
       return {
         id: userDoc.id,
-        username: data.username,
+        username: data.username || '',
         password: '', // Don't expose password
-        role: data.role,
-        displayName: data.displayName,
-        email: data.email,
-        profileImage: data.profileImage,
-        collectionPublic: data.collectionPublic,
+        role: data.role || 'user',
+        displayName: data.displayName || '',
+        email: data.email || '',
+        profileImage: data.profileImage || '',
+        collectionPublic: data.collectionPublic ?? true,
         admirers: data.admirers || [],
         admirerRequests: data.admirerRequests || [],
         autoApproveAdmirers: data.autoApproveAdmirers || false,
@@ -226,17 +238,29 @@ export class FirebaseAuthService {
    */
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const user = await this.getUserById(firebaseUser.uid);
+      try {
+        if (firebaseUser && firebaseUser.uid) {
+          const user = await this.getUserById(firebaseUser.uid);
 
-        // Migrate localStorage settings to Firestore if user exists
-        if (user) {
-          await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
+          // Migrate localStorage settings to Firestore if user exists
+          if (user) {
+            try {
+              await SettingsService.migrateLocalStorageToFirestore(firebaseUser.uid);
+            } catch (migrationError) {
+              console.warn('Settings migration failed:', migrationError);
+              // Don't fail auth if migration fails
+            }
+          }
+
+          this.currentUserCache = user;
+          callback(user);
+        } else {
+          this.currentUserCache = null;
+          callback(null);
         }
-
-        this.currentUserCache = user;
-        callback(user);
-      } else {
+      } catch (error) {
+        console.error('Auth state change error:', error);
+        // On error, still call callback to prevent hanging
         this.currentUserCache = null;
         callback(null);
       }

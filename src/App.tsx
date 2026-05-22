@@ -184,12 +184,23 @@ function MainApp() {
   // Check authentication on mount with Firebase
   useEffect(() => {
     const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        // Load user's figures from Firebase
-        const userFigures = await FirebaseStorage.getFigures(user.id);
-        setFigures(userFigures);
-      } else {
+      try {
+        setCurrentUser(user);
+        if (user && user.id) {
+          // Load user's figures from Firebase
+          try {
+            const userFigures = await FirebaseStorage.getFigures(user.id);
+            setFigures(userFigures);
+          } catch (figureError) {
+            console.error('Failed to load user figures:', figureError);
+            setFigures([]); // Set empty array on error to prevent crashes
+          }
+        } else {
+          setFigures([]);
+        }
+      } catch (authError) {
+        console.error('Auth state change error:', authError);
+        setCurrentUser(null);
         setFigures([]);
       }
     });
