@@ -18,7 +18,7 @@ interface MessagesPageProps {
 
 type FilterMode = 'all' | 'unread' | 'archived';
 
-export function MessagesPageNew({ currentUser }: MessagesPageProps) {
+function MessagesPageNew({ currentUser }: MessagesPageProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
@@ -477,3 +477,6 @@ export function MessagesPageNew({ currentUser }: MessagesPageProps) {
     </div>
   );
 }
+
+
+export default MessagesPageNew;

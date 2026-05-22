@@ -204,7 +204,7 @@ function MainApp() {
                 !user.displayName ||
                 typeof user.displayName !== 'string') {
 
-              console.error('[APP] Received malformed user object, treating as null:', user);
+              console.error('[APP] Received malformed user object, treating as null:', JSON.stringify(user, null, 2));
               setCurrentUser(null);
               setFigures([]);
               setAuthLoading(false);
@@ -216,7 +216,7 @@ function MainApp() {
           try {
             setCurrentUser(user);
           } catch (setUserError) {
-            console.error('[APP] Error setting current user:', setUserError);
+            console.error('[APP] Error setting current user:', setUserError instanceof Error ? setUserError.message : String(setUserError));
             setCurrentUser(null);
             setFigures([]);
             setAuthLoading(false);
@@ -244,7 +244,7 @@ function MainApp() {
                   setFigures([]);
                 }
               } catch (figureError) {
-                console.error('[APP] Failed to load user figures:', figureError);
+                console.error('[APP] Failed to load user figures:', figureError instanceof Error ? figureError.message : String(figureError));
                 setFigures([]); // Set empty array on error to prevent crashes
               }
             })();
@@ -253,16 +253,16 @@ function MainApp() {
             try {
               setFigures([]);
             } catch (setFiguresError) {
-              console.error('[APP] Error clearing figures:', setFiguresError);
+              console.error('[APP] Error clearing figures:', setFiguresError instanceof Error ? setFiguresError.message : String(setFiguresError));
             }
           }
         } catch (authError) {
-          console.error('[APP] Critical error in auth state change handler:', authError);
+          console.error('[APP] Critical error in auth state change handler:', authError instanceof Error ? authError.message : String(authError));
           try {
             setCurrentUser(null);
             setFigures([]);
           } catch (cleanupError) {
-            console.error('[APP] Error during cleanup:', cleanupError);
+            console.error('[APP] Error during cleanup:', cleanupError instanceof Error ? cleanupError.message : String(cleanupError));
           }
         } finally {
           // Always clear loading state once auth check is complete
@@ -321,7 +321,7 @@ function MainApp() {
         const masters = await MasterFiguresService.getAll();
         setMasterFigures(masters);
       } catch (error) {
-        console.error('Failed to load master figures:', error);
+        console.error('Failed to load master figures:', error instanceof Error ? error.message : String(error));
       }
     };
     loadMasterFigures();
@@ -364,7 +364,7 @@ function MainApp() {
       await FirebaseStorage.importFigures(currentUser.id, sampleFigures);
       await loadFigures();
     } catch (error) {
-      console.error('Failed to load sample data:', error);
+      console.error('Failed to load sample data:', error instanceof Error ? error.message : String(error));
       alert('Failed to load sample data. Please try again.');
     }
   };
@@ -402,7 +402,7 @@ function MainApp() {
       toastManager.success(`Successfully imported ${importedFigures.length} figures!`);
       loadFigures();
     } catch (error) {
-      console.error('Failed to import figures:', error);
+      console.error('Failed to import figures:', error instanceof Error ? error.message : String(error));
       toastManager.error('Failed to import figures');
     }
   };
@@ -496,7 +496,7 @@ function MainApp() {
       setCollectionTab('collection');
       loadFigures();
     } catch (error) {
-      console.error('Failed to import CSV:', error);
+      console.error('Failed to import CSV:', error instanceof Error ? error.message : String(error));
       toastManager.error('Failed to import figures');
     }
   };
@@ -586,7 +586,7 @@ function MainApp() {
       setFigures(userFigures);
       setEditingFigure(undefined);
     } catch (error) {
-      console.error('Failed to save figure:', error);
+      console.error('Failed to save figure:', error instanceof Error ? error.message : String(error));
       alert('Failed to save figure. Please try again.');
     }
   };
@@ -645,7 +645,7 @@ function MainApp() {
           !user.displayName ||
           typeof user.displayName !== 'string') {
 
-        console.error('[APP] handleLogin received invalid user object:', user);
+        console.error('[APP] handleLogin received invalid user object:', JSON.stringify(user, null, 2));
         setError('Login failed: Invalid user data received');
         setAuthLoading(false);
         return;
@@ -657,7 +657,7 @@ function MainApp() {
       // Migration happens in useEffect after user is set
       loadFigures();
     } catch (loginError) {
-      console.error('[APP] handleLogin error:', loginError);
+      console.error('[APP] handleLogin error:', loginError instanceof Error ? loginError.message : String(loginError));
       setCurrentUser(null);
       setAuthLoading(false);
       setError('Login failed: Please try again');
@@ -699,7 +699,7 @@ function MainApp() {
       const userFigures = await FirebaseStorage.getFigures(userId);
       setFigures(userFigures);
     } catch (error) {
-      console.error('Failed to load figures:', error);
+      console.error('Failed to load figures:', error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -730,7 +730,7 @@ function MainApp() {
         const userFigures = await FirebaseStorage.getFigures(userId);
         setFigures(userFigures);
       } catch (error) {
-        console.error('Failed to delete figure:', error);
+        console.error('Failed to delete figure:', error instanceof Error ? error.message : String(error));
         alert('Failed to delete figure. Please try again.');
       }
     }
@@ -1078,7 +1078,8 @@ function MainApp() {
         for (const [fieldId, selectedValues] of Object.entries(filters.customFields)) {
           if (selectedValues.length > 0) {
             const figureValue = figure.customFields?.[fieldId];
-            const figureValueStr = figureValue !== undefined && figureValue !== null ? String(figureValue) : '';
+            const figureValueStr = figureValue !== undefined && figureValue !== null ?
+              (typeof figureValue === 'object' ? JSON.stringify(figureValue) : String(figureValue)) : '';
             if (!selectedValues.includes(figureValueStr)) {
               return false;
             }

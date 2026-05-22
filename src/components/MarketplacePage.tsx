@@ -36,7 +36,7 @@ interface MarketplacePageProps {
 
 type MarketplaceTab = 'browse' | 'myListings' | 'myTrades' | 'completed';
 
-export function MarketplacePage({ currentUser }: MarketplacePageProps) {
+function MarketplacePage({ currentUser }: MarketplacePageProps) {
   const [currentTab, setCurrentTab] = useState<MarketplaceTab>('browse');
   const [allListings, setAllListings] = useState<ActionFigure[]>([]);
   const [myListings, setMyListings] = useState<ActionFigure[]>([]);
@@ -99,7 +99,7 @@ export function MarketplacePage({ currentUser }: MarketplacePageProps) {
               usernameMap.set(userId, user.username);
             }
           } catch (err) {
-            console.error(`Failed to fetch user ${userId}:`, err);
+            console.error(`Failed to fetch user ${userId}:`, err instanceof Error ? err.message : String(err));
           }
         })
       );

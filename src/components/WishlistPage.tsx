@@ -14,7 +14,7 @@ interface WishlistPageProps {
   onDialogStateChange?: (isOpen: boolean) => void; // Notify parent when dialog opens/closes
 }
 
-export function WishlistPage({ currentUser, addItemTrigger, onDialogStateChange }: WishlistPageProps) {
+function WishlistPage({ currentUser, addItemTrigger, onDialogStateChange }: WishlistPageProps) {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -405,3 +405,6 @@ export function WishlistPage({ currentUser, addItemTrigger, onDialogStateChange 
     </div>
   );
 }
+
+
+export default WishlistPage;

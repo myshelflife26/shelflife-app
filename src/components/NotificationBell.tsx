@@ -9,7 +9,7 @@ interface NotificationBellProps {
   currentUser: User;
 }
 
-export function NotificationBell({ currentUser }: NotificationBellProps) {
+function NotificationBell({ currentUser }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +34,7 @@ export function NotificationBell({ currentUser }: NotificationBellProps) {
     try {
       await FirebaseNotifications.markAllAsRead(currentUser.id);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      console.error('Failed to mark all as read:', error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -42,7 +42,7 @@ export function NotificationBell({ currentUser }: NotificationBellProps) {
     try {
       await FirebaseNotifications.markAsRead(notificationId);
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error('Failed to mark as read:', error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -230,3 +230,5 @@ export function NotificationBell({ currentUser }: NotificationBellProps) {
     </div>
   );
 }
+
+export default NotificationBell;

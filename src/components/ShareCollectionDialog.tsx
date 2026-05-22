@@ -15,7 +15,7 @@ interface ShareCollectionDialogProps {
   };
 }
 
-export function ShareCollectionDialog({
+function ShareCollectionDialog({
   open,
   onClose,
   currentUser,
@@ -196,3 +196,6 @@ export function ShareCollectionDialog({
     </div>
   );
 }
+
+
+export default ShareCollectionDialog;

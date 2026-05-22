@@ -44,7 +44,7 @@ interface SuggestedUser extends User {
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
+function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
   const [feedTab, setFeedTab] = useState<FeedTab>('rising');
   const [topJealousyFigures, setTopJealousyFigures] = useState<Array<FigureWithOwner & { jealousyScore: number }>>([]);
   const [risingStars7Days, setRisingStars7Days] = useState<Array<FigureWithOwner & { increase: number; previousScore: number }>>([]);

@@ -19,7 +19,7 @@ interface ExportImportMenuProps {
   allFigures: ActionFigure[];
 }
 
-export function ExportImportMenu({ onImport, selectedFigures, allFigures }: ExportImportMenuProps) {
+function ExportImportMenu({ onImport, selectedFigures, allFigures }: ExportImportMenuProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
@@ -522,3 +522,5 @@ export function ExportImportMenu({ onImport, selectedFigures, allFigures }: Expo
     </>
   );
 }
+
+export default ExportImportMenu;

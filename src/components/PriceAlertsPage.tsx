@@ -12,7 +12,7 @@ interface PriceAlertsPageProps {
   currentUser: User;
 }
 
-export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
+function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [showOnlyUnseen, setShowOnlyUnseen] = useState(false);
   const [selectedFigure, setSelectedFigure] = useState<ActionFigure | null>(null);
@@ -261,3 +261,6 @@ export function PriceAlertsPage({ currentUser }: PriceAlertsPageProps) {
     </div>
   );
 }
+
+
+export default PriceAlertsPage;

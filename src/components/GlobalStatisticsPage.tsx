@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { GlobalStatisticsService, type GlobalStats } from '../utils/globalStatistics';
 import { Users, Package, DollarSign, TrendingUp, Award, Sparkles } from 'lucide-react';
 
-export function GlobalStatisticsPage() {
+function GlobalStatisticsPage() {
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -187,3 +187,6 @@ export function GlobalStatisticsPage() {
     </div>
   );
 }
+
+
+export default GlobalStatisticsPage;

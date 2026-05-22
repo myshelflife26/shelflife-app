@@ -241,7 +241,7 @@ export class FirebaseAuthService {
 
       // Final validation that user object has required fields
       if (!user.id || !user.username || user.username.length === 0) {
-        console.error(`[AUTH] Created user object is invalid:`, user);
+        console.error(`[AUTH] Created user object is invalid:`, JSON.stringify(user, null, 2));
         return null;
       }
 

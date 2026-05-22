@@ -1,6 +1,6 @@
 import { Book, CheckCircle, AlertCircle, MessageSquare, Users, Heart, Flame, ThumbsUp, Mail, Eye, Package, Search } from 'lucide-react';
 
-export function BetaGuidePage() {
+function BetaGuidePage() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       {/* Header */}
@@ -296,3 +296,6 @@ export function BetaGuidePage() {
     </div>
   );
 }
+
+
+export default BetaGuidePage;

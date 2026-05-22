@@ -9,7 +9,7 @@ interface TopJealousFiguresProps {
   onFigureClick?: (figure: ActionFigure) => void;
 }
 
-export function TopJealousFigures({ figures, userId, onFigureClick }: TopJealousFiguresProps) {
+function TopJealousFigures({ figures, userId, onFigureClick }: TopJealousFiguresProps) {
   const topJealousFigures = useMemo(() => {
     const figureIds = figures.map(f => f.id);
     const top = ReactionsService.getTopFiguresByJealousy(userId, figureIds, 5);
@@ -103,3 +103,5 @@ export function TopJealousFigures({ figures, userId, onFigureClick }: TopJealous
     </div>
   );
 }
+
+export default TopJealousFigures;

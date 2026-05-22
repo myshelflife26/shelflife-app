@@ -12,7 +12,7 @@ interface BlockedUserWithData extends User {
   reason?: string;
 }
 
-export function BlockedUsersPage() {
+function BlockedUsersPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUserWithData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -563,3 +563,5 @@ export function BlockedUsersPage() {
     </div>
   );
 }
+
+export default BlockedUsersPage;

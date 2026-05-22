@@ -24,7 +24,7 @@ interface CommentReportsPageProps {
   onClose: () => void;
 }
 
-export function CommentReportsPage({ currentUser, onClose }: CommentReportsPageProps) {
+function CommentReportsPage({ currentUser, onClose }: CommentReportsPageProps) {
   const [reports, setReports] = useState<CommentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'dismissed' | 'action-taken'>('pending');
@@ -419,3 +419,6 @@ export function CommentReportsPage({ currentUser, onClose }: CommentReportsPageP
     </div>
   );
 }
+
+
+export default CommentReportsPage;

@@ -23,7 +23,7 @@ interface GalleryPageProps {
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'value-asc' | 'value-desc';
 
-export function GalleryPage({
+function GalleryPage({
   figures,
   filters,
   onFilterChange,
@@ -407,3 +407,6 @@ export function GalleryPage({
     </div>
   );
 }
+
+
+export default GalleryPage;

@@ -9,7 +9,7 @@ interface MigrateReactionsButtonProps {
   currentUser: User;
 }
 
-export function MigrateReactionsButton({ currentUser }: MigrateReactionsButtonProps) {
+function MigrateReactionsButton({ currentUser }: MigrateReactionsButtonProps) {
   const [migrating, setMigrating] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
 
@@ -84,3 +84,6 @@ export function MigrateReactionsButton({ currentUser }: MigrateReactionsButtonPr
     </div>
   );
 }
+
+
+export default MigrateReactionsButton;

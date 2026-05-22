@@ -15,7 +15,7 @@ interface ShelvesPageProps {
   onNavigateToShelf: (shelfId: string) => void;
 }
 
-export function ShelvesPage({ userId, figures, onNavigateToShelf }: ShelvesPageProps) {
+function ShelvesPage({ userId, figures, onNavigateToShelf }: ShelvesPageProps) {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -339,3 +339,6 @@ export function ShelvesPage({ userId, figures, onNavigateToShelf }: ShelvesPageP
     </div>
   );
 }
+
+
+export default ShelvesPage;

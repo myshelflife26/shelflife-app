@@ -388,7 +388,7 @@ export class ImageUploadService {
           optimizedUrls.push(result.downloadUrl);
         }
       } catch (error) {
-        console.error(`Failed to optimize image ${i}:`, error);
+        console.error(`Failed to optimize image ${i}:`, error instanceof Error ? error.message : String(error));
         // Keep the original URL if optimization fails
         optimizedUrls.push(imageUrl);
       }

@@ -16,7 +16,7 @@ interface ShelfViewPageProps {
   onBack: () => void;
 }
 
-export function ShelfViewPage({ shelfId, userId, currentUserId, figures, onBack }: ShelfViewPageProps) {
+function ShelfViewPage({ shelfId, userId, currentUserId, figures, onBack }: ShelfViewPageProps) {
   const [shelf, setShelf] = useState<Shelf | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -333,3 +333,6 @@ export function ShelfViewPage({ shelfId, userId, currentUserId, figures, onBack 
     </div>
   );
 }
+
+
+export default ShelfViewPage;

@@ -20,7 +20,7 @@ interface AdminReportsPageProps {
 
 type ReportsTab = 'userReports' | 'collectionStats' | 'summary';
 
-export function AdminReportsPage({ currentUser, onNavigateBack }: AdminReportsPageProps) {
+function AdminReportsPage({ currentUser, onNavigateBack }: AdminReportsPageProps) {
   const [currentTab, setCurrentTab] = useState<ReportsTab>('collectionStats');
   const [reports, setReports] = useState<UserReport[]>([]);
   const [figures, setFigures] = useState<ActionFigure[]>([]);
@@ -821,3 +821,6 @@ function CollectionSummaryContent({ figures, masterFigures }: { figures: ActionF
     </div>
   );
 }
+
+
+export default AdminReportsPage;

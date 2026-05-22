@@ -36,7 +36,7 @@ interface BrowsePageProps {
 
 type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks';
 
-export function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
+function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<Filters>({

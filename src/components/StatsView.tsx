@@ -17,7 +17,7 @@ interface StatsViewProps {
   figures: ActionFigure[];
 }
 
-export function StatsView({ figures }: StatsViewProps) {
+function StatsView({ figures }: StatsViewProps) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeTab, setActiveTab] = useState<StatsTab>('overview');
   const [topTenScope, setTopTenScope] = useState<'my-collection' | 'global'>('my-collection');

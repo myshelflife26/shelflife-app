@@ -29,7 +29,7 @@ interface MonthlyData {
   added: number;
 }
 
-export function CollectionGrowthPage({ figures }: CollectionGrowthPageProps) {
+function CollectionGrowthPage({ figures }: CollectionGrowthPageProps) {
   // Calculate cumulative growth data
   const growthData = useMemo(() => {
     if (figures.length === 0) return [];
@@ -293,3 +293,6 @@ export function CollectionGrowthPage({ figures }: CollectionGrowthPageProps) {
     </div>
   );
 }
+
+
+export default CollectionGrowthPage;

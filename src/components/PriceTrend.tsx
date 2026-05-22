@@ -7,7 +7,7 @@ interface PriceTrendProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function PriceTrend({ priceHistory, currentValue, size = 'md' }: PriceTrendProps) {
+function PriceTrend({ priceHistory, currentValue, size = 'md' }: PriceTrendProps) {
   if (!priceHistory || priceHistory.length < 2) {
     return null; // Not enough data to show trend
   }
@@ -43,3 +43,6 @@ export function PriceTrend({ priceHistory, currentValue, size = 'md' }: PriceTre
     );
   }
 }
+
+
+export default PriceTrend;

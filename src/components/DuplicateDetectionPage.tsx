@@ -256,7 +256,7 @@ export function DuplicateDetectionPage({ onClose, currentUser }: DuplicateDetect
           totalConsolidatedDuplicates += result.consolidatedDuplicates;
         } else {
           failCount++;
-          console.error(`Failed to merge ${deleteFigure.name}:`, result.error);
+          console.error(`Failed to merge ${deleteFigure.name}:`, result.error instanceof Error ? result.error.message : String(result.error));
         }
       } catch (error) {
         failCount++;

@@ -13,7 +13,7 @@ interface UserManagementPageProps {
   currentUser: User;
 }
 
-export function UserManagementPage({ currentUser }: UserManagementPageProps) {
+function UserManagementPage({ currentUser }: UserManagementPageProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -583,3 +583,6 @@ export function UserManagementPage({ currentUser }: UserManagementPageProps) {
     </div>
   );
 }
+
+
+export default UserManagementPage;

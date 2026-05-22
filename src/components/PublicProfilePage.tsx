@@ -13,7 +13,7 @@ interface PublicProfilePageProps {
   onNavigateBack?: () => void;
 }
 
-export function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
+function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -318,3 +318,6 @@ export function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
     </div>
   );
 }
+
+
+export default PublicProfilePage;
