@@ -1,7 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Download, X, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
-import { useNetworkStatus, skipWaiting } from '../utils/serviceWorker';
+
+// Simple network status hook - service worker disabled
+const useNetworkStatus = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return { isOnline, isOffline: !isOnline };
+};
+
+// No-op function - service worker disabled
+const skipWaiting = () => {
+  // Service worker disabled
+};
 
 interface OfflineNotificationProps {
   onUpdateAvailable?: (registration: ServiceWorkerRegistration) => void;
