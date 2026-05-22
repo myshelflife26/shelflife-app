@@ -5,7 +5,7 @@ import { NotificationsService } from '../utils/notificationsService';
 import { toastManager } from '../utils/toastManager';
 import { MasterFiguresService } from '../utils/masterFigures';
 import { FirebaseStorage } from '../utils/firebaseStorage';
-import { StatsView } from './StatsView';
+import StatsView from './StatsView';
 import type { UserReport, ReportStatus, ReportCategory } from '../utils/reporting';
 import type { User } from '../types/user';
 import type { ActionFigure } from '../types/index';

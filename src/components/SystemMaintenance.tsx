@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Database, Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import type { User } from '../types/user';
 import { migrateFiguresToStorage, checkMigrationStatus } from '../utils/migrateFiguresToStorage';
-import { MigrateReactionsButton } from './MigrateReactionsButton';
+import MigrateReactionsButton from './MigrateReactionsButton';
 
 interface SystemMaintenanceProps {
   currentUser: User;

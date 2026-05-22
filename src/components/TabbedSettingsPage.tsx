@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { User } from '../types/user';
 import { SettingsPage } from './SettingsPage';
 import { AccountSettings } from './AccountSettings';
-import { UserManagementPage } from './UserManagementPage';
+import UserManagementPage from './UserManagementPage';
 import { MasterFiguresDatabasePage } from './MasterFiguresDatabasePage';
 import { SystemMaintenance } from './SystemMaintenance';
 import { FirebaseAuthService } from '../utils/firebaseAuth';

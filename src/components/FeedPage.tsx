@@ -19,7 +19,7 @@ import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
 import { Pagination } from './Pagination';
-import { GlobalStatisticsPage } from './GlobalStatisticsPage';
+import GlobalStatisticsPage from './GlobalStatisticsPage';
 import { CommunityActivityFeed } from './CommunityActivityFeed';
 
 type FeedTab = 'rising' | 'jealous' | 'collectors' | 'recent' | 'activity' | 'stats';
