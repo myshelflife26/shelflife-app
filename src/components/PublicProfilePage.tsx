@@ -22,6 +22,7 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [reactionData, setReactionData] = useState<Map<string, { score: number; stats: any }>>(new Map());
 
   const handleSignUpClick = () => {
     navigate('/');
@@ -42,6 +43,39 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
 
     getCurrentUser();
   }, []);
+
+  // Load hybrid reaction data when figures change
+  useEffect(() => {
+    const loadReactionData = async () => {
+      if (!user || figures.length === 0) return;
+
+      const reactionMap = new Map();
+
+      // Load reactions for all figures in parallel
+      await Promise.all(
+        figures.map(async (figure) => {
+          try {
+            const jealousyScore = await ReactionsService.getJealousyScoreHybrid(figure.id, user.id);
+            const stats = await ReactionsService.getJealousyStatsHybrid(figure.id, user.id);
+            reactionMap.set(figure.id, { score: jealousyScore, stats });
+
+            // Debug logging for reactions
+            console.log(`Figure ${figure.name}: jealousyScore=${jealousyScore}, stats=`, stats);
+          } catch (error) {
+            console.error(`Failed to load reactions for figure ${figure.id}:`, error);
+            // Fallback to localStorage-only
+            const jealousyScore = ReactionsService.getJealousyScore(figure.id, user.id);
+            const stats = ReactionsService.getJealousyStats(figure.id, user.id);
+            reactionMap.set(figure.id, { score: jealousyScore, stats });
+          }
+        })
+      );
+
+      setReactionData(reactionMap);
+    };
+
+    loadReactionData();
+  }, [user, figures]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -137,11 +171,21 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
   const totalValue = figures.reduce((sum, f) => sum + f.currentValue, 0);
   const avgValue = figures.length > 0 ? totalValue / figures.length : 0;
 
-  // Get reaction stats for public figures
-  const reactionStats = ReactionsService.getCollectionStats(
-    user.id,
-    figures.map(f => f.id)
-  );
+  // Get reaction stats for public figures from preloaded data
+  const reactionStats = {
+    appreciate: 0,
+    love: 0,
+    fire: 0,
+    total: 0
+  };
+
+  // Sum up all the reaction stats from the preloaded data
+  reactionData.forEach((reactionInfo) => {
+    reactionStats.appreciate += reactionInfo.stats.appreciate || 0;
+    reactionStats.love += reactionInfo.stats.love || 0;
+    reactionStats.fire += reactionInfo.stats.fire || 0;
+    reactionStats.total += reactionInfo.stats.total || 0;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -262,11 +306,10 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
                 ? figure.images[figure.mainImageIndex ?? 0]
                 : null;
 
-              const jealousyScore = ReactionsService.getJealousyScore(figure.id, user.id);
-              const stats = ReactionsService.getJealousyStats(figure.id, user.id);
-
-              // Debug logging for reactions
-              console.log(`Figure ${figure.name}: jealousyScore=${jealousyScore}, stats=`, stats);
+              // Get reaction data from preloaded map
+              const reactionInfo = reactionData.get(figure.id) || { score: 0, stats: { appreciate: 0, love: 0, fire: 0, total: 0 } };
+              const jealousyScore = reactionInfo.score;
+              const stats = reactionInfo.stats;
 
               return (
                 <div

@@ -3,6 +3,7 @@ import { AuthService } from './auth';
 import { ActivityRecorder } from './communityActivity';
 import { FirebaseStorage } from './firebaseStorage';
 import { FirebaseAuthService } from './firebaseAuth';
+import { FirebaseReactionsService } from './firebaseReactions';
 
 const REACTIONS_KEY = 'app-reactions';
 
@@ -114,9 +115,47 @@ export class ReactionsService {
     this.saveAll(filtered);
   }
 
-  // Get reactions for a specific figure
+  // Get reactions for a specific figure from localStorage only
   static getReactionsForFigure(figureId: string): Reaction[] {
     return this.getAll().filter(r => r.figureId === figureId);
+  }
+
+  // Get reactions for a specific figure from BOTH Firebase and localStorage (hybrid)
+  static async getReactionsForFigureHybrid(figureId: string): Promise<Reaction[]> {
+    try {
+      // Get localStorage reactions
+      const localReactions = this.getReactionsForFigure(figureId);
+
+      // Try to get Firebase reactions (if permissions allow)
+      let firebaseReactions: Reaction[] = [];
+      try {
+        firebaseReactions = await FirebaseReactionsService.getReactionsForFigure(figureId);
+      } catch (error) {
+        // If Firebase fails, just use localStorage
+        console.log('Firebase reactions unavailable, using localStorage only');
+      }
+
+      // Combine and deduplicate (prefer Firebase data if both exist for same user)
+      const reactionMap = new Map<string, Reaction>();
+
+      // Add localStorage reactions first
+      localReactions.forEach(reaction => {
+        const key = `${reaction.figureId}-${reaction.userId}`;
+        reactionMap.set(key, reaction);
+      });
+
+      // Add Firebase reactions (will overwrite localStorage if user has reactions in both)
+      firebaseReactions.forEach(reaction => {
+        const key = `${reaction.figureId}-${reaction.userId}`;
+        reactionMap.set(key, reaction);
+      });
+
+      return Array.from(reactionMap.values());
+    } catch (error) {
+      console.error('Failed to get hybrid reactions:', error);
+      // Fallback to localStorage only
+      return this.getReactionsForFigure(figureId);
+    }
   }
 
   // Get reaction stats for a specific figure
@@ -213,7 +252,7 @@ export class ReactionsService {
     return stats.appreciate * 1 + stats.love * 2 + stats.fire * 3;
   }
 
-  // Calculate jealousy score for a figure (excluding owner's own reactions)
+  // Calculate jealousy score for a figure (excluding owner's own reactions) - localStorage only
   // Fire = 5 points, Love = 3 points, Appreciate = 1 point
   static getJealousyScore(figureId: string, ownerId: string): number {
     const reactions = this.getReactionsForFigure(figureId);
@@ -227,9 +266,36 @@ export class ReactionsService {
     return appreciate * 1 + love * 3 + fire * 5;
   }
 
-  // Get jealousy stats for a figure (excluding owner's reactions)
+  // Get jealousy stats for a figure (excluding owner's reactions) - localStorage only
   static getJealousyStats(figureId: string, ownerId: string): ReactionStats {
     const reactions = this.getReactionsForFigure(figureId);
+    // Exclude reactions from the owner themselves
+    const othersReactions = reactions.filter(r => r.userId !== ownerId);
+
+    return {
+      appreciate: othersReactions.filter(r => r.reactionType === 'appreciate').length,
+      love: othersReactions.filter(r => r.reactionType === 'love').length,
+      fire: othersReactions.filter(r => r.reactionType === 'fire').length,
+      total: othersReactions.length
+    };
+  }
+
+  // Calculate jealousy score for a figure using hybrid data (Firebase + localStorage)
+  static async getJealousyScoreHybrid(figureId: string, ownerId: string): Promise<number> {
+    const reactions = await this.getReactionsForFigureHybrid(figureId);
+    // Exclude reactions from the owner themselves
+    const othersReactions = reactions.filter(r => r.userId !== ownerId);
+
+    const appreciate = othersReactions.filter(r => r.reactionType === 'appreciate').length;
+    const love = othersReactions.filter(r => r.reactionType === 'love').length;
+    const fire = othersReactions.filter(r => r.reactionType === 'fire').length;
+
+    return appreciate * 1 + love * 3 + fire * 5;
+  }
+
+  // Get jealousy stats for a figure using hybrid data (Firebase + localStorage)
+  static async getJealousyStatsHybrid(figureId: string, ownerId: string): Promise<ReactionStats> {
+    const reactions = await this.getReactionsForFigureHybrid(figureId);
     // Exclude reactions from the owner themselves
     const othersReactions = reactions.filter(r => r.userId !== ownerId);
 
