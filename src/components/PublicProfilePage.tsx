@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import { ReactionsService } from '../utils/reactions';
+import { ViewTrackingService } from '../utils/viewTracking';
 import type { User } from '../types/user';
 import type { ActionFigure } from '../types/index';
 import { Package, TrendingUp, DollarSign, Star, ArrowLeft, Flame, Heart, ThumbsUp } from 'lucide-react';
@@ -20,10 +21,27 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
   const [figures, setFigures] = useState<ActionFigure[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const handleSignUpClick = () => {
     navigate('/');
   };
+
+  // Get current authenticated user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const auth = FirebaseAuthService.getCurrentUser();
+        if (auth) {
+          setCurrentUser(auth);
+        }
+      } catch (error) {
+        console.error('Failed to get current user:', error);
+      }
+    };
+
+    getCurrentUser();
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -65,6 +83,14 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
 
         console.log('Figures:', publicFigures.map(f => ({ name: f.name, isPublic: f.isPublic })));
         setFigures(publicFigures);
+
+        // Track profile view (after successful profile load)
+        try {
+          const auth = FirebaseAuthService.getCurrentUser();
+          await ViewTrackingService.trackProfileView(targetUser.id, auth?.id);
+        } catch (error) {
+          console.error('Failed to track profile view:', error);
+        }
       } catch (error) {
         console.error('Failed to load profile:', error);
         setNotFound(true);

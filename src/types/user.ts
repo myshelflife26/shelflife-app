@@ -43,6 +43,7 @@ export interface Conversation {
   figureId?: string; // If conversation is about a specific figure
   figureName?: string; // Cached figure name
   archived?: { [userId: string]: boolean }; // Per-user archive status
+  typingUsers?: { [userId: string]: TypingUser }; // Users currently typing
   createdAt: number;
 }
 
@@ -63,9 +64,23 @@ export interface Message {
   replyToMessageId?: string; // For reply threading within conversation
   edited?: boolean; // Track if message was edited
   editedAt?: number; // When message was edited
+  reactions?: MessageReaction[]; // Emoji reactions to the message
 }
 
 export type ReactionType = 'appreciate' | 'love' | 'fire';
+
+export interface MessageReaction {
+  emoji: string;
+  userId: string;
+  userName: string;
+  timestamp: number;
+}
+
+export interface TypingUser {
+  userId: string;
+  userName: string;
+  timestamp: number;
+}
 
 export interface Reaction {
   id: string;

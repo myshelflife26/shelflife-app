@@ -216,6 +216,41 @@ export interface ActionFigure {
   // Timestamps
   createdAt?: number; // When the figure was first added
   updatedAt?: number; // When the figure was last modified
+  // View tracking
+  viewCount?: number; // Total number of views
+  trendingScore?: number; // Calculated trending score
+  lastTrending?: number; // Last time this figure was trending
+}
+
+// View tracking types
+export type ViewSource = 'browse' | 'feed' | 'profile' | 'shared_link' | 'search' | 'direct';
+
+export interface ViewStats {
+  total: number;
+  unique: number;
+  recent24h: number;
+  recent7d: number;
+  recent30d: number;
+  lastViewed: number; // timestamp
+}
+
+export interface ViewEvent {
+  figureId: string;
+  userId?: string; // null for anonymous views
+  viewedAt: number; // timestamp
+  source: ViewSource;
+  duration?: number; // time spent viewing in milliseconds
+  ip?: string; // for deduplication of anonymous views
+  userAgent?: string; // for analytics
+}
+
+export interface TrendingMetrics {
+  figureId: string;
+  score: number; // calculated trending score
+  viewVelocity: number; // views per hour over last 24h
+  reactionVelocity: number; // reactions per hour over last 24h
+  recencyBoost: number; // boost for recently added figures
+  lastCalculated: number; // timestamp when score was calculated
 }
 
 export type TableColumn =

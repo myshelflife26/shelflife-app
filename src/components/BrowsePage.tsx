@@ -25,6 +25,9 @@ import { UserRatingBadge } from './UserRatingBadge';
 import { FilterSheet } from './FilterSheet';
 import { ResponseTimeBadge } from './ResponseTimeBadge';
 import { BookmarksService } from '../utils/bookmarks';
+import { ViewTrackingService } from '../utils/viewTracking';
+import { TrendingService } from '../utils/trending';
+import { UserRecommendationsService } from '../utils/userRecommendations';
 import { CommentsSection } from './CommentsSection';
 
 interface BrowsePageProps {
@@ -34,7 +37,7 @@ interface BrowsePageProps {
   onClearInitialUserId?: () => void;
 }
 
-type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks';
+type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks' | 'trending' | 'recommended';
 
 function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
@@ -83,6 +86,15 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [tradeRequestMode, setTradeRequestMode] = useState<'trade' | 'sale'>('trade');
   const [bookmarkedFigureIds, setBookmarkedFigureIds] = useState<Set<string>>(new Set());
   const [responseTime, setResponseTime] = useState<number | null>(null);
+  const [trendingFigures, setTrendingFigures] = useState<Array<ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }>>([]);
+  const [recommendedUsers, setRecommendedUsers] = useState<Array<{
+    user: any;
+    reason: string;
+    score: number;
+    sharedInterests?: string[];
+    complementaryCount?: number;
+    lastActive?: string;
+  }>>([]);
 
   // Load bookmarks on mount
   useEffect(() => {
@@ -170,6 +182,48 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
     loadPublicFigures();
   }, [currentUser.id, refreshKey]);
+
+  // Load trending figures when view mode is trending
+  useEffect(() => {
+    const loadTrendingFigures = async () => {
+      if (viewMode !== 'trending') return;
+
+      try {
+        // For now, sort by viewCount (once trending scores are populated, this will use trending score)
+        const sortedByViews = [...allPublicFigures]
+          .filter(fig => (fig.viewCount || 0) > 0)
+          .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+          .slice(0, 20); // Top 20 most viewed as trending
+
+        setTrendingFigures(sortedByViews);
+
+        // TODO: Replace with actual trending algorithm once trending scores are populated
+        // const trendingFigures = await TrendingService.getTrendingFigures(20, 'hot');
+      } catch (error) {
+        console.error('Failed to load trending figures:', error);
+        setTrendingFigures([]);
+      }
+    };
+
+    loadTrendingFigures();
+  }, [viewMode, allPublicFigures]);
+
+  // Load recommended users when view mode is recommended
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (viewMode !== 'recommended') return;
+
+      try {
+        const recommendations = await UserRecommendationsService.getRecommendedCollectors(currentUser.id, 12);
+        setRecommendedUsers(recommendations);
+      } catch (error) {
+        console.error('Failed to load recommendations:', error);
+        setRecommendedUsers([]);
+      }
+    };
+
+    loadRecommendations();
+  }, [viewMode, currentUser.id]);
 
   // Handle initial user filter from feed
   useEffect(() => {
@@ -290,6 +344,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       ? recentFigures
       : viewMode === 'bookmarks'
       ? allPublicFigures.filter(fig => bookmarkedFigureIds.has(fig.id))
+      : viewMode === 'trending'
+      ? trendingFigures
       : allPublicFigures;
 
     // Apply search query (advanced search)
@@ -464,9 +520,17 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   }, [allPublicFigures, recentFigures, viewMode, searchQuery, filters, bookmarkedFigureIds]);
 
   // Handle figure click - open detail modal
-  const handleFigureClick = (figure: ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }) => {
+  const handleFigureClick = async (figure: ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }) => {
     setSelectedFigure(figure);
     setCurrentImageIndex(figure.mainImageIndex ?? 0);
+
+    // Track the view - figures clicked from browse page
+    await ViewTrackingService.trackFigureView(
+      figure.id,
+      'browse',
+      currentUser.id
+    );
+
     // Load reaction data
     loadReactionData(figure.id);
   };
@@ -734,6 +798,28 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
           Recently Added
         </button>
         <button
+          onClick={() => setViewMode('trending')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'trending'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Flame className="h-4 w-4 inline mr-2" />
+          Trending Now
+        </button>
+        <button
+          onClick={() => setViewMode('recommended')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'recommended'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Star className="h-4 w-4 inline mr-2" />
+          Recommended
+        </button>
+        <button
           onClick={() => setViewMode('bookmarks')}
           className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
             viewMode === 'bookmarks'
@@ -747,7 +833,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       </div>
 
       {/* Search and Filters */}
-      {viewMode !== 'users' && viewMode !== 'admiring' && (
+      {viewMode !== 'users' && viewMode !== 'admiring' && viewMode !== 'trending' && (
         <div className="mb-6 flex gap-3 items-start flex-wrap">
           <Input
             placeholder="Search figures, accessories, notes, custom fields..."
@@ -779,11 +865,15 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       )}
 
       {/* Content */}
-      {viewMode === 'users' || viewMode === 'admiring' ? (
+      {viewMode === 'users' || viewMode === 'admiring' || viewMode === 'recommended' ? (
         // Users List View
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {(() => {
-            const usersToShow = viewMode === 'admiring' ? admiringCollections : publicUsers;
+            const usersToShow = viewMode === 'admiring'
+              ? admiringCollections
+              : viewMode === 'recommended'
+              ? recommendedUsers.map(rec => ({...rec.user, figureCount: 0, recommendation: rec}))
+              : publicUsers;
 
             if (usersToShow.length === 0) {
               return (
@@ -849,7 +939,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                       size="sm"
                       variant="outline"
                       className="w-full"
-                      onClick={() => {
+                      onClick={async () => {
                         if (isSelf && setCurrentPage) {
                           // If viewing own collection, navigate to Gallery page
                           setCurrentPage('gallery');
@@ -857,6 +947,13 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                           // If viewing someone else's collection, filter browse page
                           setViewMode('all');
                           setSearchQuery(user.username); // Use username for filtering
+
+                          // Track profile view when user clicks to view someone's collection
+                          try {
+                            await ViewTrackingService.trackProfileView(userId, currentUser.id);
+                          } catch (error) {
+                            console.error('Failed to track profile view:', error);
+                          }
                         }
                       }}
                     >

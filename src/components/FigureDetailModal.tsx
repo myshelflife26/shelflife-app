@@ -9,6 +9,7 @@ import { AdmirersService } from '../utils/admirers';
 import { UserRatingBadge } from './UserRatingBadge';
 import { CommentsSection } from './CommentsSection';
 import { FirebaseNotifications } from '../utils/firebaseNotifications';
+import { ViewTrackingService } from '../utils/viewTracking';
 import type { User } from '../types/user';
 
 interface FigureDetailModalProps {
@@ -51,6 +52,24 @@ export function FigureDetailModal({
     };
     checkAdmirerStatus();
   }, [figure.userId, currentUserId]);
+
+  // Track view when modal opens
+  useEffect(() => {
+    const trackView = async () => {
+      // Determine view source based on context (this could be passed as a prop in future)
+      const source = 'browse'; // Default source for now
+
+      // Track the figure view
+      await ViewTrackingService.trackFigureView(
+        figure.id,
+        source,
+        currentUserId,
+        undefined // Duration will be tracked when modal closes if needed
+      );
+    };
+
+    trackView();
+  }, [figure.id, currentUserId]); // Track view when figure or user changes
 
   const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId!);
   const stats = ReactionsService.getJealousyStats(figure.id, figure.userId!);

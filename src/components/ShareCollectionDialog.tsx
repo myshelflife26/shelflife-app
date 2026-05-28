@@ -3,6 +3,8 @@ import type { User } from '../types/user';
 import { Share2, Copy, Check, Download, Facebook, Twitter, Link as LinkIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { toastManager } from '../utils/toastManager';
+import { ShareCardGenerator } from '../utils/shareCardGenerator';
+import { Storage } from '../utils/storage';
 
 interface ShareCollectionDialogProps {
   open: boolean;
@@ -22,11 +24,14 @@ function ShareCollectionDialog({
   collectionStats
 }: ShareCollectionDialogProps) {
   const [copied, setCopied] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   if (!open) return null;
 
   // Generate shareable URL - points to public profile page
-  const shareUrl = `${window.location.origin}/profile/${currentUser.username}`;
+  // Account for GitHub Pages base path in production
+  const basePath = import.meta.env.PROD ? '/shelflife-app' : '';
+  const shareUrl = `${window.location.origin}${basePath}/profile/${currentUser.username}`;
 
   // Generate share text
   const shareText = `Check out my action figure collection on ShelfLife! ${collectionStats.totalFigures} figures worth $${collectionStats.totalValue.toFixed(0)}.`;
@@ -52,10 +57,33 @@ function ShareCollectionDialog({
     window.open(url, '_blank', 'width=600,height=400');
   };
 
-  const handleDownloadImage = () => {
-    // This would generate a shareable image card
-    toastManager.info('Image export coming soon!');
-    // TODO: Implement canvas-based image generation
+  const handleDownloadImage = async () => {
+    if (generatingImage) return;
+
+    setGeneratingImage(true);
+    try {
+      // Get user's public figures to show in the share card
+      const userFigures = Storage.getAll(currentUser.id).filter(f => f.isPublic);
+
+      // Get top figures (highest value figures for the share card)
+      const topFigures = userFigures
+        .sort((a, b) => b.currentValue - a.currentValue)
+        .slice(0, 4);
+
+      // Generate and download the collection card
+      await ShareCardGenerator.generateAndDownloadCollectionCard(
+        currentUser,
+        collectionStats,
+        topFigures
+      );
+
+      toastManager.success('Share card downloaded successfully!');
+    } catch (error) {
+      console.error('Failed to generate share card:', error);
+      toastManager.error('Failed to generate share card. Please try again.');
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   return (
@@ -158,12 +186,16 @@ function ShareCollectionDialog({
               onClick={handleDownloadImage}
               variant="outline"
               className="w-full"
+              disabled={generatingImage}
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download Share Card (Coming Soon)
+              <Download className={`h-4 w-4 mr-2 ${generatingImage ? 'animate-spin' : ''}`} />
+              {generatingImage ? 'Generating...' : 'Download Share Card'}
             </Button>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Generate a shareable image card of your collection
+              {generatingImage
+                ? 'Creating your personalized share card...'
+                : 'Generate a shareable image card of your collection'
+              }
             </p>
           </div>
 

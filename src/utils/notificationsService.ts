@@ -2,6 +2,9 @@ import { AdmirersService } from './admirers';
 import { ReactionsService } from './reactions';
 import { Storage } from './storage';
 import { PriceAlertsService } from './priceAlertsService';
+import { ViewTrackingService } from './viewTracking';
+import { TrendingService } from './trending';
+import { MessagingNotificationsService } from './messagingNotifications';
 
 const NOTIFICATIONS_KEY = 'app-notifications-state';
 const MAX_SEEN_IDS = 20;
@@ -14,7 +17,7 @@ export interface NotificationState {
 }
 
 export interface NotificationResult {
-  type: 'admirerRequest' | 'reaction' | 'newFigure' | 'reportUpdate' | 'priceAlert';
+  type: 'admirerRequest' | 'reaction' | 'newFigure' | 'reportUpdate' | 'priceAlert' | 'viewMilestone' | 'trendingStatus' | 'new_message' | 'message_reaction' | 'conversation_activity';
   id: string; // Unique ID for this notification
   message: string;
   data?: any; // Additional data for the notification
@@ -271,13 +274,25 @@ export class NotificationsService {
     const reactionNotifications = this.detectNewReactions(userId);
     const figureNotifications = await this.detectNewFiguresFromAdmirers(userId);
     const priceAlertNotifications = this.detectPriceAlerts(userId);
+    const viewMilestoneNotifications = await this.detectViewMilestones(userId);
+    const trendingStatusNotifications = await this.detectTrendingStatus(userId);
+
+    // New messaging notifications
+    const messageNotifications = await MessagingNotificationsService.detectNewMessages(userId);
+    const messageReactionNotifications = await MessagingNotificationsService.detectMessageReactions(userId);
+    const conversationActivityNotifications = await MessagingNotificationsService.detectImportantConversationActivity(userId);
 
     // Combine and return (most recent first)
     return [
       ...admirerNotifications,
       ...reactionNotifications,
       ...figureNotifications,
-      ...priceAlertNotifications
+      ...priceAlertNotifications,
+      ...viewMilestoneNotifications,
+      ...trendingStatusNotifications,
+      ...messageNotifications,
+      ...messageReactionNotifications,
+      ...conversationActivityNotifications
     ];
   }
 
@@ -295,5 +310,75 @@ export class NotificationsService {
       seenNotificationIds: []
     };
     this.saveState(userId, state);
+  }
+
+  // Detect view milestone notifications (100 views, 1000 views, etc.)
+  static async detectViewMilestones(userId: string): Promise<NotificationResult[]> {
+    const notifications: NotificationResult[] = [];
+
+    try {
+      const userFigures = Storage.getAll(userId);
+      const milestones = [100, 500, 1000, 5000, 10000];
+
+      for (const figure of userFigures) {
+        if (!figure.isPublic) continue; // Only public figures get view milestones
+
+        const viewStats = await ViewTrackingService.getViewStats(figure.id);
+        if (!viewStats) continue;
+
+        // Check each milestone
+        for (const milestone of milestones) {
+          if (viewStats.total >= milestone) {
+            const notificationId = `view-milestone-${figure.id}-${milestone}`;
+
+            if (!this.hasSeenNotification(userId, notificationId)) {
+              notifications.push({
+                type: 'viewMilestone',
+                id: notificationId,
+                message: `${figure.name} reached ${milestone.toLocaleString()} views!`,
+                data: { figure, milestone, viewCount: viewStats.total }
+              });
+              this.markAsSeen(userId, notificationId);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting view milestones:', error);
+    }
+
+    return notifications.sort((a, b) => (b.data.milestone || 0) - (a.data.milestone || 0));
+  }
+
+  // Detect trending status notifications
+  static async detectTrendingStatus(userId: string): Promise<NotificationResult[]> {
+    const notifications: NotificationResult[] = [];
+
+    try {
+      const userFigures = Storage.getAll(userId);
+
+      for (const figure of userFigures) {
+        if (!figure.isPublic) continue; // Only public figures can trend
+
+        const trendingMetrics = await TrendingService.getTrendingMetrics(figure.id);
+        if (!trendingMetrics || trendingMetrics.score < 1.0) continue; // Only notify for significant trending
+
+        const notificationId = `trending-${figure.id}-${Math.floor(trendingMetrics.lastCalculated / 3600000)}`; // Hour-based deduplication
+
+        if (!this.hasSeenNotification(userId, notificationId)) {
+          notifications.push({
+            type: 'trendingStatus',
+            id: notificationId,
+            message: `${figure.name} is trending! Score: ${trendingMetrics.score}`,
+            data: { figure, trendingMetrics }
+          });
+          this.markAsSeen(userId, notificationId);
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting trending status:', error);
+    }
+
+    return notifications.sort((a, b) => (b.data.trendingMetrics?.score || 0) - (a.data.trendingMetrics?.score || 0));
   }
 }

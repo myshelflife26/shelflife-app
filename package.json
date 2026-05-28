@@ -11,8 +11,9 @@
     "preview": "vite preview",
     "deploy": "npm run build && firebase deploy --only hosting",
     "deploy:preview": "npm run build && firebase hosting:channel:deploy preview",
-    "build:gh-pages": "NODE_ENV=production vite build",
-    "predeploy": "npm run build:gh-pages"
+    "build:gh-pages": "vite build",
+    "predeploy": "npm run build:gh-pages",
+    "deploy:gh-pages": "gh-pages -d dist"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -42,6 +43,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "gh-pages": "^6.3.0",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
