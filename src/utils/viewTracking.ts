@@ -60,16 +60,20 @@ export class ViewTrackingService {
       // Clean up old cache entries
       this.cleanupCache();
 
-      // Create view event
+      // Create view event (only include defined fields)
       const viewEvent: ViewEvent = {
         figureId,
         userId,
         viewedAt: now,
         source,
-        duration,
         userAgent: navigator.userAgent,
         // Don't store IP for privacy compliance
       };
+
+      // Only include duration if it's provided and not undefined
+      if (duration !== undefined) {
+        viewEvent.duration = duration;
+      }
 
       // Record the individual view event
       const eventRef = doc(collection(db, this.VIEW_EVENTS_COLLECTION));
