@@ -2363,7 +2363,7 @@ function MainApp() {
 function App() {
   return (
     <ErrorBoundary level="critical">
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.PROD ? '/shelflife-app' : ''}>
         <Routes>
           <Route
             path="/profile/:username"
