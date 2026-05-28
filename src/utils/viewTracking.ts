@@ -107,7 +107,12 @@ export class ViewTrackingService {
         duration: duration || 0
       });
 
-    } catch (error) {
+    } catch (error: any) {
+      // Don't log permission errors as they're already handled
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        return; // Permission errors are already handled gracefully
+      }
       console.error('Failed to track figure view:', error instanceof Error ? error.message : String(error));
     }
   }

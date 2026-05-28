@@ -22,6 +22,8 @@ const CONVERSATIONS_COLLECTION = 'conversations';
 const MESSAGES_SUBCOLLECTION = 'messages';
 
 export class FirebaseConversationsService {
+  // Flag to disable Firebase operations if permissions are insufficient
+  private static firebaseEnabled = true;
   /**
    * Create or get existing conversation between users
    * @returns conversationId
@@ -428,6 +430,11 @@ export class FirebaseConversationsService {
    * Returns null if insufficient data
    */
   static async calculateAverageResponseTime(userId: string): Promise<number | null> {
+    // Return null if Firebase is disabled due to permissions
+    if (!this.firebaseEnabled) {
+      return null;
+    }
+
     try {
       // Get all conversations where user is a participant
       const conversationsQuery = query(
@@ -491,7 +498,14 @@ export class FirebaseConversationsService {
       const averageHours = totalTime / responseTimes.length;
 
       return Math.round(averageHours * 10) / 10; // Round to 1 decimal place
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a permissions error, disable Firebase operations
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.firebaseEnabled = false;
+        console.warn('FirebaseConversationsService: Disabling Firebase due to insufficient permissions');
+        return null;
+      }
       console.error('Failed to calculate response time:', error);
       return null;
     }
