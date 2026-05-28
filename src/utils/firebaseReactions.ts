@@ -25,6 +25,8 @@ export interface ReactionStats {
 }
 
 export class FirebaseReactionsService {
+  // Flag to disable write operations if permissions are insufficient
+  private static writeEnabled = true;
   /**
    * Add or update a reaction
    */
@@ -35,6 +37,12 @@ export class FirebaseReactionsService {
     displayName: string,
     reactionType: ReactionType
   ): Promise<Reaction | null> {
+    // Return null if writes are disabled due to permissions
+    if (!this.writeEnabled) {
+      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
+      return null;
+    }
+
     try {
       // Check if user already reacted to this figure
       const q = query(
@@ -84,7 +92,14 @@ export class FirebaseReactionsService {
           timestamp
         };
       }
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a permissions error, disable future writes
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.writeEnabled = false;
+        console.warn('FirebaseReactionsService: Disabling writes due to insufficient permissions');
+        return null;
+      }
       console.error('Failed to add reaction:', error);
       return null;
     }
@@ -94,6 +109,12 @@ export class FirebaseReactionsService {
    * Remove a reaction
    */
   static async removeReaction(figureId: string, userId: string): Promise<void> {
+    // Skip if writes are disabled due to permissions
+    if (!this.writeEnabled) {
+      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
+      return;
+    }
+
     try {
       const q = query(
         collection(db, REACTIONS_COLLECTION),
@@ -105,7 +126,14 @@ export class FirebaseReactionsService {
       if (!snapshot.empty) {
         await deleteDoc(snapshot.docs[0].ref);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a permissions error, disable future writes
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.writeEnabled = false;
+        console.warn('FirebaseReactionsService: Disabling writes due to insufficient permissions');
+        return;
+      }
       console.error('Failed to remove reaction:', error);
     }
   }
@@ -120,6 +148,12 @@ export class FirebaseReactionsService {
     displayName: string,
     reactionType: ReactionType
   ): Promise<void> {
+    // Skip if writes are disabled due to permissions
+    if (!this.writeEnabled) {
+      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
+      return;
+    }
+
     try {
       const currentReaction = await this.getUserReaction(figureId, userId);
 
@@ -130,7 +164,14 @@ export class FirebaseReactionsService {
         // Different or no reaction - add/update it
         await this.react(figureId, ownerId, userId, displayName, reactionType);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a permissions error, disable future writes
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.writeEnabled = false;
+        console.warn('FirebaseReactionsService: Disabling writes due to insufficient permissions');
+        return;
+      }
       console.error('Failed to toggle reaction:', error);
     }
   }

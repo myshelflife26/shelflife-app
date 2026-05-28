@@ -1,6 +1,8 @@
 import { FirebaseReactionsService } from './firebaseReactions';
 
 export class FirebaseJealousyTrackingService {
+  // Flag to disable Firebase operations if permissions are insufficient
+  private static firebaseEnabled = true;
   /**
    * Get figures with biggest jealousy increases over a time period
    * Compares current score vs score X days ago
@@ -15,39 +17,45 @@ export class FirebaseJealousyTrackingService {
     previousScore: number;
     increase: number;
   }>> {
-    const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
-    const rises: Array<{
-      figureId: string;
-      ownerId: string;
-      currentScore: number;
-      previousScore: number;
-      increase: number;
-    }> = [];
+    // Return empty array if Firebase is disabled due to permissions
+    if (!this.firebaseEnabled) {
+      return [];
+    }
 
-    // Calculate scores for each figure
-    for (const figure of figures) {
-      try {
-        // Get current jealousy score
-        const currentScore = await FirebaseReactionsService.getJealousyScore(
-          figure.id,
-          figure.userId
-        );
+    try {
+      const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
+      const rises: Array<{
+        figureId: string;
+        ownerId: string;
+        currentScore: number;
+        previousScore: number;
+        increase: number;
+      }> = [];
 
-        // Get historical jealousy score (only reactions that existed before cutoff)
-        const previousScore = await FirebaseReactionsService.getJealousyScore(
-          figure.id,
-          figure.userId,
-          cutoffTime
-        );
+      // Calculate scores for each figure
+      for (const figure of figures) {
+        try {
+          // Get current jealousy score
+          const currentScore = await FirebaseReactionsService.getJealousyScore(
+            figure.id,
+            figure.userId
+          );
 
-        const increase = currentScore - previousScore;
+          // Get historical jealousy score (only reactions that existed before cutoff)
+          const previousScore = await FirebaseReactionsService.getJealousyScore(
+            figure.id,
+            figure.userId,
+            cutoffTime
+          );
 
-        // Only include figures with positive increases
-        if (increase > 0) {
-          rises.push({
-            figureId: figure.id,
-            ownerId: figure.userId,
-            currentScore,
+          const increase = currentScore - previousScore;
+
+          // Only include figures with positive increases
+          if (increase > 0) {
+            rises.push({
+              figureId: figure.id,
+              ownerId: figure.userId,
+              currentScore,
             previousScore,
             increase
           });
@@ -59,6 +67,17 @@ export class FirebaseJealousyTrackingService {
 
     // Sort by increase (descending) - biggest increases first
     return rises.sort((a, b) => b.increase - a.increase);
+    } catch (error: any) {
+      // If it's a permissions error, disable Firebase operations
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.firebaseEnabled = false;
+        console.warn('FirebaseJealousyTrackingService: Disabling Firebase due to insufficient permissions');
+        return [];
+      }
+      console.error('Failed to get rising stars:', error);
+      return [];
+    }
   }
 
   /**
@@ -72,34 +91,51 @@ export class FirebaseJealousyTrackingService {
     ownerId: string;
     jealousyScore: number;
   }>> {
-    const scores: Array<{
-      figureId: string;
-      ownerId: string;
-      jealousyScore: number;
-    }> = [];
-
-    for (const figure of figures) {
-      try {
-        const jealousyScore = await FirebaseReactionsService.getJealousyScore(
-          figure.id,
-          figure.userId
-        );
-
-        if (jealousyScore > 0) {
-          scores.push({
-            figureId: figure.id,
-            ownerId: figure.userId,
-            jealousyScore
-          });
-        }
-      } catch (error) {
-        console.error(`Failed to get jealousy score for figure ${figure.id}:`, error);
-      }
+    // Return empty array if Firebase is disabled due to permissions
+    if (!this.firebaseEnabled) {
+      return [];
     }
 
-    return scores
-      .sort((a, b) => b.jealousyScore - a.jealousyScore)
-      .slice(0, limit);
+    try {
+      const scores: Array<{
+        figureId: string;
+        ownerId: string;
+        jealousyScore: number;
+      }> = [];
+
+      for (const figure of figures) {
+        try {
+          const jealousyScore = await FirebaseReactionsService.getJealousyScore(
+            figure.id,
+            figure.userId
+          );
+
+          if (jealousyScore > 0) {
+            scores.push({
+              figureId: figure.id,
+              ownerId: figure.userId,
+              jealousyScore
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to get jealousy score for figure ${figure.id}:`, error);
+        }
+      }
+
+      return scores
+        .sort((a, b) => b.jealousyScore - a.jealousyScore)
+        .slice(0, limit);
+    } catch (error: any) {
+      // If it's a permissions error, disable Firebase operations
+      if (error?.code === 'permission-denied' ||
+          error?.message?.includes('insufficient permissions')) {
+        this.firebaseEnabled = false;
+        console.warn('FirebaseJealousyTrackingService: Disabling Firebase due to insufficient permissions');
+        return [];
+      }
+      console.error('Failed to get top jealousy figures:', error);
+      return [];
+    }
   }
 
   /**
