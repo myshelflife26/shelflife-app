@@ -125,14 +125,19 @@ export class ReactionsService {
     try {
       // Get localStorage reactions
       const localReactions = this.getReactionsForFigure(figureId);
+      console.log(`[HYBRID] Figure ${figureId}: localStorage reactions:`, localReactions.length);
 
       // Try to get Firebase reactions (if permissions allow)
       let firebaseReactions: Reaction[] = [];
       try {
         firebaseReactions = await FirebaseReactionsService.getReactionsForFigure(figureId);
+        console.log(`[HYBRID] Figure ${figureId}: Firebase reactions:`, firebaseReactions.length);
+        if (firebaseReactions.length > 0) {
+          console.log(`[HYBRID] Firebase reaction details:`, firebaseReactions);
+        }
       } catch (error) {
         // If Firebase fails, just use localStorage
-        console.log('Firebase reactions unavailable, using localStorage only');
+        console.log(`[HYBRID] Figure ${figureId}: Firebase reactions unavailable, using localStorage only:`, error);
       }
 
       // Combine and deduplicate (prefer Firebase data if both exist for same user)
@@ -142,15 +147,20 @@ export class ReactionsService {
       localReactions.forEach(reaction => {
         const key = `${reaction.figureId}-${reaction.userId}`;
         reactionMap.set(key, reaction);
+        console.log(`[HYBRID] Added localStorage reaction: ${reaction.reactionType} from user ${reaction.userId}`);
       });
 
       // Add Firebase reactions (will overwrite localStorage if user has reactions in both)
       firebaseReactions.forEach(reaction => {
         const key = `${reaction.figureId}-${reaction.userId}`;
         reactionMap.set(key, reaction);
+        console.log(`[HYBRID] Added Firebase reaction: ${reaction.reactionType} from user ${reaction.userId}`);
       });
 
-      return Array.from(reactionMap.values());
+      const finalReactions = Array.from(reactionMap.values());
+      console.log(`[HYBRID] Figure ${figureId}: Final combined reactions:`, finalReactions.length);
+
+      return finalReactions;
     } catch (error) {
       console.error('Failed to get hybrid reactions:', error);
       // Fallback to localStorage only
