@@ -265,74 +265,52 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
               const jealousyScore = ReactionsService.getJealousyScore(figure.id, user.id);
               const stats = ReactionsService.getJealousyStats(figure.id, user.id);
 
+              // Debug logging for reactions
+              console.log(`Figure ${figure.name}: jealousyScore=${jealousyScore}, stats=`, stats);
+
               return (
                 <div
                   key={figure.id}
                   onClick={handleSignUpClick}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-all cursor-pointer group"
+                  className="relative rounded-lg overflow-hidden shadow hover:shadow-lg transition-all cursor-pointer group aspect-square"
                 >
-                  {/* Image - 2 inches tall (h-32 = 128px ≈ 2in at 96dpi) */}
-                  <div className="relative h-32 bg-gray-100 dark:bg-gray-700 rounded-t-lg overflow-hidden">
-                    {mainImage ? (
-                      <img
-                        src={mainImage}
-                        alt={figure.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
+                  {/* Main Image */}
+                  {mainImage ? (
+                    <img
+                      src={mainImage}
+                      alt={figure.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                      <Package className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* Text overlays */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent">
+                    {/* Figure name at bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2">
+                      <h3 className="text-white font-semibold text-sm mb-1 truncate shadow-text">
+                        {figure.name}
+                      </h3>
+                      <p className="text-white/90 font-bold text-lg shadow-text">
+                        ${figure.currentValue.toFixed(0)}
+                      </p>
+                    </div>
 
                     {/* Jealousy Score Badge */}
                     {jealousyScore > 0 && (
-                      <div className="absolute top-1 right-1 bg-purple-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold shadow">
-                        {jealousyScore}
+                      <div className="absolute top-2 right-2 bg-purple-600/90 text-white px-2 py-1 rounded-full text-xs font-bold shadow">
+                        ❤️ {jealousyScore}
                       </div>
                     )}
 
                     {/* Click to view overlay */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                        Click to join
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
+                        Click to join ShelfLife
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 truncate">
-                      {figure.name}
-                    </h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate mb-1">
-                      {figure.manufacturer}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        ${figure.currentValue.toFixed(0)}
-                      </span>
-
-                      {/* Reaction icons */}
-                      {stats.total > 0 && (
-                        <div className="flex items-center gap-0.5 text-xs">
-                          {stats.fire > 0 && (
-                            <span className="flex items-center text-orange-600 dark:text-orange-400">
-                              <Flame className="h-3 w-3" />
-                            </span>
-                          )}
-                          {stats.love > 0 && (
-                            <span className="flex items-center text-pink-600 dark:text-pink-400">
-                              <Heart className="h-3 w-3" />
-                            </span>
-                          )}
-                          {stats.appreciate > 0 && (
-                            <span className="flex items-center text-blue-600 dark:text-blue-400">
-                              <ThumbsUp className="h-3 w-3" />
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
