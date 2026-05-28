@@ -35,6 +35,9 @@ export class ViewTrackingService {
   private static recentViews = new Map<string, number>();
   private static readonly DEDUPE_WINDOW = 30000; // 30 seconds
 
+  // Flag to disable write operations if permissions are insufficient
+  private static writeEnabled = true;
+
   /**
    * Track a figure view event
    */
@@ -75,12 +78,27 @@ export class ViewTrackingService {
         viewEvent.duration = duration;
       }
 
-      // Record the individual view event
-      const eventRef = doc(collection(db, this.VIEW_EVENTS_COLLECTION));
-      await setDoc(eventRef, viewEvent);
+      // Only try to write if we haven't hit permission errors yet
+      if (this.writeEnabled) {
+        try {
+          // Record the individual view event
+          const eventRef = doc(collection(db, this.VIEW_EVENTS_COLLECTION));
+          await setDoc(eventRef, viewEvent);
 
-      // Update aggregated statistics
-      await this.updateViewStats(figureId, userId !== undefined);
+          // Update aggregated statistics
+          await this.updateViewStats(figureId, userId !== undefined);
+        } catch (writeError: any) {
+          // If it's a permissions error, disable future writes
+          if (writeError?.code === 'permission-denied' ||
+              writeError?.message?.includes('insufficient permissions')) {
+            this.writeEnabled = false;
+            console.warn('ViewTracking: Disabling writes due to insufficient permissions');
+            return; // Don't throw the error, just skip tracking
+          }
+          // Re-throw other errors
+          throw writeError;
+        }
+      }
 
       // Track in privacy analytics for aggregate insights
       privacyAnalytics.trackEvent('figure_view', {
