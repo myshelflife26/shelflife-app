@@ -4,6 +4,7 @@ import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { FirebaseMessagesService } from '../utils/firebaseMessages';
 import { FirebaseConversationsService } from '../utils/firebaseConversations';
 import { ReactionsService } from '../utils/reactions';
+import { FirebaseReactionsService } from '../utils/firebaseReactions';
 import { AdmirersService } from '../utils/admirers';
 import { BlockingService } from '../utils/blocking';
 import { ReportingService } from '../utils/reporting';
@@ -532,7 +533,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     );
 
     // Load reaction data
-    loadReactionData(figure.id);
+    loadReactionData(figure.id).catch(err => console.error('Failed to load reaction data:', err));
   };
 
   // Handle close detail modal
@@ -575,35 +576,62 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   };
 
   // Load reaction data for a figure
-  const loadReactionData = (figureId: string) => {
-    const stats = ReactionsService.getStatsForFigure(figureId);
-    setReactionStats(stats);
+  const loadReactionData = async (figureId: string) => {
+    try {
+      // Try to get hybrid data (Firebase + localStorage)
+      const reactions = await ReactionsService.getReactionsForFigureHybrid(figureId);
 
-    const userReaction = ReactionsService.getUserReaction(figureId, currentUser.id);
-    setCurrentReaction(userReaction?.reactionType || null);
+      // Calculate stats from hybrid data
+      const stats = {
+        appreciate: reactions.filter(r => r.reactionType === 'appreciate').length,
+        love: reactions.filter(r => r.reactionType === 'love').length,
+        fire: reactions.filter(r => r.reactionType === 'fire').length,
+        total: reactions.length
+      };
+      setReactionStats(stats);
+
+      // Get current user's reaction from hybrid data
+      const userReaction = reactions.find(r => r.userId === currentUser.id);
+      setCurrentReaction(userReaction?.reactionType || null);
+    } catch (error) {
+      console.error('Failed to load hybrid reaction data:', error);
+      // Fallback to localStorage only
+      const stats = ReactionsService.getStatsForFigure(figureId);
+      setReactionStats(stats);
+
+      const userReaction = ReactionsService.getUserReaction(figureId, currentUser.id);
+      setCurrentReaction(userReaction?.reactionType || null);
+    }
   };
 
   // Handle reaction
-  const handleReact = (reactionType: ReactionType) => {
-    if (!selectedFigure) return;
+  const handleReact = async (reactionType: ReactionType) => {
+    if (!selectedFigure || !currentUser) return;
 
-    if (currentReaction === reactionType) {
-      // Remove reaction if clicking same one
-      ReactionsService.removeReaction(selectedFigure.id, currentUser.id);
-      setCurrentReaction(null);
-    } else {
-      // Add or update reaction
-      ReactionsService.react(
+    try {
+      // Use Firebase reactions service for cross-browser consistency
+      await FirebaseReactionsService.toggleReaction(
         selectedFigure.id,
+        selectedFigure.userId,
         currentUser.id,
         currentUser.displayName,
         reactionType
       );
-      setCurrentReaction(reactionType);
-    }
 
-    // Reload stats
-    loadReactionData(selectedFigure.id);
+      // Update local state
+      const updatedReaction = await FirebaseReactionsService.getUserReaction(selectedFigure.id, currentUser.id);
+      setCurrentReaction(updatedReaction?.reactionType || null);
+
+      // Reload stats
+      await loadReactionData(selectedFigure.id);
+    } catch (error) {
+      console.error('Failed to update reaction:', error);
+      // Fallback to localStorage
+      ReactionsService.toggleReaction(selectedFigure.id, selectedFigure.userId, currentUser.id, reactionType);
+      const fallbackReaction = ReactionsService.getUserReaction(selectedFigure.id, currentUser.id);
+      setCurrentReaction(fallbackReaction?.reactionType || null);
+      await loadReactionData(selectedFigure.id);
+    }
   };
 
   // Handle contact owner
