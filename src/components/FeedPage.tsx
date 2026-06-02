@@ -705,10 +705,22 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     }
   };
 
-  const handleReaction = (figureId: string, ownerId: string, type: 'fire' | 'love' | 'appreciate') => {
-    ReactionsService.toggleReaction(figureId, ownerId, currentUser.id, type);
-    // Refresh feed data to update rising stars and scores
-    loadFeedData();
+  const handleReaction = async (figureId: string, ownerId: string, type: 'fire' | 'love' | 'appreciate') => {
+    try {
+      // Use Firebase reactions instead of localStorage
+      await FirebaseReactionsService.toggleReaction(figureId, ownerId, currentUser.id, currentUser.displayName, type);
+
+      // Also keep localStorage updated for backwards compatibility during transition
+      ReactionsService.toggleReaction(figureId, ownerId, currentUser.id, type);
+
+      // Refresh feed data to update rising stars and scores
+      loadFeedData();
+    } catch (error) {
+      console.error('Failed to submit reaction:', error);
+      // Fallback to localStorage if Firebase fails
+      ReactionsService.toggleReaction(figureId, ownerId, currentUser.id, type);
+      loadFeedData();
+    }
   };
 
   // Paginate sections

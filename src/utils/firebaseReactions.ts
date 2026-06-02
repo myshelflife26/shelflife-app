@@ -37,12 +37,6 @@ export class FirebaseReactionsService {
     displayName: string,
     reactionType: ReactionType
   ): Promise<Reaction | null> {
-    // Return null if writes are disabled due to permissions
-    if (!this.writeEnabled) {
-      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
-      return null;
-    }
-
     try {
       // Check if user already reacted to this figure
       const q = query(
@@ -109,12 +103,6 @@ export class FirebaseReactionsService {
    * Remove a reaction
    */
   static async removeReaction(figureId: string, userId: string): Promise<void> {
-    // Skip if writes are disabled due to permissions
-    if (!this.writeEnabled) {
-      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
-      return;
-    }
-
     try {
       const q = query(
         collection(db, REACTIONS_COLLECTION),
@@ -148,12 +136,6 @@ export class FirebaseReactionsService {
     displayName: string,
     reactionType: ReactionType
   ): Promise<void> {
-    // Skip if writes are disabled due to permissions
-    if (!this.writeEnabled) {
-      console.warn('FirebaseReactionsService: Write operations disabled due to insufficient permissions');
-      return;
-    }
-
     try {
       const currentReaction = await this.getUserReaction(figureId, userId);
 

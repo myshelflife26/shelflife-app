@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ActionFigure } from '../types/index';
 import { ReactionsService } from '../utils/reactions';
+import { FirebaseReactionsService } from '../utils/firebaseReactions';
 import { Button } from './ui/button';
 import { X, Flame, Heart, ThumbsUp, ExternalLink, ChevronLeft, ChevronRight, ShieldOff, Flag, Eye, EyeOff, Lock } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
@@ -78,13 +79,34 @@ export function FigureDetailModal({
     return ReactionsService.hasReacted(figure.id, figure.userId!, currentUserId, type);
   };
 
-  const handleReaction = (type: 'fire' | 'love' | 'appreciate') => {
-    ReactionsService.toggleReaction(figure.id, figure.userId!, currentUserId, type);
-    // Force re-render of this modal
-    setReactionKey(prev => prev + 1);
-    // Notify parent to refresh feed data
-    if (onReactionChange) {
-      onReactionChange();
+  const handleReaction = async (type: 'fire' | 'love' | 'appreciate') => {
+    try {
+      // Use Firebase reactions instead of localStorage
+      await FirebaseReactionsService.toggleReaction(
+        figure.id,
+        figure.userId!,
+        currentUserId,
+        currentUser?.displayName || 'User',
+        type
+      );
+
+      // Also keep localStorage updated for backwards compatibility during transition
+      ReactionsService.toggleReaction(figure.id, figure.userId!, currentUserId, type);
+
+      // Force re-render of this modal
+      setReactionKey(prev => prev + 1);
+      // Notify parent to refresh feed data
+      if (onReactionChange) {
+        onReactionChange();
+      }
+    } catch (error) {
+      console.error('Failed to submit reaction:', error);
+      // Fallback to localStorage if Firebase fails
+      ReactionsService.toggleReaction(figure.id, figure.userId!, currentUserId, type);
+      setReactionKey(prev => prev + 1);
+      if (onReactionChange) {
+        onReactionChange();
+      }
     }
   };
 
