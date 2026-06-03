@@ -87,6 +87,11 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(null);
   const [reactionStats, setReactionStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Debug: Monitor reactionStats changes
+  useEffect(() => {
+    console.log('[REACTION_STATS] State changed:', reactionStats);
+  }, [reactionStats]);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; username: string } | null>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -591,9 +596,11 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
   // Load reaction data for a figure
   const loadReactionData = async (figureId: string) => {
+    console.log(`[LOAD_REACTION] Starting loadReactionData for figure: ${figureId}`);
     try {
       // Try to get hybrid data (Firebase + localStorage)
       const reactions = await ReactionsService.getReactionsForFigureHybrid(figureId);
+      console.log(`[LOAD_REACTION] Got ${reactions.length} total reactions:`, reactions);
 
       // Calculate stats from hybrid data
       const stats = {
@@ -602,15 +609,20 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
         fire: reactions.filter(r => r.reactionType === 'fire').length,
         total: reactions.length
       };
+      console.log(`[LOAD_REACTION] Calculated stats:`, stats);
+      console.log(`[LOAD_REACTION] About to call setReactionStats with:`, stats);
       setReactionStats(stats);
+      console.log(`[LOAD_REACTION] setReactionStats called successfully`);
 
       // Get current user's reaction from hybrid data
       const userReaction = reactions.find(r => r.userId === currentUser.id);
+      console.log(`[LOAD_REACTION] Current user reaction:`, userReaction);
       setCurrentReaction(userReaction?.reactionType || null);
     } catch (error) {
       console.error('Failed to load hybrid reaction data:', error);
       // Fallback to localStorage only
       const stats = ReactionsService.getStatsForFigure(figureId);
+      console.log(`[LOAD_REACTION] Fallback stats:`, stats);
       setReactionStats(stats);
 
       const userReaction = ReactionsService.getUserReaction(figureId, currentUser.id);
@@ -649,7 +661,9 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       setCurrentReaction(updatedReaction?.reactionType || null);
 
       // Reload stats
+      console.log('[BROWSE] About to reload reaction data after Firebase success');
       await loadReactionData(selectedFigure.id);
+      console.log('[BROWSE] Finished reloading reaction data after Firebase success');
     } catch (error) {
       console.error('Failed to update reaction:', error);
       // Fallback to localStorage
