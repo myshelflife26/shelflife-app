@@ -42,6 +42,20 @@ type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks' | 'trendin
 
 function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
+
+  // Debug: Track currentUser prop changes
+  useEffect(() => {
+    console.log('[BROWSE] BrowsePage rendered with currentUser:', currentUser ? {
+      id: currentUser.id,
+      username: currentUser.username,
+      displayName: currentUser.displayName
+    } : 'null');
+
+    // Make currentUser available globally for debugging
+    if (typeof window !== 'undefined') {
+      window.currentUser = currentUser;
+    }
+  }, [currentUser]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -606,9 +620,20 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
   // Handle reaction
   const handleReact = async (reactionType: ReactionType) => {
-    if (!selectedFigure || !currentUser) return;
+    console.log('[BROWSE] handleReact called:', { reactionType, selectedFigure: selectedFigure?.id, currentUser: currentUser?.id });
+
+    if (!selectedFigure) {
+      console.log('[BROWSE] No selected figure, aborting reaction');
+      return;
+    }
+
+    if (!currentUser) {
+      console.log('[BROWSE] No current user, aborting reaction');
+      return;
+    }
 
     try {
+      console.log('[BROWSE] Attempting Firebase reaction toggle...');
       // Use Firebase reactions service for cross-browser consistency
       await FirebaseReactionsService.toggleReaction(
         selectedFigure.id,
@@ -617,6 +642,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
         currentUser.displayName,
         reactionType
       );
+      console.log('[BROWSE] Firebase reaction toggle successful');
 
       // Update local state
       const updatedReaction = await FirebaseReactionsService.getUserReaction(selectedFigure.id, currentUser.id);
@@ -1397,6 +1423,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                 <div className="flex gap-3">
                   <Button
                     onClick={(e) => {
+                      console.log('[BROWSE] Appreciate button clicked');
                       e.stopPropagation();
                       handleReact('appreciate');
                     }}
@@ -1411,6 +1438,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                   </Button>
                   <Button
                     onClick={(e) => {
+                      console.log('[BROWSE] Love button clicked');
                       e.stopPropagation();
                       handleReact('love');
                     }}
@@ -1425,6 +1453,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                   </Button>
                   <Button
                     onClick={(e) => {
+                      console.log('[BROWSE] Fire button clicked');
                       e.stopPropagation();
                       handleReact('fire');
                     }}

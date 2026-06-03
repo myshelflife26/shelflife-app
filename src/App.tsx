@@ -190,6 +190,25 @@ function MainApp() {
       setTimeout(() => {
         try {
           console.log('[APP] Auth state changed, user:', user ? `${user.username} (${user.id})` : 'null');
+          console.log('[APP] VERSION CHECK - This should be DJeF7smG or newer, not BZNzOWD7');
+
+          // Detect user switching and force state reset
+          if (user && currentUser && user.id !== currentUser.id) {
+            console.log('[APP] User switch detected, forcing state reset');
+            console.log(`[APP] Previous user: ${currentUser.username} (${currentUser.id})`);
+            console.log(`[APP] New user: ${user.username} (${user.id})`);
+
+            // Force complete state reset on user switch
+            setCurrentUser(null);
+            setFigures([]);
+            setSelectedFigureIds(new Set());
+
+            // Small delay to ensure React re-renders
+            setTimeout(() => {
+              setCurrentUser(user);
+            }, 100);
+            return;
+          }
 
           // Extreme validation: check for any falsy or malformed values
           if (user !== null && user !== undefined) {
@@ -214,7 +233,14 @@ function MainApp() {
 
           // Set user state with extra safety
           try {
+            console.log('[APP] Setting currentUser in React state:', user ? `${user.username} (${user.id})` : 'null');
             setCurrentUser(user);
+
+            // Also set global for debugging
+            if (typeof window !== 'undefined') {
+              window.currentUser = user;
+              console.log('[APP] Set window.currentUser for debugging:', window.currentUser ? window.currentUser.username : 'null');
+            }
           } catch (setUserError) {
             console.error('[APP] Error setting current user:', setUserError instanceof Error ? setUserError.message : String(setUserError));
             setCurrentUser(null);
@@ -653,6 +679,13 @@ function MainApp() {
 
       console.log('[APP] handleLogin: Setting valid user:', user.id);
       setCurrentUser(user);
+
+      // Also set global for debugging
+      if (typeof window !== 'undefined') {
+        window.currentUser = user;
+        console.log('[APP] handleLogin: Set window.currentUser for debugging:', window.currentUser.username);
+      }
+
       setAuthLoading(false); // Ensure loading is cleared on manual login
       // Migration happens in useEffect after user is set
       loadFigures();

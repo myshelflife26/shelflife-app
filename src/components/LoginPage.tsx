@@ -48,6 +48,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     try {
+      // Clear any existing Firebase session before login to prevent user bleed
+      console.log('[LOGIN] Clearing existing Firebase session before login');
+      await FirebaseAuthService.logout();
+
+      // Small delay to ensure logout completes
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const user = await FirebaseAuthService.login(trimmedUsername, password);
 
       if (user) {
