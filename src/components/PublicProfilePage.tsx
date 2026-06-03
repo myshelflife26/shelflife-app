@@ -171,7 +171,11 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
   const totalValue = figures.reduce((sum, f) => sum + f.currentValue, 0);
   const avgValue = figures.length > 0 ? totalValue / figures.length : 0;
 
-  // Get reaction stats for public figures from preloaded data
+  // Calculate total jealousy score for all figures from preloaded data
+  const totalJealousyScore = Array.from(reactionData.values())
+    .reduce((sum, reactionInfo) => sum + (reactionInfo.score || 0), 0);
+
+  // Get detailed reaction stats for individual breakdown if needed
   const reactionStats = {
     appreciate: 0,
     love: 0,
@@ -241,10 +245,10 @@ function PublicProfilePage({ onNavigateBack }: PublicProfilePageProps) {
 
             <div className="bg-white/10 rounded-lg p-4 backdrop-blur">
               <div className="flex items-center gap-2 mb-1">
-                <Star className="h-5 w-5" />
-                <p className="text-sm text-white/80">Reactions</p>
+                <Flame className="h-5 w-5" />
+                <p className="text-sm text-white/80">Jealousy Score</p>
               </div>
-              <p className="text-2xl font-bold">{reactionStats.total}</p>
+              <p className="text-2xl font-bold">{totalJealousyScore}</p>
             </div>
           </div>
         </div>
