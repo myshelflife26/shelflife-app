@@ -88,12 +88,34 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [reactionStats, setReactionStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
   const [jealousyScore, setJealousyScore] = useState(0);
   const [jealousyStats, setJealousyStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
+  const [figureJealousyScores, setFigureJealousyScores] = useState<Map<string, number>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Debug: Monitor reactionStats changes
   useEffect(() => {
     console.log('[REACTION_STATS] State changed:', reactionStats);
   }, [reactionStats]);
+
+  // Precompute jealousy scores for all figures using hybrid data
+  const updateFigureJealousyScores = async (figures: any[]) => {
+    const scores = new Map<string, number>();
+
+    for (const figure of figures) {
+      if (figure.userId) {
+        try {
+          const score = await ReactionsService.getJealousyScoreHybrid(figure.id, figure.userId);
+          scores.set(figure.id, score);
+        } catch (error) {
+          // Fallback to localStorage
+          const fallbackScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
+          scores.set(figure.id, fallbackScore);
+        }
+      }
+    }
+
+    console.log('[JEALOUSY_SCORES] Updated scores for', scores.size, 'figures');
+    setFigureJealousyScores(scores);
+  };
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; username: string } | null>(null);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -195,6 +217,9 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
           .filter(Boolean) as Array<ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }>;
 
         setAllPublicFigures(figuresWithOwners);
+
+        // Precompute jealousy scores for all figures
+        await updateFigureJealousyScores(figuresWithOwners);
       } catch (error) {
         console.error('Failed to load public figures:', error);
       } finally {
@@ -697,6 +722,16 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       // Reload stats
       console.log('[BROWSE] About to reload reaction data after Firebase success');
       await loadReactionData(selectedFigure.id);
+
+      // Update jealousy score for this figure in the main list
+      try {
+        const updatedScore = await ReactionsService.getJealousyScoreHybrid(selectedFigure.id, selectedFigure.userId);
+        setFigureJealousyScores(prev => new Map(prev.set(selectedFigure.id, updatedScore)));
+        console.log('[BROWSE] Updated jealousy score for figure', selectedFigure.id, 'to', updatedScore);
+      } catch (error) {
+        console.error('Failed to update figure jealousy score:', error);
+      }
+
       console.log('[BROWSE] Finished reloading reaction data after Firebase success');
     } catch (error) {
       console.error('Failed to update reaction:', error);
@@ -705,6 +740,11 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       const fallbackReaction = ReactionsService.getUserReaction(selectedFigure.id, currentUser.id);
       setCurrentReaction(fallbackReaction?.reactionType || null);
       await loadReactionData(selectedFigure.id);
+
+      // Update jealousy score for this figure (fallback)
+      const fallbackScore = ReactionsService.getJealousyScore(selectedFigure.id, selectedFigure.userId);
+      setFigureJealousyScores(prev => new Map(prev.set(selectedFigure.id, fallbackScore)));
+      console.log('[BROWSE] Updated jealousy score (fallback) for figure', selectedFigure.id, 'to', fallbackScore);
     }
   };
 
@@ -1254,7 +1294,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
                       {/* Jealousy Meter */}
                       {figure.userId && (() => {
-                        const jealousyScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
+                        const jealousyScore = figureJealousyScores.get(figure.id) || 0;
                         const stats = ReactionsService.getJealousyStats(figure.id, figure.userId);
                         const userHasReacted = {
                           fire: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'fire'),
