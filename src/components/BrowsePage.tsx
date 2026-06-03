@@ -86,6 +86,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   });
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(null);
   const [reactionStats, setReactionStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
+  const [jealousyScore, setJealousyScore] = useState(0);
+  const [jealousyStats, setJealousyStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Debug: Monitor reactionStats changes
@@ -544,6 +546,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     console.log('[BROWSE] Opening figure:', figure.id);
     // Reset reaction stats when opening new figure
     setReactionStats({ appreciate: 0, love: 0, fire: 0, total: 0 });
+    setJealousyScore(0);
+    setJealousyStats({ appreciate: 0, love: 0, fire: 0, total: 0 });
     setCurrentReaction(null);
     setSelectedFigure(figure);
     setCurrentImageIndex(figure.mainImageIndex ?? 0);
@@ -623,6 +627,22 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       const userReaction = reactions.find(r => r.userId === currentUser.id);
       console.log(`[LOAD_REACTION] Current user reaction:`, userReaction);
       setCurrentReaction(userReaction?.reactionType || null);
+
+      // Calculate jealousy stats from hybrid data (exclude owner's own reactions)
+      if (selectedFigure?.userId) {
+        const othersReactions = reactions.filter(r => r.userId !== selectedFigure.userId);
+        const jealousyStatsData = {
+          appreciate: othersReactions.filter(r => r.reactionType === 'appreciate').length,
+          love: othersReactions.filter(r => r.reactionType === 'love').length,
+          fire: othersReactions.filter(r => r.reactionType === 'fire').length,
+          total: othersReactions.length
+        };
+        const jealousyScoreData = jealousyStatsData.appreciate * 1 + jealousyStatsData.love * 3 + jealousyStatsData.fire * 5;
+
+        console.log(`[LOAD_REACTION] Jealousy stats calculated:`, jealousyStatsData, 'score:', jealousyScoreData);
+        setJealousyStats(jealousyStatsData);
+        setJealousyScore(jealousyScoreData);
+      }
     } catch (error) {
       console.error('Failed to load hybrid reaction data:', error);
       // Fallback to localStorage only
@@ -632,6 +652,15 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
       const userReaction = ReactionsService.getUserReaction(figureId, currentUser.id);
       setCurrentReaction(userReaction?.reactionType || null);
+
+      // Fallback jealousy calculation from localStorage
+      if (selectedFigure?.userId) {
+        const fallbackJealousyScore = ReactionsService.getJealousyScore(figureId, selectedFigure.userId);
+        const fallbackJealousyStats = ReactionsService.getJealousyStats(figureId, selectedFigure.userId);
+        console.log(`[LOAD_REACTION] Fallback jealousy:`, fallbackJealousyStats, 'score:', fallbackJealousyScore);
+        setJealousyStats(fallbackJealousyStats);
+        setJealousyScore(fallbackJealousyScore);
+      }
     }
   };
 
@@ -1493,52 +1522,44 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                 )}
 
                 {/* Jealousy Meter */}
-                {selectedFigure.userId && (() => {
-                  const jealousyScore = ReactionsService.getJealousyScore(selectedFigure.id, selectedFigure.userId);
-                  const jealousyStats = ReactionsService.getJealousyStats(selectedFigure.id, selectedFigure.userId);
-
-                  if (jealousyScore > 0) {
-                    return (
-                      <div className="mt-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border-2 border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <Flame className="h-5 w-5 text-orange-500" />
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              Jealousy Meter
-                            </span>
-                          </div>
-                          <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                            {jealousyScore}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                          {jealousyStats.fire > 0 && (
-                            <span className="flex items-center gap-1 text-orange-700 dark:text-orange-300 font-medium">
-                              <Flame className="h-4 w-4" />
-                              {jealousyStats.fire} × 5 = {jealousyStats.fire * 5}
-                            </span>
-                          )}
-                          {jealousyStats.love > 0 && (
-                            <span className="flex items-center gap-1 text-pink-700 dark:text-pink-300 font-medium">
-                              <Heart className="h-4 w-4" />
-                              {jealousyStats.love} × 3 = {jealousyStats.love * 3}
-                            </span>
-                          )}
-                          {jealousyStats.appreciate > 0 && (
-                            <span className="flex items-center gap-1 text-blue-700 dark:text-blue-300 font-medium">
-                              <ThumbsUp className="h-4 w-4" />
-                              {jealousyStats.appreciate} × 1 = {jealousyStats.appreciate}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                          This figure makes others jealous! 🔥
-                        </p>
+                {selectedFigure.userId && jealousyScore > 0 && (
+                  <div className="mt-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border-2 border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Flame className="h-5 w-5 text-orange-500" />
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          Jealousy Meter
+                        </span>
                       </div>
-                    );
-                  }
-                  return null;
-                })()}
+                      <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                        {jealousyScore}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      {jealousyStats.fire > 0 && (
+                        <span className="flex items-center gap-1 text-orange-700 dark:text-orange-300 font-medium">
+                          <Flame className="h-4 w-4" />
+                          {jealousyStats.fire} × 5 = {jealousyStats.fire * 5}
+                        </span>
+                      )}
+                      {jealousyStats.love > 0 && (
+                        <span className="flex items-center gap-1 text-pink-700 dark:text-pink-300 font-medium">
+                          <Heart className="h-4 w-4" />
+                          {jealousyStats.love} × 3 = {jealousyStats.love * 3}
+                        </span>
+                      )}
+                      {jealousyStats.appreciate > 0 && (
+                        <span className="flex items-center gap-1 text-blue-700 dark:text-blue-300 font-medium">
+                          <ThumbsUp className="h-4 w-4" />
+                          {jealousyStats.appreciate} × 1 = {jealousyStats.appreciate * 1}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
+                      This figure makes others jealous! 🔥
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Trade/Sale Request Buttons */}
