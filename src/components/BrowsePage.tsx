@@ -541,6 +541,10 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
   // Handle figure click - open detail modal
   const handleFigureClick = async (figure: ActionFigure & { ownerName: string; ownerUsername: string; ownerDisplayName: string }) => {
+    console.log('[BROWSE] Opening figure:', figure.id);
+    // Reset reaction stats when opening new figure
+    setReactionStats({ appreciate: 0, love: 0, fire: 0, total: 0 });
+    setCurrentReaction(null);
     setSelectedFigure(figure);
     setCurrentImageIndex(figure.mainImageIndex ?? 0);
 
@@ -557,9 +561,10 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
   // Handle close detail modal
   const handleCloseDetail = () => {
+    console.log('[BROWSE] handleCloseDetail called - closing modal');
     setSelectedFigure(null);
     setCurrentReaction(null);
-    setReactionStats({ appreciate: 0, love: 0, fire: 0, total: 0 });
+    // Don't reset reactionStats here - it causes UI issues when reactions are updated
   };
 
   // Handle random figure discovery
