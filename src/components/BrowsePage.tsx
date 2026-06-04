@@ -89,6 +89,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [jealousyScore, setJealousyScore] = useState(0);
   const [jealousyStats, setJealousyStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
   const [figureJealousyScores, setFigureJealousyScores] = useState<Map<string, number>>(new Map());
+  const [figureJealousyStats, setFigureJealousyStats] = useState<Map<string, { appreciate: number; love: number; fire: number; total: number }>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Debug: Monitor reactionStats changes
@@ -96,25 +97,32 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     console.log('[REACTION_STATS] State changed:', reactionStats);
   }, [reactionStats]);
 
-  // Precompute jealousy scores for all figures using hybrid data
+  // Precompute jealousy scores and stats for all figures using hybrid data
   const updateFigureJealousyScores = async (figures: any[]) => {
     const scores = new Map<string, number>();
+    const stats = new Map<string, { appreciate: number; love: number; fire: number; total: number }>();
 
     for (const figure of figures) {
       if (figure.userId) {
         try {
           const score = await ReactionsService.getJealousyScoreHybrid(figure.id, figure.userId);
+          const figureStats = await ReactionsService.getJealousyStatsHybrid(figure.id, figure.userId);
           scores.set(figure.id, score);
+          stats.set(figure.id, figureStats);
         } catch (error) {
           // Fallback to localStorage
           const fallbackScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
+          const fallbackStats = ReactionsService.getJealousyStats(figure.id, figure.userId);
           scores.set(figure.id, fallbackScore);
+          stats.set(figure.id, fallbackStats);
         }
       }
     }
 
     console.log('[JEALOUSY_SCORES] Updated scores for', scores.size, 'figures');
+    console.log('[JEALOUSY_STATS] Updated stats for', stats.size, 'figures');
     setFigureJealousyScores(scores);
+    setFigureJealousyStats(stats);
   };
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; username: string } | null>(null);
@@ -723,13 +731,16 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       console.log('[BROWSE] About to reload reaction data after Firebase success');
       await loadReactionData(selectedFigure.id);
 
-      // Update jealousy score for this figure in the main list
+      // Update jealousy score and stats for this figure in the main list
       try {
         const updatedScore = await ReactionsService.getJealousyScoreHybrid(selectedFigure.id, selectedFigure.userId);
+        const updatedStats = await ReactionsService.getJealousyStatsHybrid(selectedFigure.id, selectedFigure.userId);
         setFigureJealousyScores(prev => new Map(prev.set(selectedFigure.id, updatedScore)));
+        setFigureJealousyStats(prev => new Map(prev.set(selectedFigure.id, updatedStats)));
         console.log('[BROWSE] Updated jealousy score for figure', selectedFigure.id, 'to', updatedScore);
+        console.log('[BROWSE] Updated jealousy stats for figure', selectedFigure.id, 'to', updatedStats);
       } catch (error) {
-        console.error('Failed to update figure jealousy score:', error);
+        console.error('Failed to update figure jealousy score/stats:', error);
       }
 
       console.log('[BROWSE] Finished reloading reaction data after Firebase success');
@@ -1295,7 +1306,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                       {/* Jealousy Meter */}
                       {figure.userId && (() => {
                         const jealousyScore = figureJealousyScores.get(figure.id) || 0;
-                        const stats = ReactionsService.getJealousyStats(figure.id, figure.userId);
+                        // Use hybrid stats from Firebase + localStorage
+                        const stats = figureJealousyStats.get(figure.id) || { appreciate: 0, love: 0, fire: 0, total: 0 };
                         const userHasReacted = {
                           fire: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'fire'),
                           love: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'love'),
@@ -1520,8 +1532,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                   >
                     <ThumbsUp className="h-4 w-4 mr-2" />
                     Appreciate
-                    {reactionStats.appreciate > 0 && (
-                      <span className="ml-2 font-bold">{reactionStats.appreciate}</span>
+                    {jealousyStats.appreciate > 0 && (
+                      <span className="ml-2 font-bold">{jealousyStats.appreciate}</span>
                     )}
                   </Button>
                   <Button
@@ -1535,8 +1547,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                   >
                     <Heart className="h-4 w-4 mr-2" />
                     Love
-                    {reactionStats.love > 0 && (
-                      <span className="ml-2 font-bold">{reactionStats.love}</span>
+                    {jealousyStats.love > 0 && (
+                      <span className="ml-2 font-bold">{jealousyStats.love}</span>
                     )}
                   </Button>
                   <Button
@@ -1550,14 +1562,14 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                   >
                     <Flame className="h-4 w-4 mr-2" />
                     Fire
-                    {reactionStats.fire > 0 && (
-                      <span className="ml-2 font-bold">{reactionStats.fire}</span>
+                    {jealousyStats.fire > 0 && (
+                      <span className="ml-2 font-bold">{jealousyStats.fire}</span>
                     )}
                   </Button>
                 </div>
-                {reactionStats.total > 0 && (
+                {jealousyStats.total > 0 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                    {reactionStats.total} {reactionStats.total === 1 ? 'reaction' : 'reactions'} total
+                    {jealousyStats.total} {jealousyStats.total === 1 ? 'reaction' : 'reactions'} from others
                   </p>
                 )}
 
