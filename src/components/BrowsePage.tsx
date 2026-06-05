@@ -17,7 +17,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign, Shuffle, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign, Shuffle, Bookmark, BookmarkCheck, Zap } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
@@ -90,6 +90,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [jealousyStats, setJealousyStats] = useState({ appreciate: 0, love: 0, fire: 0, total: 0 });
   const [figureJealousyScores, setFigureJealousyScores] = useState<Map<string, number>>(new Map());
   const [figureJealousyStats, setFigureJealousyStats] = useState<Map<string, { appreciate: number; love: number; fire: number; total: number }>>(new Map());
+  const [figureUserReactions, setFigureUserReactions] = useState<Map<string, ReactionType | null>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Debug: Monitor reactionStats changes
@@ -97,32 +98,41 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     console.log('[REACTION_STATS] State changed:', reactionStats);
   }, [reactionStats]);
 
-  // Precompute jealousy scores and stats for all figures using hybrid data
+  // Precompute jealousy scores, stats, and user reactions for all figures using hybrid data
   const updateFigureJealousyScores = async (figures: any[]) => {
     const scores = new Map<string, number>();
     const stats = new Map<string, { appreciate: number; love: number; fire: number; total: number }>();
+    const userReactions = new Map<string, ReactionType | null>();
 
     for (const figure of figures) {
       if (figure.userId) {
         try {
           const score = await ReactionsService.getJealousyScoreHybrid(figure.id, figure.userId);
           const figureStats = await ReactionsService.getJealousyStatsHybrid(figure.id, figure.userId);
+          const userReaction = await FirebaseReactionsService.getUserReaction(figure.id, currentUser.id);
+
           scores.set(figure.id, score);
           stats.set(figure.id, figureStats);
+          userReactions.set(figure.id, userReaction?.reactionType || null);
         } catch (error) {
           // Fallback to localStorage
           const fallbackScore = ReactionsService.getJealousyScore(figure.id, figure.userId);
           const fallbackStats = ReactionsService.getJealousyStats(figure.id, figure.userId);
+          const fallbackReaction = ReactionsService.getUserReaction(figure.id, currentUser.id);
+
           scores.set(figure.id, fallbackScore);
           stats.set(figure.id, fallbackStats);
+          userReactions.set(figure.id, fallbackReaction?.reactionType || null);
         }
       }
     }
 
     console.log('[JEALOUSY_SCORES] Updated scores for', scores.size, 'figures');
     console.log('[JEALOUSY_STATS] Updated stats for', stats.size, 'figures');
+    console.log('[USER_REACTIONS] Updated user reactions for', userReactions.size, 'figures');
     setFigureJealousyScores(scores);
     setFigureJealousyStats(stats);
+    setFigureUserReactions(userReactions);
   };
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; username: string } | null>(null);
@@ -731,16 +741,21 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       console.log('[BROWSE] About to reload reaction data after Firebase success');
       await loadReactionData(selectedFigure.id);
 
-      // Update jealousy score and stats for this figure in the main list
+      // Update jealousy score, stats, and user reaction for this figure in the main list
       try {
         const updatedScore = await ReactionsService.getJealousyScoreHybrid(selectedFigure.id, selectedFigure.userId);
         const updatedStats = await ReactionsService.getJealousyStatsHybrid(selectedFigure.id, selectedFigure.userId);
+        const updatedUserReaction = await FirebaseReactionsService.getUserReaction(selectedFigure.id, currentUser.id);
+
         setFigureJealousyScores(prev => new Map(prev.set(selectedFigure.id, updatedScore)));
         setFigureJealousyStats(prev => new Map(prev.set(selectedFigure.id, updatedStats)));
+        setFigureUserReactions(prev => new Map(prev.set(selectedFigure.id, updatedUserReaction?.reactionType || null)));
+
         console.log('[BROWSE] Updated jealousy score for figure', selectedFigure.id, 'to', updatedScore);
         console.log('[BROWSE] Updated jealousy stats for figure', selectedFigure.id, 'to', updatedStats);
+        console.log('[BROWSE] Updated user reaction for figure', selectedFigure.id, 'to', updatedUserReaction?.reactionType);
       } catch (error) {
-        console.error('Failed to update figure jealousy score/stats:', error);
+        console.error('Failed to update figure jealousy score/stats/reaction:', error);
       }
 
       console.log('[BROWSE] Finished reloading reaction data after Firebase success');
@@ -1306,48 +1321,65 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                       {/* Jealousy Meter */}
                       {figure.userId && (() => {
                         const jealousyScore = figureJealousyScores.get(figure.id) || 0;
-                        // Use hybrid stats from Firebase + localStorage
                         const stats = figureJealousyStats.get(figure.id) || { appreciate: 0, love: 0, fire: 0, total: 0 };
-                        const userHasReacted = {
-                          fire: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'fire'),
-                          love: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'love'),
-                          appreciate: ReactionsService.hasReacted(figure.id, figure.userId, currentUser.id, 'appreciate')
-                        };
-                        const showBox = jealousyScore > 0 || userHasReacted.fire || userHasReacted.love || userHasReacted.appreciate;
+                        const userReaction = figureUserReactions.get(figure.id);
+                        const showBox = jealousyScore > 0 || userReaction;
 
                         if (showBox) {
+                          // Determine background color based on user's reaction
+                          let bgClass = "bg-gray-50 dark:bg-gray-800/20 border-gray-200 dark:border-gray-700";
+                          if (userReaction === 'appreciate') {
+                            bgClass = "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-700/50";
+                          } else if (userReaction === 'love') {
+                            bgClass = "bg-pink-50 dark:bg-pink-900/10 border-pink-200 dark:border-pink-700/50";
+                          } else if (userReaction === 'fire') {
+                            bgClass = "bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-700/50";
+                          }
+
                           return (
-                            <div className="mt-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded p-1.5 border border-purple-200 dark:border-purple-800">
+                            <div className={`mt-1 rounded p-1.5 border ${bgClass}`}>
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                  <Flame className="h-2.5 w-2.5 text-orange-500" />
-                                  <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                                    {jealousyScore}
-                                  </span>
+                                {/* Left side: Envious icon + total score + individual counts */}
+                                <div className="flex items-center gap-1 text-[10px]">
+                                  {jealousyScore > 0 && (
+                                    <>
+                                      <Eye className="h-2.5 w-2.5 text-purple-500" />
+                                      <span className="font-semibold text-purple-700 dark:text-purple-400">
+                                        {jealousyScore}
+                                      </span>
+                                    </>
+                                  )}
                                   {stats.fire > 0 && (
-                                    <span className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400">
-                                      <Flame className="h-2.5 w-2.5" />
-                                      {stats.fire}
-                                    </span>
+                                    <>
+                                      <Flame className="h-2.5 w-2.5 text-orange-500 ml-1" />
+                                      <span className="text-orange-600 dark:text-orange-400 font-medium">
+                                        {stats.fire}
+                                      </span>
+                                    </>
                                   )}
                                   {stats.love > 0 && (
-                                    <span className="flex items-center gap-0.5 text-pink-600 dark:text-pink-400">
-                                      <Heart className="h-2.5 w-2.5" />
-                                      {stats.love}
-                                    </span>
+                                    <>
+                                      <Heart className="h-2.5 w-2.5 text-pink-500 ml-1" />
+                                      <span className="text-pink-600 dark:text-pink-400 font-medium">
+                                        {stats.love}
+                                      </span>
+                                    </>
                                   )}
                                   {stats.appreciate > 0 && (
-                                    <span className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400">
-                                      <ThumbsUp className="h-2.5 w-2.5" />
-                                      {stats.appreciate}
-                                    </span>
+                                    <>
+                                      <ThumbsUp className="h-2.5 w-2.5 text-blue-500 ml-1" />
+                                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                        {stats.appreciate}
+                                      </span>
+                                    </>
                                   )}
                                 </div>
-                                {(userHasReacted.fire || userHasReacted.love || userHasReacted.appreciate) && (
-                                  <div className="flex items-center gap-0.5">
-                                    {userHasReacted.fire && <Flame className="h-2.5 w-2.5 text-orange-600 dark:text-orange-400 fill-current" />}
-                                    {userHasReacted.love && <Heart className="h-2.5 w-2.5 text-pink-600 dark:text-pink-400 fill-current" />}
-                                    {userHasReacted.appreciate && <ThumbsUp className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400 fill-current" />}
+                                {/* Right side: My reaction */}
+                                {userReaction && (
+                                  <div className="flex items-center">
+                                    {userReaction === 'fire' && <Flame className="h-2.5 w-2.5 text-orange-600 dark:text-orange-400" />}
+                                    {userReaction === 'love' && <Heart className="h-2.5 w-2.5 text-pink-600 dark:text-pink-400" />}
+                                    {userReaction === 'appreciate' && <ThumbsUp className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />}
                                   </div>
                                 )}
                               </div>
