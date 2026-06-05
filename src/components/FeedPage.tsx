@@ -900,8 +900,8 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
               : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
           }`}
         >
-          <Flame className="h-4 w-4 inline mr-2" />
-          Most Jealous
+          <Eye className="h-4 w-4 inline mr-2" />
+          Most Envied
         </button>
         <button
           onClick={() => setFeedTab('collectors')}
@@ -953,20 +953,20 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       {feedTab === 'jealous' && (
         <div className="mb-8 bg-orange-100/70 dark:bg-orange-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Flame className="h-6 w-6 text-orange-500" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Most Jealous</h2>
+            <Eye className="h-6 w-6 text-green-500" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Most Envied</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400">({topJealousyFigures.length})</span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Figures with the highest current jealousy scores
+            Figures with the highest current envious scores
           </p>
 
           {topJealousyFigures.length === 0 ? (
             <div className="text-center py-12">
-              <Flame className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No jealous figures yet</p>
+              <Eye className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No envied figures yet</p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                Start reacting to figures to see what makes collectors jealous!
+                Start reacting to figures to see what makes collectors envious!
               </p>
             </div>
           ) : (
@@ -1081,10 +1081,10 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                          <Flame className="h-3 w-3 text-orange-500" />
-                          Jealousy
+                          <Eye className="h-3 w-3 text-green-500" />
+                          Envious
                         </span>
-                        <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                        <span className="text-sm font-bold text-green-700 dark:text-green-400">
                           {figure.jealousyScore}
                         </span>
                       </div>
@@ -1141,7 +1141,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             <span className="text-sm text-gray-500 dark:text-gray-400">({risingStars7Days.length})</span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Figures with the biggest jealousy score increases over the past week
+            Figures with the biggest envious score increases over the past week
           </p>
 
           {risingStars7Days.length === 0 ? (
@@ -1218,8 +1218,8 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                          <Flame className="h-3 w-3 text-orange-500" />
-                          Jealousy
+                          <Eye className="h-3 w-3 text-green-500" />
+                          Envious
                         </span>
                         <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                           {currentScore}
@@ -1286,7 +1286,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             <span className="text-sm text-gray-500 dark:text-gray-400">({risingStars30Days.length})</span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Figures with the biggest jealousy score increases over the past 30 days
+            Figures with the biggest envious score increases over the past 30 days
           </p>
 
           {risingStars30Days.length === 0 ? (
@@ -1357,8 +1357,8 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                          <Flame className="h-3 w-3 text-orange-500" />
-                          Jealousy
+                          <Eye className="h-3 w-3 text-green-500" />
+                          Envious
                         </span>
                         <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                           {currentScore}
@@ -1444,7 +1444,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
             </div>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Figures with the biggest jealousy score increases over the past {customDaysBack} days
+            Figures with the biggest envious score increases over the past {customDaysBack} days
           </p>
 
           {risingStarsCustom.length === 0 ? (
@@ -1515,8 +1515,8 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                     <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                          <Flame className="h-3 w-3 text-orange-500" />
-                          Jealousy
+                          <Eye className="h-3 w-3 text-green-500" />
+                          Envious
                         </span>
                         <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                           {currentScore}
@@ -1769,10 +1769,10 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         <div className="mb-8 bg-red-100/70 dark:bg-red-900/20 rounded-lg p-3 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="h-6 w-6 text-red-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Most Jealous Suggested Collectors</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Most Envied Suggested Collectors</h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Collectors with figures generating the most jealousy from the community
+            Collectors with figures generating the most envy from the community
           </p>
 
           {jealousSuggestedUsers.length === 0 ? (

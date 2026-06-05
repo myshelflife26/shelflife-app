@@ -207,8 +207,8 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
             {visibleColumns.jealousyMeter !== false && (
               <th className="px-0.5 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                 <span className="flex items-center gap-1">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  Jealousy
+                  <Eye className="h-4 w-4 text-green-500" />
+                  Envious
                 </span>
               </th>
             )}
@@ -418,35 +418,68 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
                 }
                 const jealousyScore = ReactionsService.getJealousyScore(figure.id, currentUser.id);
                 const stats = ReactionsService.getJealousyStats(figure.id, currentUser.id);
+                const userReaction = ReactionsService.getUserReaction(figure.id, currentUser.id);
 
-                if (jealousyScore === 0) {
+                if (jealousyScore === 0 && !userReaction) {
                   return <td className="px-0.5 py-2 text-xs sm:text-sm text-gray-400">-</td>;
+                }
+
+                // Determine background color based on user's reaction
+                let bgClass = "bg-gray-50 dark:bg-gray-800/20 border-gray-200 dark:border-gray-700";
+                if (userReaction?.reactionType === 'appreciate') {
+                  bgClass = "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-700/50";
+                } else if (userReaction?.reactionType === 'love') {
+                  bgClass = "bg-pink-50 dark:bg-pink-900/10 border-pink-200 dark:border-pink-700/50";
+                } else if (userReaction?.reactionType === 'fire') {
+                  bgClass = "bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-700/50";
                 }
 
                 return (
                   <td className="px-0.5 py-2 text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                        {jealousyScore}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {stats.fire > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs text-orange-600 dark:text-orange-400" title={`${stats.fire} Fire reactions`}>
-                            <Flame className="h-3 w-3" />
-                            {stats.fire}
-                          </span>
-                        )}
-                        {stats.love > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs text-pink-600 dark:text-pink-400" title={`${stats.love} Love reactions`}>
-                            <Heart className="h-3 w-3" />
-                            {stats.love}
-                          </span>
-                        )}
-                        {stats.appreciate > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs text-blue-600 dark:text-blue-400" title={`${stats.appreciate} Appreciate reactions`}>
-                            <ThumbsUp className="h-3 w-3" />
-                            {stats.appreciate}
-                          </span>
+                    <div className={`rounded p-1.5 border ${bgClass}`}>
+                      <div className="flex items-center justify-between">
+                        {/* Left side: Green eye + score + individual counts */}
+                        <div className="flex items-center gap-1">
+                          {jealousyScore > 0 && (
+                            <>
+                              <Eye className="h-3 w-3 text-green-500" />
+                              <span className="font-semibold text-green-700 dark:text-green-400">
+                                {jealousyScore}
+                              </span>
+                            </>
+                          )}
+                          {stats.fire > 0 && (
+                            <>
+                              <Flame className="h-3 w-3 text-orange-500 ml-0.5" />
+                              <span className="text-orange-600 dark:text-orange-400 font-medium">
+                                {stats.fire}
+                              </span>
+                            </>
+                          )}
+                          {stats.love > 0 && (
+                            <>
+                              <Heart className="h-3 w-3 text-pink-500 ml-0.5" />
+                              <span className="text-pink-600 dark:text-pink-400 font-medium">
+                                {stats.love}
+                              </span>
+                            </>
+                          )}
+                          {stats.appreciate > 0 && (
+                            <>
+                              <ThumbsUp className="h-3 w-3 text-blue-500 ml-0.5" />
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                {stats.appreciate}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {/* Right side: My reaction */}
+                        {userReaction && (
+                          <div className="flex items-center">
+                            {userReaction.reactionType === 'fire' && <Flame className="h-3 w-3 text-orange-600 dark:text-orange-400" />}
+                            {userReaction.reactionType === 'love' && <Heart className="h-3 w-3 text-pink-600 dark:text-pink-400" />}
+                            {userReaction.reactionType === 'appreciate' && <ThumbsUp className="h-3 w-3 text-blue-600 dark:text-blue-400" />}
+                          </div>
                         )}
                       </div>
                     </div>

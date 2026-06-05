@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ActionFigure } from '../types/index';
 import { ReactionsService } from '../utils/reactions';
-import { Flame, Heart, ThumbsUp } from 'lucide-react';
+import { Flame, Heart, ThumbsUp, Eye } from 'lucide-react';
 
 interface TopJealousFiguresProps {
   figures: ActionFigure[];
@@ -61,8 +61,9 @@ function TopJealousFigures({ figures, userId, onFigureClick }: TopJealousFigures
                       <span className="text-xs">No Image</span>
                     </div>
                   )}
-                  {/* Jealousy Score Badge */}
-                  <div className="absolute top-1 right-1 bg-purple-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold shadow">
+                  {/* Envious Score Badge */}
+                  <div className="absolute top-1 right-1 bg-green-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold shadow flex items-center gap-0.5">
+                    <Eye className="h-2.5 w-2.5" />
                     {item.jealousyScore}
                   </div>
                 </div>
