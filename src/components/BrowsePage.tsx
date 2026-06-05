@@ -1343,8 +1343,8 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                                 <div className="flex items-center gap-1 text-[10px]">
                                   {jealousyScore > 0 && (
                                     <>
-                                      <Eye className="h-2.5 w-2.5 text-purple-500" />
-                                      <span className="font-semibold text-purple-700 dark:text-purple-400">
+                                      <Eye className="h-2.5 w-2.5 text-green-500" />
+                                      <span className="font-semibold text-green-700 dark:text-green-400">
                                         {jealousyScore}
                                       </span>
                                     </>
