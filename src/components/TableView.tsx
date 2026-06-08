@@ -6,7 +6,7 @@ import { AuthService } from '../utils/auth';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
-import { Pencil, Trash2, ChevronUp, ChevronDown, Package, Clock, Eye, Flame, Heart, ThumbsUp, Check, X as XIcon, AlertCircle, Star } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, ChevronDown, Package, Clock, Eye, Flame, Heart, ThumbsUp, Check, X as XIcon, AlertCircle, Star, Share2 } from 'lucide-react';
 
 interface TableViewProps {
   figures: ActionFigure[];
@@ -281,8 +281,8 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
                         )}
                       </span>
                       {figure.isPublic && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          <Eye className="h-3 w-3 mr-1" />
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          <Share2 className="h-3 w-3 mr-1" />
                           Public
                         </span>
                       )}
