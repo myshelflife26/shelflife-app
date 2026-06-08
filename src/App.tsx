@@ -2057,8 +2057,8 @@ function MainApp() {
                       </div>
                       {/* Privacy badge */}
                       {figure.isPublic && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1 shadow">
-                          <Eye className="h-3 w-3" />
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1 shadow">
+                          <Share2 className="h-3 w-3" />
                           Public
                         </div>
                       )}
@@ -2096,8 +2096,8 @@ function MainApp() {
                       </div>
                       {/* Privacy badge */}
                       {figure.isPublic && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1 shadow">
-                          <Eye className="h-3 w-3" />
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1 shadow">
+                          <Share2 className="h-3 w-3" />
                           Public
                         </div>
                       )}
