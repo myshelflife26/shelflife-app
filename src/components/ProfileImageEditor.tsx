@@ -125,7 +125,7 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
 
   return (
     <Dialog open={open} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile Image</DialogTitle>
           <DialogDescription>
@@ -137,15 +137,15 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
           {!selectedImage ? (
             <div className="space-y-4">
               {/* Current Image Preview */}
-              <div className="flex items-center gap-4">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                   {user.profileImage ? (
                     <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <UserIcon className="w-16 h-16 text-gray-400" />
+                    <UserIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
                   )}
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     {user.profileImage ? 'Current profile image' : 'No profile image set'}
                   </p>
@@ -156,13 +156,13 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
                     onChange={handleFileSelect}
                     className="hidden"
                   />
-                  <div className="flex gap-2">
-                    <Button onClick={() => fileInputRef.current?.click()} size="sm">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button onClick={() => fileInputRef.current?.click()} size="sm" className="w-full sm:w-auto">
                       <Upload className="h-4 w-4 mr-2" />
                       {user.profileImage ? 'Change Image' : 'Upload Image'}
                     </Button>
                     {user.profileImage && (
-                      <Button onClick={handleRemove} variant="outline" size="sm">
+                      <Button onClick={handleRemove} variant="outline" size="sm" className="w-full sm:w-auto">
                         <X className="h-4 w-4 mr-2" />
                         Remove Image
                       </Button>
@@ -185,7 +185,7 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
                   ref={imageRef}
                   src={selectedImage}
                   alt="Preview"
-                  className="max-w-full max-h-96 mx-auto block"
+                  className="max-w-full max-h-64 sm:max-h-80 md:max-h-96 mx-auto block"
                 />
                 <div
                   className="absolute border-4 border-blue-500 cursor-move"
@@ -205,10 +205,10 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
               </p>
 
               {/* Preview */}
-              <div className="flex items-center gap-4">
-                <div>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="text-center sm:text-left">
                   <p className="text-sm font-medium mb-2">Preview:</p>
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 mx-auto sm:mx-0">
                     {selectedImage && (
                       <img
                         src={getCroppedImage()}
@@ -224,11 +224,11 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
               <canvas ref={canvasRef} className="hidden" />
 
               {/* Action Buttons */}
-              <div className="flex gap-2 justify-end">
-                <Button onClick={handleCancel} variant="outline">
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                <Button onClick={handleCancel} variant="outline" className="w-full sm:w-auto">
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>
+                <Button onClick={handleSave} className="w-full sm:w-auto">
                   Save Profile Image
                 </Button>
               </div>
@@ -238,7 +238,7 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
           {/* Close button if no image selected */}
           {!selectedImage && (
             <div className="flex justify-end">
-              <Button onClick={handleCancel} variant="outline">
+              <Button onClick={handleCancel} variant="outline" className="w-full sm:w-auto">
                 Close
               </Button>
             </div>
