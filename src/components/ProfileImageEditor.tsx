@@ -125,7 +125,7 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
 
   return (
     <Dialog open={open} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-2xl sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle>Edit Profile Image</DialogTitle>
           <DialogDescription>
@@ -137,37 +137,48 @@ export function ProfileImageEditor({ user, open, onClose, onSave }: ProfileImage
           {!selectedImage ? (
             <div className="space-y-4">
               {/* Current Image Preview */}
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                  {user.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
-                  )}
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    {user.profileImage ? 'Current profile image' : 'No profile image set'}
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button onClick={() => fileInputRef.current?.click()} size="sm" className="w-full sm:w-auto">
-                      <Upload className="h-4 w-4 mr-2" />
-                      {user.profileImage ? 'Change Image' : 'Upload Image'}
-                    </Button>
-                    {user.profileImage && (
-                      <Button onClick={handleRemove} variant="outline" size="sm" className="w-full sm:w-auto">
-                        <X className="h-4 w-4 mr-2" />
-                        Remove Image
-                      </Button>
+              <div className="space-y-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    {user.profileImage ? (
+                      <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <UserIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
                     )}
                   </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">
+                    {user.profileImage ? 'Current profile image' : 'No profile image set'}
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {user.profileImage ? 'Change Image' : 'Upload Image'}
+                  </Button>
+                  {user.profileImage && (
+                    <Button
+                      onClick={handleRemove}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Remove Image
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
