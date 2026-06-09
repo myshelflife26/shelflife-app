@@ -78,17 +78,17 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
       </div>
 
       {/* Image Storage Migration */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-start gap-3 mb-4">
           <Database className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 break-words">
               Image Storage Migration
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 break-words">
               Migrate your figure images from base64 storage to Firebase Storage. This will:
             </p>
-            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4">
+            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4 break-words">
               <li>Fix "Request payload size exceeds limit" errors</li>
               <li>Improve page load performance</li>
               <li>Allow you to upload more images per figure</li>
@@ -155,11 +155,12 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={handleCheckStatus}
                 disabled={isChecking || isMigrating}
                 variant="outline"
+                className="w-full sm:w-auto"
               >
                 {isChecking ? (
                   <>
@@ -177,6 +178,7 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
               <Button
                 onClick={handleMigrate}
                 disabled={isChecking || isMigrating || (migrationStatus && migrationStatus.needsMigration === 0)}
+                className="w-full sm:w-auto"
               >
                 {isMigrating ? (
                   <>
@@ -203,17 +205,17 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
       </div>
 
       {/* Reactions Migration */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-start gap-3">
           <Database className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 break-words">
               Reactions Database Migration
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 break-words">
               Migrate reactions from browser localStorage to Firestore. This will:
             </p>
-            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4">
+            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4 break-words">
               <li>Enable cross-device reaction syncing</li>
               <li>Enable accurate rising stars tracking with historical data</li>
               <li>Persist reactions across browsers and devices</li>
