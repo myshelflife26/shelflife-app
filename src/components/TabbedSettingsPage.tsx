@@ -21,6 +21,14 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const isAdmin = currentUser.role === 'management';
 
+  // Debug logging for user role issues
+  console.log('[TabbedSettingsPage] Current user:', {
+    id: currentUser.id,
+    username: currentUser.username,
+    role: currentUser.role,
+    isAdmin: isAdmin
+  });
+
   const tabs = [
     { id: 'general' as TabType, label: 'General', icon: Settings, adminOnly: false },
     { id: 'privacy' as TabType, label: 'Privacy', icon: Eye, adminOnly: false },
@@ -41,6 +49,16 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           Manage your account, privacy, and application settings
         </p>
+
+        {/* Debug info for admin access issues */}
+        <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
+          <div><strong>Debug Info:</strong></div>
+          <div>User: {currentUser.username} (ID: {currentUser.id})</div>
+          <div>Role: {currentUser.role}</div>
+          <div>Is Admin: {isAdmin ? 'YES' : 'NO'}</div>
+          <div>Visible Tabs: {visibleTabs.length} of {tabs.length}</div>
+          <div>Admin Tabs: {visibleTabs.filter(tab => tab.adminOnly).map(tab => tab.label).join(', ') || 'None'}</div>
+        </div>
       </div>
 
       {/* Tabs */}
