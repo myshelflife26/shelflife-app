@@ -46,12 +46,12 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
         // Force logout and login to completely refresh user data
         await FirebaseAuthService.logout();
 
-        // Wait a moment then redirect to login
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        alert('✅ Role updated! Logging out - please log back in to see admin features.');
 
-        alert('✅ Role updated! Logging out and redirecting to refresh your session...');
+        // Reload the current page to trigger login
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         console.error('Role update failed:', result.error);
         alert('❌ Failed to update role: ' + result.error);
