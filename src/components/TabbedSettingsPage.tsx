@@ -7,6 +7,7 @@ import { MasterFiguresDatabasePage } from './MasterFiguresDatabasePage';
 import { SystemMaintenance } from './SystemMaintenance';
 import { FirebaseAuthService } from '../utils/firebaseAuth';
 import { Settings, User as UserIcon, Shield, Wrench, Lock, Eye, Database } from 'lucide-react';
+import { Button } from './ui/button';
 
 interface TabbedSettingsPageProps {
   currentUser: User;
@@ -28,6 +29,25 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     role: currentUser.role,
     isAdmin: isAdmin
   });
+
+  const handleFixAdminRole = async () => {
+    if (!confirm('Fix ackpack34 role to management? This will update the database and require a page refresh.')) {
+      return;
+    }
+
+    try {
+      // Update user role directly in Firestore
+      const result = await FirebaseAuthService.updateUser(currentUser.id, { role: 'management' });
+      if (result.success) {
+        alert('✅ Role updated to management! Please refresh the page.');
+      } else {
+        alert('❌ Failed to update role: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      alert('❌ Failed to update role. Check console for details.');
+    }
+  };
 
   const tabs = [
     { id: 'general' as TabType, label: 'General', icon: Settings, adminOnly: false },
@@ -58,6 +78,21 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
           <div>Is Admin: {isAdmin ? 'YES' : 'NO'}</div>
           <div>Visible Tabs: {visibleTabs.length} of {tabs.length}</div>
           <div>Admin Tabs: {visibleTabs.filter(tab => tab.adminOnly).map(tab => tab.label).join(', ') || 'None'}</div>
+
+          {currentUser.username === 'ackpack34' && currentUser.role !== 'management' && (
+            <div className="mt-3">
+              <div className="text-red-600 dark:text-red-400 font-semibold mb-2">
+                ⚠️ Issue: ackpack34 should have 'management' role but has '{currentUser.role}'
+              </div>
+              <Button
+                onClick={handleFixAdminRole}
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                🔧 Fix Admin Role
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
