@@ -38,19 +38,28 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     try {
       // Update user role directly in Firestore
       console.log('Updating user role for:', currentUser.id);
+      console.log('Current user object:', currentUser);
+      console.log('About to call updateUser with role: management');
+
       const result = await FirebaseAuthService.updateUser(currentUser.id, { role: 'management' });
+      console.log('UpdateUser result:', result);
 
       if (result.success) {
         console.log('Role update successful!');
 
+        // Wait a moment for Firestore to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         // Verify the update by fetching fresh user data
+        console.log('Fetching fresh user data to verify update...');
         const updatedUser = await FirebaseAuthService.getUserById(currentUser.id);
         console.log('Fresh user data from database:', updatedUser);
 
         if (updatedUser?.role === 'management') {
           alert('✅ Role successfully updated in database! \n\nThe role is now "management" in Firestore. \n\nTry these steps:\n1. Open a new incognito/private browser window\n2. Go to your app URL\n3. Login as ackpack34\n4. Check Settings - you should see admin tabs');
         } else {
-          alert('⚠️ Database says it updated but role is still: ' + (updatedUser?.role || 'unknown'));
+          console.error('Role mismatch - expected management, got:', updatedUser?.role);
+          alert(`⚠️ Update seemed successful but verification failed!\n\nExpected: management\nActual: ${updatedUser?.role || 'unknown'}\n\nThere may be a Firestore permissions issue. Check console for details.`);
         }
       } else {
         console.error('Role update failed:', result.error);
