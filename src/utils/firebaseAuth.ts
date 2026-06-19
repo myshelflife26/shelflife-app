@@ -202,23 +202,17 @@ export class FirebaseAuthService {
     }
 
     try {
-      console.log('[AUTH] getUserById: Fetching user from Firestore:', userId);
-      const docRef = doc(db, USERS_COLLECTION, userId);
-      console.log('[AUTH] getUserById: Document reference path:', docRef.path);
-
-      const userDoc = await getDoc(docRef);
-      console.log('[AUTH] getUserById: Document exists:', userDoc.exists());
+      console.log('[AUTH] Fetching user from Firestore:', userId);
+      const userDoc = await getDoc(doc(db, USERS_COLLECTION, userId));
 
       if (!userDoc.exists()) {
-        console.warn(`[AUTH] getUserById: User not found in Firestore: ${userId}`);
+        console.warn(`[AUTH] User not found in Firestore: ${userId}`);
         return null;
       }
 
       const data = userDoc.data();
-      console.log('[AUTH] getUserById: Raw document data:', data);
-
       if (!data || typeof data !== 'object') {
-        console.warn(`[AUTH] getUserById: User document has no data: ${userId}`);
+        console.warn(`[AUTH] User document has no data: ${userId}`);
         return null;
       }
 
@@ -474,31 +468,23 @@ export class FirebaseAuthService {
     updates: Partial<Omit<User, 'id' | 'password'>>
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('[FirebaseAuth] updateUser called with:', { userId, updates });
       const userRef = doc(db, USERS_COLLECTION, userId);
-      console.log('[FirebaseAuth] Document reference:', userRef.path);
 
       // Remove undefined values
       const cleanUpdates = Object.fromEntries(
         Object.entries(updates).filter(([_, v]) => v !== undefined)
       );
-      console.log('[FirebaseAuth] Clean updates to send:', cleanUpdates);
 
-      console.log('[FirebaseAuth] Calling updateDoc...');
       await updateDoc(userRef, cleanUpdates);
-      console.log('[FirebaseAuth] updateDoc completed successfully');
 
       // Update cache if it's the current user
       if (this.currentUserCache?.id === userId) {
-        console.log('[FirebaseAuth] Updating cache for current user');
         this.currentUserCache = { ...this.currentUserCache, ...updates };
       }
 
       return { success: true };
     } catch (error: any) {
-      console.error('[FirebaseAuth] Failed to update user:', error);
-      console.error('[FirebaseAuth] Error code:', error.code);
-      console.error('[FirebaseAuth] Error message:', error.message);
+      console.error('Failed to update user:', error);
       return { success: false, error: error.message };
     }
   }
