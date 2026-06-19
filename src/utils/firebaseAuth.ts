@@ -202,17 +202,23 @@ export class FirebaseAuthService {
     }
 
     try {
-      console.log('[AUTH] Fetching user from Firestore:', userId);
-      const userDoc = await getDoc(doc(db, USERS_COLLECTION, userId));
+      console.log('[AUTH] getUserById: Fetching user from Firestore:', userId);
+      const docRef = doc(db, USERS_COLLECTION, userId);
+      console.log('[AUTH] getUserById: Document reference path:', docRef.path);
+
+      const userDoc = await getDoc(docRef);
+      console.log('[AUTH] getUserById: Document exists:', userDoc.exists());
 
       if (!userDoc.exists()) {
-        console.warn(`[AUTH] User not found in Firestore: ${userId}`);
+        console.warn(`[AUTH] getUserById: User not found in Firestore: ${userId}`);
         return null;
       }
 
       const data = userDoc.data();
+      console.log('[AUTH] getUserById: Raw document data:', data);
+
       if (!data || typeof data !== 'object') {
-        console.warn(`[AUTH] User document has no data: ${userId}`);
+        console.warn(`[AUTH] getUserById: User document has no data: ${userId}`);
         return null;
       }
 
@@ -228,7 +234,7 @@ export class FirebaseAuthService {
         id: docId,
         username: (typeof data.username === 'string' ? data.username : '') || '',
         password: '', // Don't expose password
-        role: (data.role === 'admin' ? 'admin' : 'user'),
+        role: (data.role === 'admin' || data.role === 'management') ? (data.role as 'admin' | 'management') : 'user',
         displayName: (typeof data.displayName === 'string' ? data.displayName : '') || '',
         email: (typeof data.email === 'string' ? data.email : '') || '',
         profileImage: (typeof data.profileImage === 'string' ? data.profileImage : '') || '',
