@@ -31,16 +31,29 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
   });
 
   const handleFixAdminRole = async () => {
-    if (!confirm('Fix ackpack34 role to management? This will update the database and require a page refresh.')) {
+    if (!confirm('Fix ackpack34 role to management? This will update the database and force a logout/login to refresh the cache.')) {
       return;
     }
 
     try {
       // Update user role directly in Firestore
+      console.log('Updating user role for:', currentUser.id);
       const result = await FirebaseAuthService.updateUser(currentUser.id, { role: 'management' });
+
       if (result.success) {
-        alert('✅ Role updated to management! Please refresh the page.');
+        console.log('Role update successful, forcing logout/login...');
+
+        // Force logout and login to completely refresh user data
+        await FirebaseAuthService.logout();
+
+        // Wait a moment then redirect to login
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+
+        alert('✅ Role updated! Logging out and redirecting to refresh your session...');
       } else {
+        console.error('Role update failed:', result.error);
         alert('❌ Failed to update role: ' + result.error);
       }
     } catch (error) {
@@ -84,12 +97,15 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
               <div className="text-red-600 dark:text-red-400 font-semibold mb-2">
                 ⚠️ Issue: ackpack34 should have 'management' role but has '{currentUser.role}'
               </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                This will update Firestore and force a logout/login to clear all caches.
+              </div>
               <Button
                 onClick={handleFixAdminRole}
                 size="sm"
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
-                🔧 Fix Admin Role
+                🔧 Fix Admin Role (Logout Required)
               </Button>
             </div>
           )}
