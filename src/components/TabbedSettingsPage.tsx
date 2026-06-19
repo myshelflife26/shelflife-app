@@ -31,7 +31,7 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
   });
 
   const handleFixAdminRole = async () => {
-    if (!confirm('Fix ackpack34 role to management? This will update the database and force a logout/login to refresh the cache.')) {
+    if (!confirm('Fix ackpack34 role to management? This will update the database.')) {
       return;
     }
 
@@ -41,17 +41,17 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
       const result = await FirebaseAuthService.updateUser(currentUser.id, { role: 'management' });
 
       if (result.success) {
-        console.log('Role update successful, forcing logout/login...');
+        console.log('Role update successful!');
 
-        // Force logout and login to completely refresh user data
-        await FirebaseAuthService.logout();
+        // Verify the update by fetching fresh user data
+        const updatedUser = await FirebaseAuthService.getUserById(currentUser.id);
+        console.log('Fresh user data from database:', updatedUser);
 
-        alert('✅ Role updated! Logging out - please log back in to see admin features.');
-
-        // Reload the current page to trigger login
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        if (updatedUser?.role === 'management') {
+          alert('✅ Role successfully updated in database! \n\nThe role is now "management" in Firestore. \n\nTry these steps:\n1. Open a new incognito/private browser window\n2. Go to your app URL\n3. Login as ackpack34\n4. Check Settings - you should see admin tabs');
+        } else {
+          alert('⚠️ Database says it updated but role is still: ' + (updatedUser?.role || 'unknown'));
+        }
       } else {
         console.error('Role update failed:', result.error);
         alert('❌ Failed to update role: ' + result.error);
@@ -59,6 +59,15 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
     } catch (error) {
       console.error('Failed to update role:', error);
       alert('❌ Failed to update role. Check console for details.');
+    }
+  };
+
+  const handleManualVerify = async () => {
+    try {
+      const freshUser = await FirebaseAuthService.getUserById(currentUser.id);
+      alert(`Current role in database: ${freshUser?.role || 'unknown'}\n\nIf this shows 'management', try opening an incognito window and logging in fresh.`);
+    } catch (error) {
+      alert('Error checking database: ' + error);
     }
   };
 
@@ -98,15 +107,25 @@ export function TabbedSettingsPage({ currentUser, setCurrentPage, darkMode, setD
                 ⚠️ Issue: ackpack34 should have 'management' role but has '{currentUser.role}'
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                This will update Firestore and force a logout/login to clear all caches.
+                This will update Firestore. If successful, use incognito mode to test with fresh login.
               </div>
-              <Button
-                onClick={handleFixAdminRole}
-                size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                🔧 Fix Admin Role (Logout Required)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleFixAdminRole}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  🔧 Fix Admin Role
+                </Button>
+                <Button
+                  onClick={handleManualVerify}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                >
+                  🔍 Check Database
+                </Button>
+              </div>
             </div>
           )}
         </div>
