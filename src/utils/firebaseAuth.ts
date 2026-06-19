@@ -468,23 +468,31 @@ export class FirebaseAuthService {
     updates: Partial<Omit<User, 'id' | 'password'>>
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log('[FirebaseAuth] updateUser called with:', { userId, updates });
       const userRef = doc(db, USERS_COLLECTION, userId);
+      console.log('[FirebaseAuth] Document reference:', userRef.path);
 
       // Remove undefined values
       const cleanUpdates = Object.fromEntries(
         Object.entries(updates).filter(([_, v]) => v !== undefined)
       );
+      console.log('[FirebaseAuth] Clean updates to send:', cleanUpdates);
 
+      console.log('[FirebaseAuth] Calling updateDoc...');
       await updateDoc(userRef, cleanUpdates);
+      console.log('[FirebaseAuth] updateDoc completed successfully');
 
       // Update cache if it's the current user
       if (this.currentUserCache?.id === userId) {
+        console.log('[FirebaseAuth] Updating cache for current user');
         this.currentUserCache = { ...this.currentUserCache, ...updates };
       }
 
       return { success: true };
     } catch (error: any) {
-      console.error('Failed to update user:', error);
+      console.error('[FirebaseAuth] Failed to update user:', error);
+      console.error('[FirebaseAuth] Error code:', error.code);
+      console.error('[FirebaseAuth] Error message:', error.message);
       return { success: false, error: error.message };
     }
   }
