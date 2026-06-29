@@ -218,5 +218,42 @@ service cloud.firestore {
       // Delete: Only figure owner can delete reports
       allow delete: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
     }
+
+    // Toy Line Database Collections
+    match /toyLines/{toyLineId} {
+      // Allow all authenticated users to read public toy lines
+      allow read: if resource.data.isPublic == true || isSignedIn();
+
+      // Only management/admins can create, update, or delete toy lines
+      allow create, update, delete: if isManagement();
+    }
+
+    match /toyLineFigures/{figureId} {
+      // Allow all authenticated users to read toy line figures
+      allow read: if isSignedIn();
+
+      // Only management/admins can create, update, or delete toy line figures
+      allow create, update, delete: if isManagement();
+    }
+
+    match /toyLineSuggestions/{suggestionId} {
+      // Users can read their own suggestions, admins can read all
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+
+      // Users can create suggestions for themselves
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Only admins can update suggestions (approve/reject)
+      allow update: if isManagement();
+
+      // Users can delete their own pending suggestions, admins can delete any
+      allow delete: if isSignedIn() && (
+        (resource.data.userId == request.auth.uid && resource.data.status == 'pending') ||
+        isManagement()
+      );
+    }
   }
 }
