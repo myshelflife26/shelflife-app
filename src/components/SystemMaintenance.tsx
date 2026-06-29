@@ -6,6 +6,7 @@ import { migrateFiguresToStorage, checkMigrationStatus } from '../utils/migrateF
 import MigrateReactionsButton from './MigrateReactionsButton';
 import FigureMigrationPanel from './admin/FigureMigrationPanel';
 import ToyLineFixPanel from './admin/ToyLineFixPanel';
+import CollectionImageSyncPanel from './admin/CollectionImageSyncPanel';
 
 interface SystemMaintenanceProps {
   currentUser: User;
@@ -271,6 +272,29 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
             </ul>
 
             <ToyLineFixPanel />
+          </div>
+        </div>
+      </div>
+
+      {/* Collection Image Sync */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-start gap-3">
+          <Database className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 break-words">
+              Collection Image Sync
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 break-words">
+              Fix disconnected collection images that aren't showing in toy lines:
+            </p>
+            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4 break-words">
+              <li>User figures that don't match master figures exactly</li>
+              <li>Images missing from toy line views after master figure edits</li>
+              <li>Orphaned figures that need reconnection</li>
+              <li>Fixes issues like the Scarlett figure image problem</li>
+            </ul>
+
+            <CollectionImageSyncPanel />
           </div>
         </div>
       </div>
