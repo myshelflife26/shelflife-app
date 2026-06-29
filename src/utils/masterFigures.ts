@@ -25,6 +25,7 @@ export interface MasterFigure {
   name: string;
   version?: string;
   year?: number;
+  franchise?: string; // Franchise/IP (e.g., "G.I. Joe", "Star Wars", "Masters of the Universe")
   series?: string; // Legacy field - use productLine/subProductLine instead
   manufacturer: string;
   category: string;

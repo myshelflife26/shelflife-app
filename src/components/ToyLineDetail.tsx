@@ -14,7 +14,8 @@ import {
   SortAsc,
   Edit3,
   X,
-  Save
+  Save,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -68,8 +69,20 @@ export function ToyLineDetail({
   // Admin editing states
   const [editingFigure, setEditingFigure] = useState<string | null>(null);
   const [allToyLines, setAllToyLines] = useState<ToyLine[]>([]);
-  const [editingToyLine, setEditingToyLine] = useState<string>('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    version: '',
+    franchise: '',
+    year: '',
+    productLine: '',
+    productLineNumber: '',
+    manufacturer: '',
+    category: '',
+    size: '',
+    upc: '',
+    packaging: ''
+  });
 
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'management' || currentUser?.role === 'manager';
@@ -237,57 +250,118 @@ export function ToyLineDetail({
   };
 
   // Admin editing functions
-  const startEditFigure = (figure: ToyLineFigure) => {
+  const startEditFigure = async (figure: ToyLineFigure) => {
     setEditingFigure(figure.id);
-    // Find the current toy line assignment
-    const currentToyLineId = allToyLines.find(tl => tl.name === toyLine.name)?.id || '';
-    setEditingToyLine(currentToyLineId);
+
+    // Load the master figure data to get all current values
+    if (figure.masterFigureId) {
+      try {
+        const masterFigure = await MasterFiguresService.getById(figure.masterFigureId);
+        if (masterFigure) {
+          setEditFormData({
+            name: masterFigure.name || '',
+            version: masterFigure.version || '',
+            franchise: masterFigure.franchise || '',
+            year: masterFigure.year?.toString() || '',
+            productLine: masterFigure.productLine || '',
+            productLineNumber: masterFigure.productLineNumber || '',
+            manufacturer: masterFigure.manufacturer || '',
+            category: masterFigure.category || '',
+            size: masterFigure.size || '',
+            upc: masterFigure.upc || '',
+            packaging: masterFigure.packaging || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error loading master figure data:', error);
+        // Fallback to toy line figure data
+        setEditFormData({
+          name: figure.name || '',
+          version: '',
+          franchise: '',
+          year: figure.year?.toString() || '',
+          productLine: toyLine.name || '',
+          productLineNumber: figure.figureNumber || '',
+          manufacturer: figure.manufacturer || '',
+          category: figure.category || '',
+          size: figure.size || '',
+          upc: figure.upc || '',
+          packaging: ''
+        });
+      }
+    }
   };
 
   const cancelEdit = () => {
     setEditingFigure(null);
-    setEditingToyLine('');
+    setEditFormData({
+      name: '',
+      version: '',
+      franchise: '',
+      year: '',
+      productLine: '',
+      productLineNumber: '',
+      manufacturer: '',
+      category: '',
+      size: '',
+      upc: '',
+      packaging: ''
+    });
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const saveFigureEdit = async (figure: ToyLineFigure) => {
-    if (!editingToyLine || !figure.masterFigureId) {
-      toastManager.error('Please select a toy line');
+    if (!figure.masterFigureId) {
+      toastManager.error('Master figure ID not found');
+      return;
+    }
+
+    // Basic validation
+    if (!editFormData.name.trim() || !editFormData.manufacturer.trim() || !editFormData.category.trim()) {
+      toastManager.error('Name, manufacturer, and category are required');
       return;
     }
 
     setIsSavingEdit(true);
     try {
-      // Find the selected toy line
-      const selectedToyLine = allToyLines.find(tl => tl.id === editingToyLine);
-      if (!selectedToyLine) {
-        throw new Error('Selected toy line not found');
-      }
-
-      // Update the master figure with new toy line assignment
+      // Get current master figure
       const masterFigure = await MasterFiguresService.getById(figure.masterFigureId);
       if (!masterFigure) {
         throw new Error('Master figure not found');
       }
 
+      // Prepare updated data
       const updatedMasterFigure = {
         ...masterFigure,
-        productLine: selectedToyLine.name,
-        series: selectedToyLine.name, // Update legacy field too
-        notes: (masterFigure.notes || '') + ` [Admin moved from "${toyLine.name}" to "${selectedToyLine.name}" on ${new Date().toLocaleDateString()}]`
+        name: editFormData.name.trim(),
+        version: editFormData.version.trim() || undefined,
+        franchise: editFormData.franchise.trim() || undefined,
+        year: editFormData.year ? parseInt(editFormData.year) : undefined,
+        productLine: editFormData.productLine.trim() || undefined,
+        productLineNumber: editFormData.productLineNumber.trim() || undefined,
+        manufacturer: editFormData.manufacturer.trim(),
+        category: editFormData.category.trim(),
+        size: editFormData.size.trim() || undefined,
+        upc: editFormData.upc.trim() || undefined,
+        packaging: editFormData.packaging.trim() || undefined,
+        series: editFormData.productLine.trim() || undefined, // Update legacy field
+        notes: (masterFigure.notes || '') + ` [Admin edited on ${new Date().toLocaleDateString()}]`
       };
 
       await MasterFiguresService.update(figure.masterFigureId, updatedMasterFigure);
 
-      // Refresh the toy line data to reflect the change
+      // Refresh the toy line data to reflect changes
       await loadToyLineData();
 
-      toastManager.success(`Moved ${figure.name} to ${selectedToyLine.name}`);
-      setEditingFigure(null);
-      setEditingToyLine('');
+      toastManager.success(`Updated ${editFormData.name}`);
+      cancelEdit();
 
     } catch (error) {
-      console.error('Error updating figure toy line:', error);
-      toastManager.error('Failed to update figure assignment');
+      console.error('Error updating figure:', error);
+      toastManager.error('Failed to update figure');
     } finally {
       setIsSavingEdit(false);
     }
@@ -596,19 +670,21 @@ export function ToyLineDetail({
       {/* Admin Edit Figure Modal */}
       {isAdmin && editingFigure && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Edit Figure Assignment
-              </h3>
-              <Button
-                onClick={cancelEdit}
-                size="sm"
-                variant="ghost"
-                className="p-1 h-auto"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Figure Details
+                </h3>
+                <Button
+                  onClick={cancelEdit}
+                  size="sm"
+                  variant="ghost"
+                  className="p-1 h-auto"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {(() => {
@@ -616,66 +692,205 @@ export function ToyLineDetail({
               if (!figure) return null;
 
               return (
-                <div className="space-y-4">
-                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {figure.name}
+                <div className="p-6 space-y-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Basic Information
                     </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {figure.manufacturer} • {figure.year}
-                    </p>
-                    {figure.figureNumber && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        #{figure.figureNumber}
-                      </p>
-                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.name}
+                          onChange={(e) => handleFormChange('name', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Figure name"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Version
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.version}
+                          onChange={(e) => handleFormChange('version', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="V1, V2, 25th Anniversary, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Franchise
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.franchise}
+                          onChange={(e) => handleFormChange('franchise', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="G.I. Joe, Star Wars, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Release Year
+                        </label>
+                        <input
+                          type="number"
+                          value={editFormData.year}
+                          onChange={(e) => handleFormChange('year', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="2024"
+                          min="1950"
+                          max="2030"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Move to Toy Line:
-                    </label>
-                    <select
-                      value={editingToyLine}
-                      onChange={(e) => setEditingToyLine(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">Select a toy line...</option>
-                      {allToyLines
-                        .filter(tl => tl.manufacturer === figure.manufacturer) // Only show same manufacturer
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map(tl => (
-                          <option key={tl.id} value={tl.id}>
-                            {tl.name} ({tl.figureCount} figures)
-                          </option>
-                        ))}
-                    </select>
+                  {/* Product Details */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Product Details
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Product Line
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.productLine}
+                          onChange={(e) => handleFormChange('productLine', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Classified Series, Black Series, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Product Line Number
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.productLineNumber}
+                          onChange={(e) => handleFormChange('productLineNumber', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="#01, 1234, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Manufacturer *
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.manufacturer}
+                          onChange={(e) => handleFormChange('manufacturer', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Hasbro, Mattel, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Category *
+                        </label>
+                        <select
+                          value={editFormData.category}
+                          onChange={(e) => handleFormChange('category', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Select category...</option>
+                          <option value="Action Figures">Action Figures</option>
+                          <option value="Vehicles">Vehicles</option>
+                          <option value="Playsets">Playsets</option>
+                          <option value="Accessories">Accessories</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Size
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.size}
+                          onChange={(e) => handleFormChange('size', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="6 inch, 12 inch, etc."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Packaging
+                        </label>
+                        <select
+                          value={editFormData.packaging}
+                          onChange={(e) => handleFormChange('packaging', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Select packaging...</option>
+                          <option value="Individual">Individual</option>
+                          <option value="Multi-pack">Multi-pack</option>
+                          <option value="with Vehicle">with Vehicle</option>
+                          <option value="with Playset">with Playset</option>
+                          <option value="Exclusive">Exclusive</option>
+                        </select>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          UPC
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.upc}
+                          onChange={(e) => handleFormChange('upc', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="UPC/EAN barcode"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
                       <AlertCircle className="h-4 w-4 inline mr-1" />
-                      This will update the master figure database and move this figure to the selected toy line.
-                      The change will be logged in the figure's notes.
+                      Changes will be saved to the master figure database and logged with timestamp.
+                      Fields marked with * are required.
                     </p>
                   </div>
 
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <Button
                       onClick={cancelEdit}
                       variant="outline"
                       className="flex-1"
+                      disabled={isSavingEdit}
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={() => saveFigureEdit(figure)}
-                      disabled={!editingToyLine || isSavingEdit}
+                      disabled={isSavingEdit || !editFormData.name.trim() || !editFormData.manufacturer.trim() || !editFormData.category.trim()}
                       className="flex-1"
                     >
                       {isSavingEdit ? (
                         <>
-                          <AlertCircle className="h-4 w-4 mr-2 animate-spin" />
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                           Saving...
                         </>
                       ) : (
