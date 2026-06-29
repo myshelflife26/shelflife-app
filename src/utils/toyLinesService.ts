@@ -42,13 +42,16 @@ class ToyLinesService {
       }>();
 
       for (const figure of masterFigures) {
-        // Determine the toy line identifier - use productLine first, then series, then category
-        const toyLineName = figure.productLine || figure.series || `${figure.manufacturer} ${figure.category}`;
+        // Determine the base product line
+        const productLine = figure.productLine || figure.series || figure.category;
+        if (!productLine) continue;
 
-        if (!toyLineName) continue;
+        // Create toy line name as "Franchise - Product Line" or fallback to just product line
+        const franchise = figure.franchise;
+        const toyLineName = franchise ? `${franchise} - ${productLine}` : productLine;
 
-        // Create unique key for grouping
-        const key = `${figure.manufacturer}-${toyLineName}`;
+        // Create unique key for grouping (include franchise for better separation)
+        const key = `${figure.manufacturer}-${franchise || 'unknown'}-${productLine}`;
 
         if (!toyLineGroups.has(key)) {
           toyLineGroups.set(key, {
@@ -147,17 +150,26 @@ class ToyLinesService {
    */
   static async getFiguresInLine(toyLineId: string): Promise<ToyLineFigure[]> {
     try {
-      // Parse the toyLineId to get manufacturer and toy line name
-      const [manufacturer, ...toyLineNameParts] = toyLineId.split('-');
-      const toyLineName = toyLineNameParts.join('-');
+      // Parse the toyLineId: manufacturer-franchise-productLine (franchise could be 'unknown')
+      const parts = toyLineId.split('-');
+      const manufacturer = parts[0];
+      const franchise = parts[1] === 'unknown' ? undefined : parts[1];
+      const productLine = parts.slice(2).join('-'); // In case product line has dashes
 
       // Get all master figures
       const masterFigures = await MasterFiguresService.getAll();
 
       // Filter figures that belong to this toy line
       const lineFigures = masterFigures.filter(figure => {
-        const figureToyLine = figure.productLine || figure.series || `${figure.manufacturer} ${figure.category}`;
-        return figure.manufacturer === manufacturer && figureToyLine === toyLineName;
+        const figureProductLine = figure.productLine || figure.series || figure.category;
+        const figureFranchise = figure.franchise;
+
+        // Match manufacturer and product line, and franchise (if specified)
+        const manufacturerMatch = figure.manufacturer === manufacturer;
+        const productLineMatch = figureProductLine === productLine;
+        const franchiseMatch = franchise ? figureFranchise === franchise : true; // If no franchise in key, accept any
+
+        return manufacturerMatch && productLineMatch && franchiseMatch;
       });
 
       // Convert to ToyLineFigure format and add collection images
@@ -317,17 +329,24 @@ class ToyLinesService {
           const nameMatch = userFigure.name.toLowerCase() === toyLineFigure.name.toLowerCase();
           const manufacturerMatch = userFigure.manufacturer.toLowerCase() === toyLineFigure.manufacturer.toLowerCase();
 
-          // Match toy line: check productLine first, then series, then use manufacturer + category as fallback
-          const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
-          const toyLineName = toyLineFigure.name; // This is the toy line name from the dynamic generation
+          // Parse toyLineId: manufacturer-franchise-productLine
+          const parts = toyLineId.split('-');
+          const expectedFranchise = parts[1] === 'unknown' ? undefined : parts[1];
+          const expectedProductLine = parts.slice(2).join('-');
 
-          // Parse toyLineId to get the expected toy line name
-          const [, ...toyLineNameParts] = toyLineId.split('-');
-          const expectedToyLineName = toyLineNameParts.join('-');
+          // Get user figure's toy line components
+          const userProductLine = userFigure.productLine || userFigure.series || userFigure.category;
+          const userFranchise = userFigure.franchise;
 
-          const toyLineMatch = userToyLine.toLowerCase() === expectedToyLineName.toLowerCase();
+          // Match both franchise and product line
+          const franchiseMatch = expectedFranchise ?
+            (userFranchise && userFranchise.toLowerCase() === expectedFranchise.toLowerCase()) :
+            true; // If no franchise expected, accept any
 
-          return nameMatch && manufacturerMatch && toyLineMatch;
+          const productLineMatch = userProductLine &&
+            userProductLine.toLowerCase() === expectedProductLine.toLowerCase();
+
+          return nameMatch && manufacturerMatch && franchiseMatch && productLineMatch;
         });
 
         return {
@@ -421,9 +440,10 @@ class ToyLinesService {
         ...doc.data()
       } as ActionFigure));
 
-      // Parse toyLineId to get expected toy line name
-      const [, ...toyLineNameParts] = toyLineId.split('-');
-      const expectedToyLineName = toyLineNameParts.join('-');
+      // Parse toyLineId: manufacturer-franchise-productLine
+      const parts = toyLineId.split('-');
+      const expectedFranchise = parts[1] === 'unknown' ? undefined : parts[1];
+      const expectedProductLine = parts.slice(2).join('-');
 
       const matches = toyLineFigures.map(toyLineFigure => {
         const potentialMatches = userFigures.filter(userFigure =>
@@ -441,28 +461,42 @@ class ToyLinesService {
 
         // Check toy line matching for each potential match
         for (const userFigure of potentialMatches) {
-          const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
-          const toyLineMatch = userToyLine.toLowerCase() === expectedToyLineName.toLowerCase();
+          const userProductLine = userFigure.productLine || userFigure.series || userFigure.category;
+          const userFranchise = userFigure.franchise;
+
+          // Match both franchise and product line
+          const franchiseMatch = expectedFranchise ?
+            (userFranchise && userFranchise.toLowerCase() === expectedFranchise.toLowerCase()) :
+            true;
+
+          const productLineMatch = userProductLine &&
+            userProductLine.toLowerCase() === expectedProductLine.toLowerCase();
+
+          const toyLineMatch = franchiseMatch && productLineMatch;
 
           if (toyLineMatch) {
+            const userToyLineName = userFranchise ? `${userFranchise} - ${userProductLine}` : userProductLine;
             return {
               toyLineFigure,
               userFigure,
               matched: true,
-              reason: `Matched on toy line: "${userToyLine}"`
+              reason: `Matched on toy line: "${userToyLineName}"`
             };
           }
         }
 
         // Show the first non-matching figure with details
         const userFigure = potentialMatches[0];
-        const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
+        const userProductLine = userFigure.productLine || userFigure.series || userFigure.category;
+        const userFranchise = userFigure.franchise;
+        const userToyLineName = userFranchise ? `${userFranchise} - ${userProductLine}` : userProductLine;
+        const expectedToyLineName = expectedFranchise ? `${expectedFranchise} - ${expectedProductLine}` : expectedProductLine;
 
         return {
           toyLineFigure,
           userFigure,
           matched: false,
-          reason: `Name/manufacturer match but wrong toy line: user has "${userToyLine}", expected "${expectedToyLineName}"`
+          reason: `Name/manufacturer match but wrong toy line: user has "${userToyLineName}", expected "${expectedToyLineName}"`
         };
       });
 
