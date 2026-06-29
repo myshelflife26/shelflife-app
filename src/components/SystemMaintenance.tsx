@@ -5,6 +5,7 @@ import type { User } from '../types/user';
 import { migrateFiguresToStorage, checkMigrationStatus } from '../utils/migrateFiguresToStorage';
 import MigrateReactionsButton from './MigrateReactionsButton';
 import FigureMigrationPanel from './admin/FigureMigrationPanel';
+import ToyLineFixPanel from './admin/ToyLineFixPanel';
 
 interface SystemMaintenanceProps {
   currentUser: User;
@@ -247,6 +248,29 @@ export function SystemMaintenance({ currentUser }: SystemMaintenanceProps) {
             </ul>
 
             <FigureMigrationPanel />
+          </div>
+        </div>
+      </div>
+
+      {/* Toy Line Assignment Fixes */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-start gap-3">
+          <Database className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 break-words">
+              Toy Line Assignment Fixes
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 break-words">
+              Fix figures that are showing in wrong toy lines. This addresses:
+            </p>
+            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4 break-words">
+              <li>Figures appearing as owned in multiple toy lines</li>
+              <li>Missing toy line assignments causing incorrect ownership detection</li>
+              <li>Figures assigned to incorrect product lines or series</li>
+              <li>Inconsistent toy line naming between user figures and master data</li>
+            </ul>
+
+            <ToyLineFixPanel />
           </div>
         </div>
       </div>

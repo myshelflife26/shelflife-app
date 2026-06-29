@@ -312,11 +312,23 @@ class ToyLinesService {
 
       // Match user figures to toy line figures
       const figuresWithOwnership = toyLineFigures.map(toyLineFigure => {
-        // Find matching user figure by name and manufacturer
-        const matchingUserFigure = userFigures.find(userFigure =>
-          userFigure.name.toLowerCase() === toyLineFigure.name.toLowerCase() &&
-          userFigure.manufacturer.toLowerCase() === toyLineFigure.manufacturer.toLowerCase()
-        );
+        // Find matching user figure by name, manufacturer, AND toy line
+        const matchingUserFigure = userFigures.find(userFigure => {
+          const nameMatch = userFigure.name.toLowerCase() === toyLineFigure.name.toLowerCase();
+          const manufacturerMatch = userFigure.manufacturer.toLowerCase() === toyLineFigure.manufacturer.toLowerCase();
+
+          // Match toy line: check productLine first, then series, then use manufacturer + category as fallback
+          const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
+          const toyLineName = toyLineFigure.name; // This is the toy line name from the dynamic generation
+
+          // Parse toyLineId to get the expected toy line name
+          const [, ...toyLineNameParts] = toyLineId.split('-');
+          const expectedToyLineName = toyLineNameParts.join('-');
+
+          const toyLineMatch = userToyLine.toLowerCase() === expectedToyLineName.toLowerCase();
+
+          return nameMatch && manufacturerMatch && toyLineMatch;
+        });
 
         return {
           figure: toyLineFigure,
@@ -373,6 +385,97 @@ class ToyLinesService {
     } catch (error) {
       console.error('Error fetching toy lines by manufacturer:', error);
       throw new Error('Failed to fetch toy lines by manufacturer');
+    }
+  }
+
+  /**
+   * Debug ownership detection for a specific user and toy line
+   */
+  static async debugOwnership(userId: string, toyLineId: string): Promise<{
+    toyLine: ToyLine | null;
+    toyLineFigures: ToyLineFigure[];
+    userFigures: ActionFigure[];
+    matches: Array<{
+      toyLineFigure: ToyLineFigure;
+      userFigure?: ActionFigure;
+      matched: boolean;
+      reason: string;
+    }>;
+  }> {
+    try {
+      const toyLine = await this.getById(toyLineId);
+      if (!toyLine) {
+        throw new Error('Toy line not found');
+      }
+
+      const toyLineFigures = await this.getFiguresInLine(toyLineId);
+
+      // Get user's figures
+      const userFiguresQuery = query(
+        collection(db, this.userFiguresCollection),
+        where('userId', '==', userId)
+      );
+      const userFiguresSnapshot = await getDocs(userFiguresQuery);
+      const userFigures = userFiguresSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as ActionFigure));
+
+      // Parse toyLineId to get expected toy line name
+      const [, ...toyLineNameParts] = toyLineId.split('-');
+      const expectedToyLineName = toyLineNameParts.join('-');
+
+      const matches = toyLineFigures.map(toyLineFigure => {
+        const potentialMatches = userFigures.filter(userFigure =>
+          userFigure.name.toLowerCase() === toyLineFigure.name.toLowerCase() &&
+          userFigure.manufacturer.toLowerCase() === toyLineFigure.manufacturer.toLowerCase()
+        );
+
+        if (potentialMatches.length === 0) {
+          return {
+            toyLineFigure,
+            matched: false,
+            reason: 'No user figure with matching name and manufacturer'
+          };
+        }
+
+        // Check toy line matching for each potential match
+        for (const userFigure of potentialMatches) {
+          const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
+          const toyLineMatch = userToyLine.toLowerCase() === expectedToyLineName.toLowerCase();
+
+          if (toyLineMatch) {
+            return {
+              toyLineFigure,
+              userFigure,
+              matched: true,
+              reason: `Matched on toy line: "${userToyLine}"`
+            };
+          }
+        }
+
+        // Show the first non-matching figure with details
+        const userFigure = potentialMatches[0];
+        const userToyLine = userFigure.productLine || userFigure.series || `${userFigure.manufacturer} ${userFigure.category}`;
+
+        return {
+          toyLineFigure,
+          userFigure,
+          matched: false,
+          reason: `Name/manufacturer match but wrong toy line: user has "${userToyLine}", expected "${expectedToyLineName}"`
+        };
+      });
+
+      return {
+        toyLine,
+        toyLineFigures,
+        userFigures,
+        matches
+      };
+
+    } catch (error) {
+      console.error('Error debugging ownership:', error);
+      throw new Error(`Debug failed: ${error.message}`);
     }
   }
 }
