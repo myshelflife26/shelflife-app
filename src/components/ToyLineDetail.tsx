@@ -11,13 +11,17 @@ import {
   Package,
   User,
   AlertCircle,
-  SortAsc
+  SortAsc,
+  Edit3,
+  X,
+  Save
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ToyLinesService } from '../utils/toyLinesService';
 import { ToyLineSuggestionsService } from '../utils/toyLineSuggestionsService';
+import { MasterFiguresService } from '../utils/masterFigures';
 import { toastManager } from '../utils/toastManager';
 import type { ToyLine, ToyLineFigure, LineCompletion } from '../types/toyLine';
 import type { User } from '../types/user';
@@ -61,9 +65,30 @@ export function ToyLineDetail({
   const [sortBy, setSortBy] = useState<SortOption>('number');
   const [sortAsc, setSortAsc] = useState(true);
 
+  // Admin editing states
+  const [editingFigure, setEditingFigure] = useState<string | null>(null);
+  const [allToyLines, setAllToyLines] = useState<ToyLine[]>([]);
+  const [editingToyLine, setEditingToyLine] = useState<string>('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'management' || currentUser?.role === 'manager';
+
   useEffect(() => {
     loadToyLineData();
+    if (isAdmin) {
+      loadAllToyLines();
+    }
   }, [toyLine.id, currentUser.id]);
+
+  const loadAllToyLines = async () => {
+    try {
+      const toyLines = await ToyLinesService.getAll();
+      setAllToyLines(toyLines);
+    } catch (error) {
+      console.error('Error loading toy lines:', error);
+    }
+  };
 
   const loadToyLineData = async () => {
     try {
@@ -209,6 +234,63 @@ export function ToyLineDetail({
     if (!figure.collectionImages || figure.collectionImages.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * figure.collectionImages.length);
     return figure.collectionImages[randomIndex].imageUrl;
+  };
+
+  // Admin editing functions
+  const startEditFigure = (figure: ToyLineFigure) => {
+    setEditingFigure(figure.id);
+    // Find the current toy line assignment
+    const currentToyLineId = allToyLines.find(tl => tl.name === toyLine.name)?.id || '';
+    setEditingToyLine(currentToyLineId);
+  };
+
+  const cancelEdit = () => {
+    setEditingFigure(null);
+    setEditingToyLine('');
+  };
+
+  const saveFigureEdit = async (figure: ToyLineFigure) => {
+    if (!editingToyLine || !figure.masterFigureId) {
+      toastManager.error('Please select a toy line');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      // Find the selected toy line
+      const selectedToyLine = allToyLines.find(tl => tl.id === editingToyLine);
+      if (!selectedToyLine) {
+        throw new Error('Selected toy line not found');
+      }
+
+      // Update the master figure with new toy line assignment
+      const masterFigure = await MasterFiguresService.getById(figure.masterFigureId);
+      if (!masterFigure) {
+        throw new Error('Master figure not found');
+      }
+
+      const updatedMasterFigure = {
+        ...masterFigure,
+        productLine: selectedToyLine.name,
+        series: selectedToyLine.name, // Update legacy field too
+        notes: (masterFigure.notes || '') + ` [Admin moved from "${toyLine.name}" to "${selectedToyLine.name}" on ${new Date().toLocaleDateString()}]`
+      };
+
+      await MasterFiguresService.update(figure.masterFigureId, updatedMasterFigure);
+
+      // Refresh the toy line data to reflect the change
+      await loadToyLineData();
+
+      toastManager.success(`Moved ${figure.name} to ${selectedToyLine.name}`);
+      setEditingFigure(null);
+      setEditingToyLine('');
+
+    } catch (error) {
+      console.error('Error updating figure toy line:', error);
+      toastManager.error('Failed to update figure assignment');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   if (loading) {
@@ -438,18 +520,33 @@ export function ToyLineDetail({
                     </div>
                   </div>
 
-                  {ownership.owned ? (
-                    <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-                  ) : (
-                    <Button
-                      onClick={() => handleAddToCollection(figure)}
-                      size="sm"
-                      className="text-xs px-2 py-1 h-auto"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {ownership.owned ? (
+                      <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    ) : (
+                      <Button
+                        onClick={() => handleAddToCollection(figure)}
+                        size="sm"
+                        className="text-xs px-2 py-1 h-auto"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    )}
+
+                    {/* Admin Edit Button */}
+                    {isAdmin && (
+                      <Button
+                        onClick={() => startEditFigure(figure)}
+                        size="sm"
+                        variant="outline"
+                        className="text-xs px-2 py-1 h-auto"
+                        title="Edit figure assignment"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {figure.subLine && (
@@ -492,6 +589,106 @@ export function ToyLineDetail({
               <Plus className="h-4 w-4 mr-1" />
               Suggest a Figure
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Figure Modal */}
+      {isAdmin && editingFigure && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Edit Figure Assignment
+              </h3>
+              <Button
+                onClick={cancelEdit}
+                size="sm"
+                variant="ghost"
+                className="p-1 h-auto"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {(() => {
+              const figure = figures.find(f => f.id === editingFigure);
+              if (!figure) return null;
+
+              return (
+                <div className="space-y-4">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                      {figure.name}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {figure.manufacturer} • {figure.year}
+                    </p>
+                    {figure.figureNumber && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        #{figure.figureNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Move to Toy Line:
+                    </label>
+                    <select
+                      value={editingToyLine}
+                      onChange={(e) => setEditingToyLine(e.target.value)}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select a toy line...</option>
+                      {allToyLines
+                        .filter(tl => tl.manufacturer === figure.manufacturer) // Only show same manufacturer
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map(tl => (
+                          <option key={tl.id} value={tl.id}>
+                            {tl.name} ({tl.figureCount} figures)
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      <AlertCircle className="h-4 w-4 inline mr-1" />
+                      This will update the master figure database and move this figure to the selected toy line.
+                      The change will be logged in the figure's notes.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      onClick={cancelEdit}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => saveFigureEdit(figure)}
+                      disabled={!editingToyLine || isSavingEdit}
+                      className="flex-1"
+                    >
+                      {isSavingEdit ? (
+                        <>
+                          <AlertCircle className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
