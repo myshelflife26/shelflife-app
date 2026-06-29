@@ -6,10 +6,11 @@ import { toastManager } from '../utils/toastManager';
 import { MasterFiguresService } from '../utils/masterFigures';
 import { FirebaseStorage } from '../utils/firebaseStorage';
 import StatsView from './StatsView';
+import FigureMigrationPanel from './admin/FigureMigrationPanel';
 import type { UserReport, ReportStatus, ReportCategory } from '../utils/reporting';
 import type { User } from '../types/user';
 import type { ActionFigure } from '../types/index';
-import { Flag, AlertCircle, Search, Filter, TrendingUp, CheckCircle, XCircle, AlertTriangle, Trash2, BarChart3, Package, DollarSign, ArrowLeft } from 'lucide-react';
+import { Flag, AlertCircle, Search, Filter, TrendingUp, CheckCircle, XCircle, AlertTriangle, Trash2, BarChart3, Package, DollarSign, ArrowLeft, Database } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
@@ -18,7 +19,7 @@ interface AdminReportsPageProps {
   onNavigateBack?: () => void;
 }
 
-type ReportsTab = 'userReports' | 'collectionStats' | 'summary';
+type ReportsTab = 'userReports' | 'collectionStats' | 'summary' | 'migration';
 
 function AdminReportsPage({ currentUser, onNavigateBack }: AdminReportsPageProps) {
   const [currentTab, setCurrentTab] = useState<ReportsTab>('collectionStats');
@@ -237,6 +238,19 @@ function AdminReportsPage({ currentUser, onNavigateBack }: AdminReportsPageProps
             <div className="flex items-center justify-center gap-2">
               <Flag className="h-4 w-4" />
               <span>User Reports</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setCurrentTab('migration')}
+            className={`flex-1 pb-3 px-1 border-b-2 font-medium transition-colors ${
+              currentTab === 'migration'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>Migration</span>
             </div>
           </button>
         </nav>
@@ -510,6 +524,11 @@ function AdminReportsPage({ currentUser, onNavigateBack }: AdminReportsPageProps
       {/* Collection Statistics Tab */}
       {currentTab === 'collectionStats' && (
         <StatsView figures={figures} />
+      )}
+
+      {/* Migration Tab */}
+      {currentTab === 'migration' && (
+        <FigureMigrationPanel />
       )}
     </div>
   );
