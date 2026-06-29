@@ -1,15 +1,9 @@
 import {
   collection,
-  doc,
   getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
-  orderBy,
-  Timestamp
+  orderBy
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type {
@@ -20,141 +14,186 @@ import type {
   CollectionImage
 } from '../types/toyLine';
 import type { ActionFigure } from '../types';
+import { MasterFiguresService, type MasterFigure } from './masterFigures';
 
 class ToyLinesService {
-  private static toyLinesCollection = 'toyLines';
-  private static figuresCollection = 'toyLineFigures';
   private static userFiguresCollection = 'figures';
 
-  // ===== TOY LINE MANAGEMENT =====
+  // ===== DYNAMIC TOY LINE GENERATION FROM MASTER FIGURES =====
 
   /**
-   * Get all toy lines
+   * Generate toy lines dynamically from masterFigures collection
+   * Groups figures by franchise/productLine/series
    */
   static async getAll(): Promise<ToyLine[]> {
     try {
-      const querySnapshot = await getDocs(
-        query(
-          collection(db, this.toyLinesCollection),
-          where('isPublic', '==', true),
-          orderBy('name')
-        )
-      );
+      // Get all master figures
+      const masterFigures = await MasterFiguresService.getAll();
 
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ToyLine));
+      // Group figures by franchise/productLine/series to create toy lines
+      const toyLineGroups = new Map<string, {
+        figures: MasterFigure[];
+        name: string;
+        manufacturer: string;
+        startYear: number;
+        endYear?: number;
+        description?: string;
+        category: string;
+      }>();
+
+      for (const figure of masterFigures) {
+        // Determine the toy line identifier - use productLine first, then series, then category
+        const toyLineName = figure.productLine || figure.series || `${figure.manufacturer} ${figure.category}`;
+
+        if (!toyLineName) continue;
+
+        // Create unique key for grouping
+        const key = `${figure.manufacturer}-${toyLineName}`;
+
+        if (!toyLineGroups.has(key)) {
+          toyLineGroups.set(key, {
+            figures: [],
+            name: toyLineName,
+            manufacturer: figure.manufacturer,
+            startYear: figure.year || new Date().getFullYear(),
+            category: figure.category,
+            description: figure.subProductLine ? `${figure.subProductLine} collection` : undefined
+          });
+        }
+
+        const group = toyLineGroups.get(key)!;
+        group.figures.push(figure);
+
+        // Update year range
+        if (figure.year) {
+          if (figure.year < group.startYear) {
+            group.startYear = figure.year;
+          }
+          if (!group.endYear || figure.year > group.endYear) {
+            group.endYear = figure.year;
+          }
+        }
+      }
+
+      // Convert groups to ToyLine objects
+      const toyLines: ToyLine[] = [];
+      for (const [key, group] of toyLineGroups) {
+        // Only include toy lines with multiple figures or well-known franchises
+        if (group.figures.length >= 2 || this.isWellKnownFranchise(group.name)) {
+          toyLines.push({
+            id: key, // Use the key as ID
+            name: group.name,
+            manufacturer: group.manufacturer,
+            startYear: group.startYear,
+            endYear: group.endYear === group.startYear ? undefined : group.endYear,
+            description: group.description,
+            category: group.category,
+            isActive: !group.endYear || group.endYear >= new Date().getFullYear() - 1,
+            figureCount: group.figures.length,
+            verified: true,
+            isPublic: true,
+            source: 'admin',
+            createdBy: 'system',
+            createdAt: Date.now()
+          });
+        }
+      }
+
+      // Sort by name
+      return toyLines.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-      console.error('Error fetching toy lines:', error);
+      console.error('Error generating toy lines from master figures:', error);
       throw new Error('Failed to fetch toy lines');
     }
   }
 
   /**
-   * Get toy line by ID
+   * Check if a franchise is well-known (should be included even with few figures)
+   */
+  private static isWellKnownFranchise(name: string): boolean {
+    const wellKnown = [
+      'G.I. Joe',
+      'Transformers',
+      'Star Wars',
+      'Marvel',
+      'DC',
+      'Teenage Mutant Ninja Turtles',
+      'Masters of the Universe',
+      'Power Rangers'
+    ];
+
+    return wellKnown.some(franchise =>
+      name.toLowerCase().includes(franchise.toLowerCase())
+    );
+  }
+
+  /**
+   * Get toy line by ID (which is the generated key)
    */
   static async getById(id: string): Promise<ToyLine | null> {
     try {
-      const docRef = doc(db, this.toyLinesCollection, id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data()
-        } as ToyLine;
-      }
-
-      return null;
+      const allLines = await this.getAll();
+      return allLines.find(line => line.id === id) || null;
     } catch (error) {
-      console.error('Error fetching toy line:', error);
+      console.error('Error fetching toy line by ID:', error);
       throw new Error('Failed to fetch toy line');
-    }
-  }
-
-  /**
-   * Create new toy line
-   */
-  static async create(toyLine: Partial<ToyLine>): Promise<string> {
-    try {
-      const now = Date.now();
-      const toyLineData = {
-        ...toyLine,
-        figureCount: 0,
-        createdAt: now,
-        verified: false,
-        isPublic: true
-      };
-
-      const docRef = await addDoc(collection(db, this.toyLinesCollection), toyLineData);
-      return docRef.id;
-    } catch (error) {
-      console.error('Error creating toy line:', error);
-      throw new Error('Failed to create toy line');
-    }
-  }
-
-  /**
-   * Update toy line
-   */
-  static async update(id: string, updates: Partial<ToyLine>): Promise<void> {
-    try {
-      const docRef = doc(db, this.toyLinesCollection, id);
-      await updateDoc(docRef, updates);
-    } catch (error) {
-      console.error('Error updating toy line:', error);
-      throw new Error('Failed to update toy line');
-    }
-  }
-
-  /**
-   * Delete toy line (admin only)
-   */
-  static async delete(id: string): Promise<void> {
-    try {
-      // First, delete all figures in this toy line
-      const figuresQuery = query(
-        collection(db, this.figuresCollection),
-        where('toyLineId', '==', id)
-      );
-      const figuresSnapshot = await getDocs(figuresQuery);
-
-      // Delete all figures
-      const deletePromises = figuresSnapshot.docs.map(doc =>
-        deleteDoc(doc.ref)
-      );
-      await Promise.all(deletePromises);
-
-      // Then delete the toy line itself
-      const docRef = doc(db, this.toyLinesCollection, id);
-      await deleteDoc(docRef);
-    } catch (error) {
-      console.error('Error deleting toy line:', error);
-      throw new Error('Failed to delete toy line');
     }
   }
 
   // ===== FIGURE MANAGEMENT WITHIN LINES =====
 
   /**
-   * Get all figures in a toy line
+   * Get all figures in a toy line (from masterFigures collection)
    */
   static async getFiguresInLine(toyLineId: string): Promise<ToyLineFigure[]> {
     try {
-      const querySnapshot = await getDocs(
-        query(
-          collection(db, this.figuresCollection),
-          where('toyLineId', '==', toyLineId),
-          orderBy('figureNumber'),
-          orderBy('name')
-        )
-      );
+      // Parse the toyLineId to get manufacturer and toy line name
+      const [manufacturer, ...toyLineNameParts] = toyLineId.split('-');
+      const toyLineName = toyLineNameParts.join('-');
 
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ToyLineFigure));
+      // Get all master figures
+      const masterFigures = await MasterFiguresService.getAll();
+
+      // Filter figures that belong to this toy line
+      const lineFigures = masterFigures.filter(figure => {
+        const figureToyLine = figure.productLine || figure.series || `${figure.manufacturer} ${figure.category}`;
+        return figure.manufacturer === manufacturer && figureToyLine === toyLineName;
+      });
+
+      // Convert to ToyLineFigure format and add collection images
+      const toyLineFigures: ToyLineFigure[] = [];
+
+      for (const figure of lineFigures) {
+        // Get collection images for this figure
+        const collectionImages = await this.getCollectionImagesForFigure(figure);
+
+        toyLineFigures.push({
+          id: figure.id,
+          toyLineId,
+          name: figure.name,
+          figureNumber: figure.productLineNumber,
+          year: figure.year || new Date().getFullYear(),
+          subLine: figure.subProductLine,
+          wave: undefined, // Not in master figures schema
+          manufacturer: figure.manufacturer,
+          category: figure.category,
+          size: figure.size,
+          upc: figure.upc,
+          collectionImages,
+          createdAt: figure.createdAt,
+          createdBy: figure.createdBy,
+          source: figure.source as any,
+          masterFigureId: figure.id
+        });
+      }
+
+      // Sort by figure number then name
+      return toyLineFigures.sort((a, b) => {
+        if (a.figureNumber && b.figureNumber) {
+          return a.figureNumber.localeCompare(b.figureNumber);
+        }
+        return a.name.localeCompare(b.name);
+      });
     } catch (error) {
       console.error('Error fetching toy line figures:', error);
       throw new Error('Failed to fetch toy line figures');
@@ -162,100 +201,15 @@ class ToyLinesService {
   }
 
   /**
-   * Add figure to toy line
+   * Get collection images for a master figure from user collections
    */
-  static async addFigureToLine(toyLineId: string, figure: Partial<ToyLineFigure>): Promise<string> {
+  private static async getCollectionImagesForFigure(masterFigure: MasterFigure): Promise<CollectionImage[]> {
     try {
-      const now = Date.now();
-      const figureData = {
-        ...figure,
-        toyLineId,
-        collectionImages: [],
-        createdAt: now
-      };
-
-      const docRef = await addDoc(collection(db, this.figuresCollection), figureData);
-
-      // Update toy line figure count
-      await this.updateFigureCount(toyLineId);
-
-      return docRef.id;
-    } catch (error) {
-      console.error('Error adding figure to toy line:', error);
-      throw new Error('Failed to add figure to toy line');
-    }
-  }
-
-  /**
-   * Update figure in toy line
-   */
-  static async updateFigureInLine(figureId: string, updates: Partial<ToyLineFigure>): Promise<void> {
-    try {
-      const docRef = doc(db, this.figuresCollection, figureId);
-      await updateDoc(docRef, updates);
-    } catch (error) {
-      console.error('Error updating toy line figure:', error);
-      throw new Error('Failed to update toy line figure');
-    }
-  }
-
-  /**
-   * Remove figure from toy line
-   */
-  static async removeFigureFromLine(figureId: string): Promise<void> {
-    try {
-      // Get the figure first to get toyLineId
-      const figureDoc = await getDoc(doc(db, this.figuresCollection, figureId));
-      if (!figureDoc.exists()) {
-        throw new Error('Figure not found');
-      }
-
-      const toyLineId = figureDoc.data().toyLineId;
-
-      // Delete the figure
-      await deleteDoc(doc(db, this.figuresCollection, figureId));
-
-      // Update toy line figure count
-      await this.updateFigureCount(toyLineId);
-    } catch (error) {
-      console.error('Error removing figure from toy line:', error);
-      throw new Error('Failed to remove figure from toy line');
-    }
-  }
-
-  /**
-   * Update figure count for a toy line
-   */
-  private static async updateFigureCount(toyLineId: string): Promise<void> {
-    try {
-      const figures = await this.getFiguresInLine(toyLineId);
-      await this.update(toyLineId, { figureCount: figures.length });
-    } catch (error) {
-      console.error('Error updating figure count:', error);
-    }
-  }
-
-  // ===== COLLECTION IMAGE AGGREGATION =====
-
-  /**
-   * Update collection images for a specific figure
-   */
-  static async updateFigureCollectionImages(figureId: string): Promise<void> {
-    try {
-      // Get the toy line figure
-      const figureDoc = await getDoc(doc(db, this.figuresCollection, figureId));
-      if (!figureDoc.exists()) {
-        return;
-      }
-
-      const toyLineFigure = figureDoc.data() as ToyLineFigure;
-
-      // Find user figures that match this toy line figure
-      // This is a simplified approach - in practice, you'd want more sophisticated matching
+      // Find user figures that match this master figure
       const userFiguresQuery = query(
         collection(db, this.userFiguresCollection),
-        where('name', '==', toyLineFigure.name),
-        where('manufacturer', '==', toyLineFigure.manufacturer),
+        where('name', '==', masterFigure.name),
+        where('manufacturer', '==', masterFigure.manufacturer),
         where('isPublic', '==', true)
       );
 
@@ -283,43 +237,10 @@ class ToyLinesService {
         }
       }
 
-      // Update the toy line figure with collection images
-      await this.updateFigureInLine(figureId, { collectionImages });
+      return collectionImages;
     } catch (error) {
-      console.error('Error updating collection images:', error);
-      throw new Error('Failed to update collection images');
-    }
-  }
-
-  /**
-   * Refresh collection images for all figures (batch operation)
-   */
-  static async refreshAllCollectionImages(): Promise<void> {
-    try {
-      const allFigures = await getDocs(collection(db, this.figuresCollection));
-
-      // Process in batches to avoid overwhelming the system
-      const batchSize = 10;
-      const figures = allFigures.docs;
-
-      for (let i = 0; i < figures.length; i += batchSize) {
-        const batch = figures.slice(i, i + batchSize);
-        const promises = batch.map(doc =>
-          this.updateFigureCollectionImages(doc.id).catch(error =>
-            console.error(`Failed to update images for figure ${doc.id}:`, error)
-          )
-        );
-
-        await Promise.all(promises);
-
-        // Small delay between batches
-        if (i + batchSize < figures.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing all collection images:', error);
-      throw new Error('Failed to refresh collection images');
+      console.error('Error fetching collection images:', error);
+      return [];
     }
   }
 
@@ -391,7 +312,7 @@ class ToyLinesService {
 
       // Match user figures to toy line figures
       const figuresWithOwnership = toyLineFigures.map(toyLineFigure => {
-        // Find matching user figure (simplified matching by name and manufacturer)
+        // Find matching user figure by name and manufacturer
         const matchingUserFigure = userFigures.find(userFigure =>
           userFigure.name.toLowerCase() === toyLineFigure.name.toLowerCase() &&
           userFigure.manufacturer.toLowerCase() === toyLineFigure.manufacturer.toLowerCase()
@@ -447,19 +368,8 @@ class ToyLinesService {
    */
   static async getByManufacturer(manufacturer: string): Promise<ToyLine[]> {
     try {
-      const querySnapshot = await getDocs(
-        query(
-          collection(db, this.toyLinesCollection),
-          where('manufacturer', '==', manufacturer),
-          where('isPublic', '==', true),
-          orderBy('name')
-        )
-      );
-
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ToyLine));
+      const allLines = await this.getAll();
+      return allLines.filter(line => line.manufacturer === manufacturer);
     } catch (error) {
       console.error('Error fetching toy lines by manufacturer:', error);
       throw new Error('Failed to fetch toy lines by manufacturer');

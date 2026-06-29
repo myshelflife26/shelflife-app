@@ -12,6 +12,7 @@ import {
 import { db } from '../config/firebase';
 import { FirebaseNotifications } from './firebaseNotifications';
 import { ToyLinesService } from './toyLinesService';
+import { MasterFiguresService, type MasterFigure } from './masterFigures';
 import type { ToyLineSuggestion, ToyLineFigure } from '../types/toyLine';
 
 class ToyLineSuggestionsService {
@@ -141,27 +142,32 @@ class ToyLineSuggestionsService {
 
       const suggestion = { id: suggestionDoc.id, ...suggestionDoc.data() } as ToyLineSuggestion;
 
-      // Create the new toy line figure from the suggestion
-      const newFigure: Partial<ToyLineFigure> = {
-        name: suggestion.figureName,
-        figureNumber: suggestion.figureNumber,
-        year: suggestion.year || new Date().getFullYear(),
-        subLine: suggestion.subLine,
-        manufacturer: '', // Will need to get from toy line
-        category: 'Action Figures', // Default
-        source: 'user-suggestion',
-        createdBy: adminId
-      };
-
-      // Get the toy line to populate manufacturer and category
+      // Since we're using dynamic toy lines, approved suggestions need to be added as masterFigures
+      // Get the toy line to determine productLine/series mapping
       const toyLine = await ToyLinesService.getById(suggestion.toyLineId);
-      if (toyLine) {
-        newFigure.manufacturer = toyLine.manufacturer;
-        newFigure.category = toyLine.category;
+      if (!toyLine) {
+        throw new Error('Toy line not found');
       }
 
-      // Add the figure to the toy line
-      await ToyLinesService.addFigureToLine(suggestion.toyLineId, newFigure);
+      // Create a new master figure from the suggestion
+      const newMasterFigure: Omit<MasterFigure, 'id' | 'createdAt'> = {
+        name: suggestion.figureName,
+        manufacturer: toyLine.manufacturer,
+        productLine: toyLine.name,
+        productLineNumber: suggestion.figureNumber,
+        year: suggestion.year || new Date().getFullYear(),
+        subProductLine: suggestion.subLine,
+        category: toyLine.category,
+        source: 'admin',
+        createdBy: adminId,
+        notes: `Added from user suggestion. Reason: ${suggestion.reason}`
+      };
+
+      // Add the figure to masterFigures collection
+      const addedFigure = await MasterFiguresService.add(newMasterFigure, adminId);
+      if (!addedFigure) {
+        throw new Error('Failed to add master figure');
+      }
 
       // Update the suggestion status
       const now = Date.now();
