@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Upload, Database, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { FigureMigrationService } from '../../utils/figureMigration';
+import { Upload, Database, CheckCircle, AlertCircle, RefreshCw, Eye, RotateCcw, X } from 'lucide-react';
+import { FigureMigrationService, type MigrationResults, type MigrationError } from '../../utils/figureMigration';
+import type { ActionFigure } from '../../types';
 
 interface MigrationStatus {
   totalUserFigures: number;
@@ -15,12 +16,7 @@ interface MigrationStatus {
   }>;
 }
 
-interface MigrationResults {
-  processed: number;
-  added: number;
-  skipped: number;
-  errors: string[];
-}
+// MigrationResults is now imported from the service
 
 const FigureMigrationPanel: React.FC = () => {
   const [migrationStatus, setMigrationStatus] = useState<MigrationStatus | null>(null);
@@ -28,6 +24,10 @@ const FigureMigrationPanel: React.FC = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [showMissingDetails, setShowMissingDetails] = useState(false);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const [selectedError, setSelectedError] = useState<MigrationError | null>(null);
+  const [figureDetails, setFigureDetails] = useState<ActionFigure | null>(null);
+  const [retryingFigures, setRetryingFigures] = useState<Set<string>>(new Set());
 
   const checkMigrationStatus = async () => {
     setIsChecking(true);
@@ -62,6 +62,53 @@ const FigureMigrationPanel: React.FC = () => {
     } finally {
       setIsMigrating(false);
     }
+  };
+
+  const viewErrorDetails = async (error: MigrationError) => {
+    setSelectedError(error);
+    if (error.figureId) {
+      const details = await FigureMigrationService.getFigureDetails(error.figureId);
+      setFigureDetails(details);
+    }
+    setShowErrorDetails(true);
+  };
+
+  const retryFigureMigration = async (error: MigrationError) => {
+    if (!error.figureId) return;
+
+    setRetryingFigures(prev => new Set([...prev, error.figureId!]));
+
+    try {
+      const result = await FigureMigrationService.retryFigureMigration(error.figureId, 'admin');
+
+      if (result.success) {
+        // Remove this error from the results and refresh status
+        setMigrationResults(prev => prev ? {
+          ...prev,
+          errors: prev.errors.filter(e => e.figureId !== error.figureId),
+          added: prev.added + 1
+        } : null);
+
+        await checkMigrationStatus();
+        alert(`Successfully migrated ${error.figureName}!`);
+      } else {
+        alert(`Failed to retry migration: ${result.error}`);
+      }
+    } catch (error) {
+      alert('Error during retry: ' + error.message);
+    } finally {
+      setRetryingFigures(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(error.figureId!);
+        return newSet;
+      });
+    }
+  };
+
+  const closeErrorDetails = () => {
+    setShowErrorDetails(false);
+    setSelectedError(null);
+    setFigureDetails(null);
   };
 
   return (
@@ -193,18 +240,56 @@ const FigureMigrationPanel: React.FC = () => {
 
             {migrationResults.errors.length > 0 && (
               <div className="border-t border-green-200 pt-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  <span className="text-sm font-medium text-red-700">
-                    {migrationResults.errors.length} Errors
-                  </span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-medium text-red-700">
+                      {migrationResults.errors.length} Errors
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowErrorDetails(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    View Details
+                  </button>
                 </div>
                 <div className="max-h-32 overflow-y-auto">
-                  {migrationResults.errors.map((error, index) => (
-                    <div key={index} className="text-xs text-red-600 py-1">
-                      {error}
+                  {migrationResults.errors.slice(0, 3).map((error, index) => (
+                    <div key={index} className="text-xs text-red-600 py-1 flex items-center justify-between">
+                      <span className="flex-1">{error.figureName || 'Unknown figure'}: {error.message}</span>
+                      <div className="flex gap-1 ml-2">
+                        {error.figureId && (
+                          <>
+                            <button
+                              onClick={() => viewErrorDetails(error)}
+                              className="p-1 hover:bg-red-100 rounded"
+                              title="View Details"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => retryFigureMigration(error)}
+                              disabled={retryingFigures.has(error.figureId)}
+                              className="p-1 hover:bg-blue-100 rounded disabled:opacity-50"
+                              title="Retry Migration"
+                            >
+                              {retryingFigures.has(error.figureId) ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-3 w-3" />
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
+                  {migrationResults.errors.length > 3 && (
+                    <div className="text-xs text-gray-500 text-center py-1">
+                      ... and {migrationResults.errors.length - 3} more errors
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -238,6 +323,108 @@ const FigureMigrationPanel: React.FC = () => {
           </ul>
         </div>
       </div>
+
+      {/* Error Details Modal */}
+      {showErrorDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-medium text-gray-900">Migration Errors</h3>
+              <button
+                onClick={closeErrorDetails}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {migrationResults?.errors.map((error, index) => (
+                <div key={index} className="mb-4 p-3 border border-red-200 rounded-lg bg-red-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-medium text-red-800">
+                        {error.figureName || 'Unknown Figure'}
+                      </h4>
+                      <p className="text-sm text-red-600 mt-1">{error.message}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {error.figureId && (
+                        <>
+                          {error.figureData && (
+                            <button
+                              onClick={() => viewErrorDetails(error)}
+                              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                            >
+                              <Eye className="h-4 w-4 mr-1 inline" />
+                              View Details
+                            </button>
+                          )}
+                          <button
+                            onClick={() => retryFigureMigration(error)}
+                            disabled={retryingFigures.has(error.figureId)}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {retryingFigures.has(error.figureId) ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-1 inline animate-spin" />
+                                Retrying...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="h-4 w-4 mr-1 inline" />
+                                Retry
+                              </>
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {error.figureData && selectedError?.figureId === error.figureId && figureDetails && (
+                    <div className="mt-3 p-3 bg-white border border-gray-200 rounded">
+                      <h5 className="font-medium text-gray-800 mb-2">Figure Details:</h5>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><strong>Name:</strong> {figureDetails.name}</div>
+                        <div><strong>Manufacturer:</strong> {figureDetails.manufacturer}</div>
+                        <div><strong>Series:</strong> {figureDetails.series || 'None'}</div>
+                        <div><strong>Product Line:</strong> {figureDetails.productLine || 'None'}</div>
+                        <div><strong>Year:</strong> {figureDetails.year || 'Unknown'}</div>
+                        <div><strong>Category:</strong> {figureDetails.category}</div>
+                        <div><strong>Condition:</strong> {figureDetails.condition}</div>
+                        <div><strong>User ID:</strong> {figureDetails.userId}</div>
+                      </div>
+
+                      {figureDetails.notes && (
+                        <div className="mt-2">
+                          <strong>Notes:</strong>
+                          <p className="text-gray-600 mt-1">{figureDetails.notes}</p>
+                        </div>
+                      )}
+
+                      {(figureDetails.images && figureDetails.images.length > 0) && (
+                        <div className="mt-2">
+                          <strong>Images:</strong> {figureDetails.images.length} image(s)
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={closeErrorDetails}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

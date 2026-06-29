@@ -8,6 +8,20 @@ import { db } from '../config/firebase';
 import { MasterFiguresService, type MasterFigure } from './masterFigures';
 import type { ActionFigure } from '../types';
 
+export interface MigrationError {
+  message: string;
+  figureId?: string;
+  figureName?: string;
+  figureData?: ActionFigure;
+}
+
+export interface MigrationResults {
+  processed: number;
+  added: number;
+  skipped: number;
+  errors: MigrationError[];
+}
+
 class FigureMigrationService {
   private static userFiguresCollection = 'figures';
 
@@ -15,17 +29,12 @@ class FigureMigrationService {
    * Migrate all user figures to masterFigures database
    * This ensures every figure in user collections is also in the master database
    */
-  static async migrateUserFiguresToMaster(): Promise<{
-    processed: number;
-    added: number;
-    skipped: number;
-    errors: string[];
-  }> {
+  static async migrateUserFiguresToMaster(): Promise<MigrationResults> {
     const results = {
       processed: 0,
       added: 0,
       skipped: 0,
-      errors: [] as string[]
+      errors: [] as MigrationError[]
     };
 
     try {
@@ -106,11 +115,21 @@ class FigureMigrationService {
             masterFigureMap.set(figureKey, addedFigure);
             console.log(`Added: ${userFigure.name} by ${userFigure.manufacturer}`);
           } else {
-            results.errors.push(`Failed to add ${userFigure.name} by ${userFigure.manufacturer}`);
+            results.errors.push({
+              message: `Failed to add ${userFigure.name} by ${userFigure.manufacturer}`,
+              figureId: userFigure.id,
+              figureName: userFigure.name,
+              figureData: userFigure
+            });
           }
 
         } catch (error) {
-          results.errors.push(`Error processing ${userFigure.name}: ${error.message}`);
+          results.errors.push({
+            message: `Error processing ${userFigure.name}: ${error.message}`,
+            figureId: userFigure.id,
+            figureName: userFigure.name,
+            figureData: userFigure
+          });
           console.error(`Error processing figure ${userFigure.name}:`, error);
         }
 
@@ -242,17 +261,12 @@ class FigureMigrationService {
   /**
    * Migrate figures for a specific user only
    */
-  static async migrateUserFiguresForUser(userId: string): Promise<{
-    processed: number;
-    added: number;
-    skipped: number;
-    errors: string[];
-  }> {
+  static async migrateUserFiguresForUser(userId: string): Promise<MigrationResults> {
     const results = {
       processed: 0,
       added: 0,
       skipped: 0,
-      errors: [] as string[]
+      errors: [] as MigrationError[]
     };
 
     try {
@@ -319,11 +333,21 @@ class FigureMigrationService {
             results.added++;
             masterFigureMap.set(figureKey, addedFigure);
           } else {
-            results.errors.push(`Failed to add ${userFigure.name}`);
+            results.errors.push({
+              message: `Failed to add ${userFigure.name}`,
+              figureId: userFigure.id,
+              figureName: userFigure.name,
+              figureData: userFigure
+            });
           }
 
         } catch (error) {
-          results.errors.push(`Error processing ${userFigure.name}: ${error.message}`);
+          results.errors.push({
+            message: `Error processing ${userFigure.name}: ${error.message}`,
+            figureId: userFigure.id,
+            figureName: userFigure.name,
+            figureData: userFigure
+          });
         }
       }
 
@@ -332,6 +356,108 @@ class FigureMigrationService {
     } catch (error) {
       console.error(`Error migrating figures for user ${userId}:`, error);
       throw new Error(`Migration failed for user: ${error.message}`);
+    }
+  }
+
+  /**
+   * Retry migrating a specific figure that previously failed
+   */
+  static async retryFigureMigration(figureId: string, userId: string): Promise<{
+    success: boolean;
+    error?: string;
+    addedFigure?: MasterFigure;
+  }> {
+    try {
+      // Get the specific figure
+      const userFiguresQuery = query(
+        collection(db, this.userFiguresCollection),
+        where('__name__', '==', figureId)
+      );
+      const userFiguresSnapshot = await getDocs(userFiguresQuery);
+
+      if (userFiguresSnapshot.empty) {
+        return { success: false, error: 'Figure not found' };
+      }
+
+      const userFigure = {
+        id: userFiguresSnapshot.docs[0].id,
+        ...userFiguresSnapshot.docs[0].data()
+      } as ActionFigure;
+
+      // Check if master figure already exists
+      const existingMasterFigures = await MasterFiguresService.getAll();
+      const figureKey = this.createFigureKey(
+        userFigure.name,
+        userFigure.manufacturer,
+        userFigure.productLine || userFigure.series
+      );
+
+      const existingFigure = existingMasterFigures.find(figure => {
+        const key = this.createFigureKey(figure.name, figure.manufacturer, figure.productLine || figure.series);
+        return key === figureKey;
+      });
+
+      if (existingFigure) {
+        return { success: false, error: 'Figure already exists in master database' };
+      }
+
+      // Create master figure
+      const masterFigureData: Omit<MasterFigure, 'id' | 'createdAt'> = {
+        name: userFigure.name,
+        version: userFigure.version,
+        year: userFigure.year,
+        series: userFigure.series,
+        manufacturer: userFigure.manufacturer,
+        category: userFigure.category,
+        size: userFigure.size,
+        productLine: userFigure.productLine || userFigure.series,
+        productLineNumber: userFigure.productLineNumber,
+        subProductLine: userFigure.subProductLine,
+        packaging: userFigure.packaging,
+        upc: userFigure.upc,
+        imageUrl: this.getFirstUserImage(userFigure),
+        notes: `Added by user ${userId} via retry`,
+        createdBy: userId,
+        source: 'user'
+      };
+
+      const addedFigure = await MasterFiguresService.add(masterFigureData, userId);
+
+      if (addedFigure) {
+        return { success: true, addedFigure };
+      } else {
+        return { success: false, error: 'Failed to add figure to master database' };
+      }
+
+    } catch (error) {
+      console.error(`Error retrying figure migration:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get detailed information about a figure that failed migration
+   */
+  static async getFigureDetails(figureId: string): Promise<ActionFigure | null> {
+    try {
+      const userFiguresQuery = query(
+        collection(db, this.userFiguresCollection),
+        where('__name__', '==', figureId)
+      );
+      const userFiguresSnapshot = await getDocs(userFiguresQuery);
+
+      if (userFiguresSnapshot.empty) {
+        return null;
+      }
+
+      return {
+        id: userFiguresSnapshot.docs[0].id,
+        ...userFiguresSnapshot.docs[0].data()
+      } as ActionFigure;
+
+    } catch (error) {
+      console.error('Error getting figure details:', error);
+      return null;
     }
   }
 }
