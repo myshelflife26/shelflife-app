@@ -191,6 +191,56 @@ export class FirebaseNotifications {
   }
 
   /**
+   * Create a toy line suggestion approved notification
+   */
+  static async createToyLineSuggestionApprovedNotification(
+    userId: string,
+    figureName: string,
+    toyLineName: string,
+    adminName: string,
+    reviewNotes?: string
+  ): Promise<void> {
+    await addDoc(collection(db, this.NOTIFICATIONS_COLLECTION), {
+      userId,
+      type: 'toy_line_suggestion_approved',
+      read: false,
+      timestamp: Date.now(),
+      actorId: 'system',
+      actorName: adminName,
+      text: reviewNotes
+        ? `Your suggestion "${figureName}" for ${toyLineName} was approved. ${this.truncateText(reviewNotes, 80)}`
+        : `Your suggestion "${figureName}" for ${toyLineName} was approved!`,
+      actionUrl: `/browse/toy-lines/${encodeURIComponent(toyLineName)}`,
+    });
+
+    await this.cleanupOldNotifications(userId);
+  }
+
+  /**
+   * Create a toy line suggestion rejected notification
+   */
+  static async createToyLineSuggestionRejectedNotification(
+    userId: string,
+    figureName: string,
+    toyLineName: string,
+    adminName: string,
+    reviewNotes: string
+  ): Promise<void> {
+    await addDoc(collection(db, this.NOTIFICATIONS_COLLECTION), {
+      userId,
+      type: 'toy_line_suggestion_rejected',
+      read: false,
+      timestamp: Date.now(),
+      actorId: 'system',
+      actorName: adminName,
+      text: `Your suggestion "${figureName}" for ${toyLineName} was declined. ${this.truncateText(reviewNotes, 80)}`,
+      actionUrl: `/browse/toy-lines`,
+    });
+
+    await this.cleanupOldNotifications(userId);
+  }
+
+  /**
    * Get all notifications for a user
    */
   static async getNotifications(userId: string, limitCount: number = 20): Promise<Notification[]> {

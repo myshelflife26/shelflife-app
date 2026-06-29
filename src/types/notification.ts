@@ -1,7 +1,7 @@
 export interface Notification {
   id: string;
   userId: string; // Who receives this notification
-  type: 'comment' | 'reply' | 'mention' | 'report' | 'like' | 'figure_reaction' | 'formula_access_request';
+  type: 'comment' | 'reply' | 'mention' | 'report' | 'like' | 'figure_reaction' | 'formula_access_request' | 'toy_line_suggestion_approved' | 'toy_line_suggestion_rejected';
   read: boolean;
   timestamp: number;
 

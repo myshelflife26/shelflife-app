@@ -17,7 +17,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign, Shuffle, Bookmark, BookmarkCheck, Zap } from 'lucide-react';
+import { Search, User as UserIcon, Package, Eye, Mail, X, ThumbsUp, Heart, Flame, Star, UserPlus, UserMinus, Clock, ShieldOff, Flag, ChevronLeft, ChevronRight, Repeat, DollarSign, Shuffle, Bookmark, BookmarkCheck, Zap, Database } from 'lucide-react';
 import { WatermarkedImage } from './ImageOverlay';
 import { BlockReasonDialog } from './BlockReasonDialog';
 import { ReportReasonDialog } from './ReportReasonDialog';
@@ -30,6 +30,10 @@ import { ViewTrackingService } from '../utils/viewTracking';
 import { TrendingService } from '../utils/trending';
 import { UserRecommendationsService } from '../utils/userRecommendations';
 import { CommentsSection } from './CommentsSection';
+import { ToyLineDatabaseTab } from './ToyLineDatabaseTab';
+import { ToyLineDetail } from './ToyLineDetail';
+import { FigureSuggestionModal } from './FigureSuggestionModal';
+import type { ToyLine, ToyLineFigure } from '../types/toyLine';
 
 interface BrowsePageProps {
   currentUser: User;
@@ -38,7 +42,7 @@ interface BrowsePageProps {
   onClearInitialUserId?: () => void;
 }
 
-type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks' | 'trending' | 'recommended';
+type ViewMode = 'all' | 'users' | 'recent' | 'admiring' | 'bookmarks' | 'trending' | 'recommended' | 'toy-lines';
 
 function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitialUserId }: BrowsePageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
@@ -92,6 +96,10 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
   const [figureJealousyStats, setFigureJealousyStats] = useState<Map<string, { appreciate: number; love: number; fire: number; total: number }>>(new Map());
   const [figureUserReactions, setFigureUserReactions] = useState<Map<string, ReactionType | null>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Toy line state
+  const [selectedToyLine, setSelectedToyLine] = useState<ToyLine | null>(null);
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
 
   // Debug: Monitor reactionStats changes
   useEffect(() => {
@@ -829,6 +837,18 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     setUserToBlock(null);
   };
 
+  // Handle adding figure from toy line to collection
+  const handleAddFromToyLine = (toyLineFigure: ToyLineFigure) => {
+    // This would typically navigate to the FigureForm with pre-populated data
+    // For now, we'll implement a basic approach
+    if (setCurrentPage) {
+      // Navigate to collection page where user can add the figure
+      // We could pass the toy line figure data via a callback or state management
+      setCurrentPage('collection');
+      toastManager.info(`Navigate to your collection to add ${toyLineFigure.name}`);
+    }
+  };
+
   // Cancel block
   const cancelBlock = () => {
     setBlockDialogOpen(false);
@@ -998,10 +1018,21 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
           <BookmarkCheck className="h-4 w-4 inline mr-2" />
           Bookmarks ({bookmarkedFigureIds.size})
         </button>
+        <button
+          onClick={() => setViewMode('toy-lines')}
+          className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            viewMode === 'toy-lines'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Database className="h-4 w-4 inline mr-2" />
+          Toy Lines
+        </button>
       </div>
 
       {/* Search and Filters */}
-      {viewMode !== 'users' && viewMode !== 'admiring' && viewMode !== 'trending' && (
+      {viewMode !== 'users' && viewMode !== 'admiring' && viewMode !== 'trending' && viewMode !== 'toy-lines' && (
         <div className="mb-6 flex gap-3 items-start flex-wrap">
           <Input
             placeholder="Search figures, accessories, notes, custom fields..."
@@ -1187,6 +1218,22 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
             });
           })()}
         </div>
+      ) : viewMode === 'toy-lines' ? (
+        // Toy Lines View
+        selectedToyLine ? (
+          <ToyLineDetail
+            toyLine={selectedToyLine}
+            currentUser={currentUser}
+            onBack={() => setSelectedToyLine(null)}
+            onAddFigure={handleAddFromToyLine}
+            onSuggestFigure={() => setSuggestionModalOpen(true)}
+          />
+        ) : (
+          <ToyLineDatabaseTab
+            currentUser={currentUser}
+            onSelectToyLine={setSelectedToyLine}
+          />
+        )
       ) : (
         // Figures Grid View
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -1863,6 +1910,20 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
           requestedFigure={selectedFigure}
           currentUser={currentUser}
           mode={tradeRequestMode}
+        />
+      )}
+
+      {/* Figure Suggestion Modal */}
+      {selectedToyLine && (
+        <FigureSuggestionModal
+          toyLine={selectedToyLine}
+          currentUser={currentUser}
+          open={suggestionModalOpen}
+          onClose={() => setSuggestionModalOpen(false)}
+          onSubmitted={() => {
+            // Could refresh toy line data if needed
+            toastManager.success('Suggestion submitted successfully!');
+          }}
         />
       )}
     </div>
