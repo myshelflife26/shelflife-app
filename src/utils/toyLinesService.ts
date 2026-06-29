@@ -11,7 +11,7 @@ import {
   orderBy,
   Timestamp
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../config/firebase';
 import type {
   ToyLine,
   ToyLineFigure,

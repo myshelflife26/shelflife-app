@@ -9,7 +9,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../config/firebase';
 import { FirebaseNotifications } from './firebaseNotifications';
 import { ToyLinesService } from './toyLinesService';
 import type { ToyLineSuggestion, ToyLineFigure } from '../types/toyLine';
