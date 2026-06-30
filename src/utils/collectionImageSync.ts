@@ -15,6 +15,60 @@ class CollectionImageSyncService {
   private static userFiguresCollection = 'figures';
 
   /**
+   * Find user figures that match master figures but may be in wrong toy line context
+   */
+  static async findToyLineContextIssues(): Promise<Array<{
+    userFigure: ActionFigure;
+    currentMatch: MasterFigure | null;
+    suggestedMatches: MasterFigure[];
+    issue: string;
+  }>> {
+    try {
+      // Get all user figures (not just public ones)
+      const userFiguresSnapshot = await getDocs(collection(db, this.userFiguresCollection));
+      const userFigures = userFiguresSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as ActionFigure));
+
+      // Get all master figures
+      const masterFigures = await MasterFiguresService.getAll();
+
+      const contextIssues = [];
+
+      for (const userFigure of userFigures) {
+        // Find current exact match
+        const currentMatch = masterFigures.find(mf =>
+          mf.name.toLowerCase() === userFigure.name.toLowerCase() &&
+          mf.manufacturer.toLowerCase() === userFigure.manufacturer.toLowerCase()
+        );
+
+        // Find other possible matches by name (different manufacturer/context)
+        const nameMatches = masterFigures.filter(mf =>
+          mf.name.toLowerCase() === userFigure.name.toLowerCase() &&
+          mf.id !== currentMatch?.id
+        );
+
+        if (nameMatches.length > 0) {
+          contextIssues.push({
+            userFigure,
+            currentMatch,
+            suggestedMatches: nameMatches,
+            issue: currentMatch
+              ? `Matches "${currentMatch.manufacturer}" but other versions exist`
+              : 'No exact match but similar names found'
+          });
+        }
+      }
+
+      return contextIssues;
+    } catch (error) {
+      console.error('Error finding toy line context issues:', error);
+      throw new Error('Failed to find toy line context issues');
+    }
+  }
+
+  /**
    * Find orphaned user figures that don't match any master figures
    */
   static async findOrphanedUserFigures(): Promise<Array<{

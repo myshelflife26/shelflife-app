@@ -10,20 +10,36 @@ interface OrphanedFigure {
   issue: string;
 }
 
+interface ToyLineContextIssue {
+  userFigure: ActionFigure;
+  currentMatch: MasterFigure | null;
+  suggestedMatches: MasterFigure[];
+  issue: string;
+}
+
 const CollectionImageSyncPanel: React.FC = () => {
   const [orphanedFigures, setOrphanedFigures] = useState<OrphanedFigure[]>([]);
+  const [contextIssues, setContextIssues] = useState<ToyLineContextIssue[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isFixing, setIsFixing] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFixes, setSelectedFixes] = useState<Map<string, MasterFigure>>(new Map());
+  const [analysisMode, setAnalysisMode] = useState<'orphaned' | 'context' | 'both'>('both');
 
   const analyzeOrphanedFigures = async () => {
     setIsAnalyzing(true);
     try {
-      const orphaned = await CollectionImageSyncService.findOrphanedUserFigures();
-      setOrphanedFigures(orphaned);
+      if (analysisMode === 'orphaned' || analysisMode === 'both') {
+        const orphaned = await CollectionImageSyncService.findOrphanedUserFigures();
+        setOrphanedFigures(orphaned);
+      }
+
+      if (analysisMode === 'context' || analysisMode === 'both') {
+        const context = await CollectionImageSyncService.findToyLineContextIssues();
+        setContextIssues(context);
+      }
     } catch (error) {
-      console.error('Error analyzing orphaned figures:', error);
+      console.error('Error analyzing figures:', error);
       alert('Failed to analyze figures: ' + error.message);
     } finally {
       setIsAnalyzing(false);
@@ -102,6 +118,12 @@ const CollectionImageSyncPanel: React.FC = () => {
     orphaned.userFigure.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredContext = contextIssues.filter(context =>
+    searchQuery === '' ||
+    context.userFigure.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    context.userFigure.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -114,19 +136,30 @@ const CollectionImageSyncPanel: React.FC = () => {
           Find and fix user figures that don't match master figures, preventing their images from showing in toy lines.
         </p>
 
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={analyzeOrphanedFigures}
-            disabled={isAnalyzing}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isAnalyzing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4 mr-2" />
-            )}
-            Find Orphaned Figures
-          </button>
+        <div className="mb-6">
+          <div className="flex gap-3 mb-4">
+            <select
+              value={analysisMode}
+              onChange={(e) => setAnalysisMode(e.target.value as 'orphaned' | 'context' | 'both')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="both">Find All Issues</option>
+              <option value="orphaned">Orphaned Figures Only</option>
+              <option value="context">Toy Line Context Issues Only</option>
+            </select>
+
+            <button
+              onClick={analyzeOrphanedFigures}
+              disabled={isAnalyzing}
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              {isAnalyzing ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4 mr-2" />
+              )}
+              Analyze Figures
+            </button>
 
           {selectedFixes.size > 0 && (
             <button
@@ -242,10 +275,98 @@ const CollectionImageSyncPanel: React.FC = () => {
           </div>
         )}
 
-        {!isAnalyzing && orphanedFigures.length === 0 && (
+        {/* Toy Line Context Issues */}
+        {filteredContext.length > 0 && (
+          <div className="space-y-4 mt-8">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900">
+                Toy Line Context Issues ({filteredContext.length})
+              </h3>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <AlertTriangle className="h-4 w-4 text-blue-500" />
+                Figures that might be in wrong toy line context
+              </div>
+            </div>
+
+            {filteredContext.map((contextIssue, index) => (
+              <div key={contextIssue.userFigure.id} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {contextIssue.userFigure.name}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {contextIssue.userFigure.manufacturer} • Owner: {contextIssue.userFigure.userId}
+                    </p>
+                    {contextIssue.currentMatch && (
+                      <p className="text-sm text-blue-600 mt-1">
+                        Currently matches: {contextIssue.currentMatch.manufacturer} - {contextIssue.currentMatch.franchise || 'No Franchise'} - {contextIssue.currentMatch.productLine || 'No Product Line'}
+                      </p>
+                    )}
+                    <p className="text-sm text-blue-700 mt-1">
+                      {contextIssue.issue}
+                    </p>
+                  </div>
+
+                  {contextIssue.userFigure.images && contextIssue.userFigure.images.length > 0 && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={contextIssue.userFigure.images[contextIssue.userFigure.mainImageIndex || 0]}
+                        alt={contextIssue.userFigure.name}
+                        className="w-16 h-16 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {contextIssue.suggestedMatches.length > 0 && (
+                  <div className="space-y-2">
+                    <h5 className="text-sm font-medium text-gray-700">Other Versions Available:</h5>
+                    {contextIssue.suggestedMatches.map((match, matchIndex) => (
+                      <div key={match.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{match.name}</div>
+                          <div className="text-xs text-gray-600">
+                            {match.manufacturer} • {match.franchise && `${match.franchise} - `}{match.productLine || match.series}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name={`fix-context-${contextIssue.userFigure.id}`}
+                            checked={selectedFixes.get(contextIssue.userFigure.id)?.id === match.id}
+                            onChange={() => selectFix(contextIssue.userFigure.id, match)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500"
+                          />
+                          <button
+                            onClick={() => fixSingleFigure({ userFigure: contextIssue.userFigure, possibleMatches: contextIssue.suggestedMatches, issue: contextIssue.issue }, match)}
+                            disabled={isFixing.has(contextIssue.userFigure.id)}
+                            className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+                          >
+                            {isFixing.has(contextIssue.userFigure.id) ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <Link className="h-3 w-3 mr-1 inline" />
+                                Switch
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isAnalyzing && orphanedFigures.length === 0 && contextIssues.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500" />
-            <p>No orphaned figures found. All collection images should be displaying correctly.</p>
+            <p>No issues found. All collection images should be displaying correctly in toy lines.</p>
           </div>
         )}
 
