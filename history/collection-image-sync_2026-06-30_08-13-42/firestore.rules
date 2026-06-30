@@ -1,0 +1,259 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isManagement() {
+      return isSignedIn() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'management' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
+    }
+
+    function isTradeTransfer() {
+      return isSignedIn() &&
+             request.resource.data.userId != resource.data.userId &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'updatedAt', 'isPublic', 'isListed', 'marketplaceListing', 'availability']);
+    }
+
+    match /masterFigures/{figureId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManagement();
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isManagement();
+    }
+
+    match /figures/{figureId} {
+      // UPDATED: Allow unauthenticated users to read public/listed figures
+      allow read: if resource.data.isPublic == true ||
+                     resource.data.isListed == true ||
+                     (isSignedIn() && resource.data.userId == request.auth.uid) ||
+                     isManagement();
+
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId) || isManagement();
+
+      allow update: if isTradeTransfer();
+    }
+
+    match /reactions/{reactionId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /messages/{messageId} {
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow update: if isSignedIn() && resource.data.toUserId == request.auth.uid;
+      allow delete: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    // Conversations (new threaded messaging system)
+    match /conversations/{conversationId} {
+      // Users can read conversations if they are participants
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Users can create conversations if they are one of the participants
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
+
+      // Users can update conversations if they are participants (for marking as read, archiving)
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Users can delete their own conversations
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // Messages subcollection within conversations
+      match /messages/{messageId} {
+        // Users can read messages if they are participants of the parent conversation
+        allow read: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        // Users can create messages if they are participants and the message is from them
+        allow create: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants &&
+          request.resource.data.fromUserId == request.auth.uid;
+
+        // Users can update their own messages (for editing/read receipts)
+        allow update: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        // Users can delete their own messages
+        allow delete: if isSignedIn() &&
+          resource.data.fromUserId == request.auth.uid;
+      }
+    }
+
+    match /communityFigures/{figureId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+    }
+
+    match /trades/{tradeId} {
+      allow read: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    match /admirer_requests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.admirerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+    }
+
+    match /admirers/{relationshipId} {
+      // Allow all signed-in users to read (for admirer counts)
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && (
+        resource.data.admirerId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid
+      );
+    }
+
+    match /userRatings/{ratingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.fromUserId == request.auth.uid;
+    }
+
+    match /shelves/{shelfId} {
+      allow read: if isSignedIn() && (
+        resource.data.isPublic == true ||
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+    }
+
+    match /wishlist/{itemId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+    }
+
+    match /rejectedDuplicates/{rejectionId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isManagement();
+    }
+
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Any signed-in user can create notifications (for comments, mentions, etc.)
+      // But can only create notifications for other users (not themselves)
+      allow create: if isSignedIn();
+
+      // Users can update/delete their own notifications
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Comments System
+    match /comments/{commentId} {
+      // Allow anyone to read comments (client-side will filter hidden/unapproved)
+      allow read: if true;
+
+      // Create: Must be signed in and set userId to self
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Update: Own comment OR figure owner (for moderation)
+      allow update: if isSignedIn();
+
+      // Delete: Own comment OR must be signed in (figure owner check on client)
+      allow delete: if isSignedIn();
+    }
+
+    // Comment Reports
+    match /commentReports/{reportId} {
+      // Read: Only figure owners can read reports for their figures
+      allow read: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
+
+      // Create: Any signed-in user can report a comment
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+
+      // Update: Only figure owner can update (review) reports
+      allow update: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
+
+      // Delete: Only figure owner can delete reports
+      allow delete: if isSignedIn() && resource.data.figureOwnerId == request.auth.uid;
+    }
+
+    // Toy Line Database Collections
+    match /toyLines/{toyLineId} {
+      // Allow all authenticated users to read public toy lines
+      allow read: if resource.data.isPublic == true || isSignedIn();
+
+      // Only management/admins can create, update, or delete toy lines
+      allow create, update, delete: if isManagement();
+    }
+
+    match /toyLineFigures/{figureId} {
+      // Allow all authenticated users to read toy line figures
+      allow read: if isSignedIn();
+
+      // Only management/admins can create, update, or delete toy line figures
+      allow create, update, delete: if isManagement();
+    }
+
+    match /toyLineSuggestions/{suggestionId} {
+      // Users can read their own suggestions, admins can read all
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManagement()
+      );
+
+      // Users can create suggestions for themselves
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Only admins can update suggestions (approve/reject)
+      allow update: if isManagement();
+
+      // Users can delete their own pending suggestions, admins can delete any
+      allow delete: if isSignedIn() && (
+        (resource.data.userId == request.auth.uid && resource.data.status == 'pending') ||
+        isManagement()
+      );
+    }
+  }
+}

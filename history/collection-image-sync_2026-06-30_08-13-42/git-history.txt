@@ -1,0 +1,10 @@
+95e7f67 Enhance Collection Image Sync to find more context issues
+1b20e88 Enhance Collection Image Sync to find toy line context issues
+077a67d Add collection image sync system to fix disconnected images
+eb91ed2 Update toy line naming to 'Franchise - Product Line' format
+02589f7 Add comprehensive figure editing with all fields
+acf5a37 Add admin figure editing directly in toy line detail view
+d646c15 Fix toy line ownership detection and add assignment fixes
+704535d Enhance migration error handling and debugging
+559c3b4 Move figure migration panel to Admin Settings System Maintenance
+e37bca9 Add figure migration system
