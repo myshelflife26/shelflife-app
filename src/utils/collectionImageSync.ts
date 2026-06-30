@@ -77,12 +77,8 @@ class CollectionImageSyncService {
     issue: string;
   }>> {
     try {
-      // Get all public user figures
-      const userFiguresQuery = query(
-        collection(db, this.userFiguresCollection),
-        where('isPublic', '==', true)
-      );
-      const userFiguresSnapshot = await getDocs(userFiguresQuery);
+      // Get all user figures (not just public ones to catch more issues)
+      const userFiguresSnapshot = await getDocs(collection(db, this.userFiguresCollection));
       const userFigures = userFiguresSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -101,7 +97,7 @@ class CollectionImageSyncService {
         );
 
         if (!exactMatch) {
-          // Find possible matches by name only
+          // Find possible matches by name only (different manufacturers)
           const nameMatches = masterFigures.filter(mf =>
             mf.name.toLowerCase() === userFigure.name.toLowerCase()
           );
@@ -116,18 +112,47 @@ class CollectionImageSyncService {
           let possibleMatches = [];
 
           if (nameMatches.length > 0) {
-            issue = `Name matches found but different manufacturer. User has "${userFigure.manufacturer}"`;
+            issue = `Name matches found but different manufacturer. User has "${userFigure.manufacturer}", available: ${nameMatches.map(m => m.manufacturer).join(', ')}`;
             possibleMatches = nameMatches;
           } else if (fuzzyMatches.length > 0) {
             issue = 'Similar names found with same manufacturer';
             possibleMatches = fuzzyMatches;
+          } else {
+            // Also check for figures where name is partially contained
+            const partialMatches = masterFigures.filter(mf =>
+              (mf.name.toLowerCase().includes(userFigure.name.toLowerCase()) ||
+               userFigure.name.toLowerCase().includes(mf.name.toLowerCase())) &&
+              mf.manufacturer.toLowerCase() === userFigure.manufacturer.toLowerCase()
+            );
+
+            if (partialMatches.length > 0) {
+              issue = 'Partial name matches found';
+              possibleMatches = partialMatches;
+            }
           }
 
-          orphanedFigures.push({
-            userFigure,
-            possibleMatches,
-            issue
-          });
+          if (possibleMatches.length > 0) {
+            orphanedFigures.push({
+              userFigure,
+              possibleMatches,
+              issue
+            });
+          }
+        } else {
+          // Even if there's an exact match, check if there are other versions
+          // This helps identify figures that might be connected to the wrong master figure
+          const otherVersions = masterFigures.filter(mf =>
+            mf.name.toLowerCase() === userFigure.name.toLowerCase() &&
+            mf.manufacturer.toLowerCase() !== userFigure.manufacturer.toLowerCase()
+          );
+
+          if (otherVersions.length > 0) {
+            orphanedFigures.push({
+              userFigure,
+              possibleMatches: [exactMatch, ...otherVersions],
+              issue: `Currently matches "${exactMatch.manufacturer}" but other versions exist: ${otherVersions.map(v => v.manufacturer).join(', ')}`
+            });
+          }
         }
       }
 
