@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ShelfLife - Action Figure Tracker</title>
+  <meta name="description" content="Track, organize, and manage your action figure collection with comprehensive tools and community features.">
+
+  <!-- This script takes the current URL and redirects to the index page with the path as a query parameter -->
+  <script type="text/javascript">
+    // Single Page Apps for GitHub Pages
+    // MIT License
+    // https://github.com/rafgraph/spa-github-pages
+
+    // This script checks to see if a redirect is present in the query string,
+    // converts it back into the correct url and adds it to the
+    // browser's history using window.history.replaceState(...)
+
+    var pathSegmentsToKeep = 1; // Keep /shelflife-app/ as the base path
+
+    var l = window.location;
+
+    // Prevent infinite redirect loops - only redirect if we're not already in a redirect
+    if (l.search.indexOf('?/') !== 1) {
+      var redirectPath = l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/');
+      if (redirectPath) {
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+          l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') +
+          '/?/' + redirectPath +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Loading indicator while redirect happens -->
+  <div style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    color: #374151;
+  ">
+    <div style="
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    "></div>
+    <p>Loading ShelfLife...</p>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>
