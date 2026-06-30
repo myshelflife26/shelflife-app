@@ -1043,13 +1043,13 @@ function MainApp() {
       }
 
       // Other filters
-      if (filters.manufacturers.length > 0 && !filters.manufacturers.includes(figure.manufacturer)) {
+      if (filters.manufacturers && filters.manufacturers.length > 0 && !filters.manufacturers.includes(figure.manufacturer)) {
         return false;
       }
-      if (filters.categories.length > 0 && !filters.categories.includes(figure.category)) {
+      if (filters.categories && filters.categories.length > 0 && !filters.categories.includes(figure.category)) {
         return false;
       }
-      if (filters.conditions.length > 0 && !filters.conditions.includes(figure.condition)) {
+      if (filters.conditions && filters.conditions.length > 0 && !filters.conditions.includes(figure.condition)) {
         return false;
       }
       if (figure.currentValue < filters.priceRange[0] || figure.currentValue > filters.priceRange[1]) {
@@ -1061,23 +1061,23 @@ function MainApp() {
       if (filters.dateRange[1] && figure.purchaseDate > filters.dateRange[1]) {
         return false;
       }
-      if (filters.sizes.length > 0 && !filters.sizes.includes(figure.size || '')) {
+      if (filters.sizes && filters.sizes.length > 0 && !filters.sizes.includes(figure.size || '')) {
         return false;
       }
-      if (filters.packaging.length > 0 && !filters.packaging.includes(figure.packaging || '')) {
+      if (filters.packaging && filters.packaging.length > 0 && !filters.packaging.includes(figure.packaging || '')) {
         return false;
       }
-      if (filters.productLines.length > 0 && !filters.productLines.includes(figure.productLine || '')) {
+      if (filters.productLines && filters.productLines.length > 0 && !filters.productLines.includes(figure.productLine || '')) {
         return false;
       }
-      if (filters.locations.length > 0 && !filters.locations.includes(figure.location || '')) {
+      if (filters.locations && filters.locations.length > 0 && !filters.locations.includes(figure.location || '')) {
         return false;
       }
       // Advanced filters
-      if (filters.years.length > 0 && figure.year && !filters.years.includes(figure.year)) {
+      if (filters.years && filters.years.length > 0 && figure.year && !filters.years.includes(figure.year)) {
         return false;
       }
-      if (filters.versions.length > 0 && !filters.versions.includes(figure.version || '')) {
+      if (filters.versions && filters.versions.length > 0 && !filters.versions.includes(figure.version || '')) {
         return false;
       }
       if (filters.upc && figure.upc && !figure.upc.includes(filters.upc)) {
@@ -1098,7 +1098,7 @@ function MainApp() {
           return false;
         }
       }
-      if (filters.saleTradeStatuses.length > 0) {
+      if (filters.saleTradeStatuses && filters.saleTradeStatuses.length > 0) {
         const figureAvailability = figure.availability || [];
         // Check if figure has any of the filtered statuses
         const hasMatch = filters.saleTradeStatuses.some(status => figureAvailability.includes(status));
@@ -1124,7 +1124,7 @@ function MainApp() {
         return false;
       }
       // Tags filter
-      if (filters.tags.length > 0) {
+      if (filters.tags && filters.tags.length > 0) {
         const figureTags = figure.tags || [];
         // Figure must have at least one of the selected tags
         const hasMatchingTag = filters.tags.some(tag => figureTags.includes(tag));
@@ -2070,12 +2070,12 @@ function MainApp() {
                       {/* For Sale/For Trade badges */}
                       {figure.availability && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {figure.availability.includes('for-sale') && (
+                          {(figure.availability || []).includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {figure.availability.includes('for-trade') && (
+                          {(figure.availability || []).includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>
@@ -2104,12 +2104,12 @@ function MainApp() {
                       {/* For Sale/For Trade badges */}
                       {figure.availability && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {figure.availability.includes('for-sale') && (
+                          {(figure.availability || []).includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {figure.availability.includes('for-trade') && (
+                          {(figure.availability || []).includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>
