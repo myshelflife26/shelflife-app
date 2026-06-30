@@ -359,12 +359,12 @@ export function TableView({ figures, onEdit, onDelete, onDelayedDelete, selected
                 <td className="px-0.5 py-2 text-xs sm:text-sm">
                 {figure.availability && figure.availability.length > 0 ? (
                   <div className="flex gap-1">
-                    {figure.availability.includes('for-sale') && (
+                    {(figure.availability || []).includes('for-sale') && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         For Sale
                       </span>
                     )}
-                    {figure.availability.includes('for-trade') && (
+                    {(figure.availability || []).includes('for-trade') && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                         For Trade
                       </span>

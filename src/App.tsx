@@ -20,7 +20,7 @@ import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
 import { Moon, Sun, Plus, Database, Pencil, Trash2, Settings, Home, User as UserIcon, Grid, List, BarChart3, Package, Check, Images, LogOut, Shield, Clock, Eye, EyeOff, Search, Mail, Flame, Heart, ThumbsUp, TrendingUp, Store, Activity, Share2, Star, Upload, Bell, Flag } from 'lucide-react';
 import { sampleFigures } from './data/sampleData';
-import { FigureForm } from './components/FigureForm';
+import { FigureForm } from './components/FigureForm_Fixed';
 import { OfflineNotification } from './components/OfflineNotification';
 import { PrivacyConsentBanner } from './components/PrivacyConsentBanner';
 // Service Worker import removed - completely disabled

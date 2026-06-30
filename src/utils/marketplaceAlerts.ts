@@ -93,7 +93,7 @@ export class MarketplaceAlertsService {
       if (listing.userId === userId) continue;
 
       // Skip if not for sale
-      if (!listing.availability?.includes('for-sale')) continue;
+      if (!(listing.availability || []).includes('for-sale')) continue;
 
       const matches = this.checkListing(userId, listing);
 

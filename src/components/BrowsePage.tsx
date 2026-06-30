@@ -461,61 +461,61 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     }
 
     // Apply filters
-    if (filters.manufacturers.length > 0) {
+    if (filters.manufacturers && filters.manufacturers.length > 0) {
       figures = figures.filter(fig =>
         fig.manufacturer && filters.manufacturers.includes(fig.manufacturer)
       );
     }
 
-    if (filters.categories.length > 0) {
+    if (filters.categories && filters.categories.length > 0) {
       figures = figures.filter(fig =>
         fig.category && filters.categories.includes(fig.category)
       );
     }
 
-    if (filters.conditions.length > 0) {
+    if (filters.conditions && filters.conditions.length > 0) {
       figures = figures.filter(fig =>
         fig.condition && filters.conditions.includes(fig.condition)
       );
     }
 
-    if (filters.sizes.length > 0) {
+    if (filters.sizes && filters.sizes.length > 0) {
       figures = figures.filter(fig =>
         fig.size && filters.sizes.includes(fig.size)
       );
     }
 
-    if (filters.packaging.length > 0) {
+    if (filters.packaging && filters.packaging.length > 0) {
       figures = figures.filter(fig =>
         fig.packaging && filters.packaging.includes(fig.packaging)
       );
     }
 
-    if (filters.productLines.length > 0) {
+    if (filters.productLines && filters.productLines.length > 0) {
       figures = figures.filter(fig =>
         fig.productLine && filters.productLines.includes(fig.productLine)
       );
     }
 
-    if (filters.locations.length > 0) {
+    if (filters.locations && filters.locations.length > 0) {
       figures = figures.filter(fig =>
         fig.location && filters.locations.includes(fig.location)
       );
     }
 
-    if (filters.years.length > 0) {
+    if (filters.years && filters.years.length > 0) {
       figures = figures.filter(fig =>
         fig.year && filters.years.includes(fig.year)
       );
     }
 
-    if (filters.versions.length > 0) {
+    if (filters.versions && filters.versions.length > 0) {
       figures = figures.filter(fig =>
         fig.version && filters.versions.includes(fig.version)
       );
     }
 
-    if (filters.tags.length > 0) {
+    if (filters.tags && filters.tags.length > 0) {
       figures = figures.filter(fig =>
         fig.tags && fig.tags.some(tag => filters.tags.includes(tag))
       );
@@ -569,10 +569,10 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     }
 
     // Sale/Trade status filter
-    if (filters.saleTradeStatuses.length > 0) {
+    if (filters.saleTradeStatuses && filters.saleTradeStatuses.length > 0) {
       figures = figures.filter(fig =>
         fig.availability && filters.saleTradeStatuses.some(status =>
-          fig.availability!.includes(status)
+          (fig.availability || []).includes(status)
         )
       );
     }
@@ -1289,12 +1289,12 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                       {/* For Sale/For Trade badges */}
                       {figure.availability && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {figure.availability.includes('for-sale') && (
+                          {(figure.availability || []).includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {figure.availability.includes('for-trade') && (
+                          {(figure.availability || []).includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>
@@ -1320,12 +1320,12 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                       {/* For Sale/For Trade badges */}
                       {figure.availability && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {figure.availability.includes('for-sale') && (
+                          {(figure.availability || []).includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {figure.availability.includes('for-trade') && (
+                          {(figure.availability || []).includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>
@@ -1582,12 +1582,12 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                 <div>
                   <Label>Availability</Label>
                   <div className="flex gap-2 mt-1">
-                    {selectedFigure.availability.includes('for-sale') && (
+                    {(selectedFigure.availability || []).includes('for-sale') && (
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         For Sale
                       </span>
                     )}
-                    {selectedFigure.availability.includes('for-trade') && (
+                    {(selectedFigure.availability || []).includes('for-trade') && (
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                         For Trade
                       </span>
@@ -1697,7 +1697,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
               {selectedFigure.userId && selectedFigure.userId !== currentUser.id && selectedFigure.availability && (
                 <div className="border-t pt-4">
                   <div className="flex gap-2 mb-2">
-                    {selectedFigure.availability.includes('for-trade') && (
+                    {(selectedFigure.availability || []).includes('for-trade') && (
                       <Button
                         onClick={() => {
                           setTradeRequestMode('trade');
@@ -1709,7 +1709,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
                         Request Trade
                       </Button>
                     )}
-                    {selectedFigure.availability.includes('for-sale') && (
+                    {(selectedFigure.availability || []).includes('for-sale') && (
                       <Button
                         onClick={() => {
                           setTradeRequestMode('sale');

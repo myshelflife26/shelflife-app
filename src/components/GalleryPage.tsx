@@ -211,12 +211,12 @@ function GalleryPage({
                 {/* Sale/Trade Badge */}
                 {item.figure.availability && item.figure.availability.length > 0 && (
                   <div className="absolute top-2 left-2 flex gap-1">
-                    {item.figure.availability.includes('for-sale') && (
+                    {(item.figure.availability || []).includes('for-sale') && (
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">
                         For Sale
                       </span>
                     )}
-                    {item.figure.availability.includes('for-trade') && (
+                    {(item.figure.availability || []).includes('for-trade') && (
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-600 text-white">
                         For Trade
                       </span>

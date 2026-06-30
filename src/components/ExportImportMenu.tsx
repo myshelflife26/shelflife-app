@@ -96,8 +96,8 @@ function ExportImportMenu({ onImport, selectedFigures, allFigures }: ExportImpor
         figure.isComplete !== undefined ? (figure.isComplete ? 'Yes' : 'No') : '',
         figure.completenessNotes || '',
         figure.isPublic ? 'Yes' : 'No',
-        figure.availability?.includes('for-sale') ? 'Yes' : 'No',
-        figure.availability?.includes('for-trade') ? 'Yes' : 'No',
+        (figure.availability || []).includes('for-sale') ? 'Yes' : 'No',
+        (figure.availability || []).includes('for-trade') ? 'Yes' : 'No',
         figure.notes || ''
       ];
 

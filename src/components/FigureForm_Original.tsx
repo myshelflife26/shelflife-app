@@ -176,8 +176,8 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
       cleanFormData.marketplaceListing = {
         figureId: '', // Will be set by the parent component after save
-        forSale: formData.availability?.includes('for-sale') || false,
-        forTrade: formData.availability?.includes('for-trade') || false,
+        forSale: (formData.availability || []).includes('for-sale') || false,
+        forTrade: (formData.availability || []).includes('for-trade') || false,
         ...(formData.currentValue && { askingPrice: formData.currentValue }),
         ...(formData.notes && { marketplaceDescription: formData.notes }),
         ...(customBuildDetails && { customBuildDetails }),
@@ -758,7 +758,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="availability-sale"
-                    checked={formData.availability?.includes('for-sale') || false}
+                    checked={(formData.availability || []).includes('for-sale') || false}
                     onCheckedChange={(checked) => {
                       setFormData(prev => ({
                         ...prev,
@@ -777,7 +777,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="availability-trade"
-                    checked={formData.availability?.includes('for-trade') || false}
+                    checked={(formData.availability || []).includes('for-trade') || false}
                     onCheckedChange={(checked) => {
                       setFormData(prev => ({
                         ...prev,

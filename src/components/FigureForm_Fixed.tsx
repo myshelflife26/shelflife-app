@@ -265,8 +265,8 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
       cleanFormData.marketplaceListing = {
         figureId: '', // Will be set by the parent component after save
-        forSale: formData.availability?.includes('for-sale') || false,
-        forTrade: formData.availability?.includes('for-trade') || false,
+        forSale: (formData.availability || []).includes('for-sale') || false,
+        forTrade: (formData.availability || []).includes('for-trade') || false,
         ...(formData.currentValue && { askingPrice: formData.currentValue }),
         ...(formData.notes && { marketplaceDescription: formData.notes }),
         ...(customBuildDetails && { customBuildDetails }),
@@ -360,7 +360,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
   const handleAddTag = () => {
     const trimmedTag = tagInput.trim().toLowerCase();
-    if (trimmedTag && !formData.tags?.includes(trimmedTag)) {
+    if (trimmedTag && !(formData.tags || []).includes(trimmedTag)) {
       setFormData(prev => ({
         ...prev,
         tags: [...(prev.tags || []), trimmedTag]
