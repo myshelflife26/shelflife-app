@@ -409,6 +409,10 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       currentValue: result.estimatedValue || prev.currentValue,
       images: result.images.length > 0 ? result.images : prev.images,
       condition: result.condition || prev.condition,
+      // Ensure arrays are always initialized
+      availability: prev.availability || [],
+      tags: prev.tags || [],
+      accessories: prev.accessories || [],
     }));
 
     // Save to community database

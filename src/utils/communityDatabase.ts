@@ -34,12 +34,12 @@ export class CommunityDatabaseService {
     return db
       .filter(
         (fig) =>
-          fig.name.toLowerCase().includes(lowerQuery) ||
-          fig.manufacturer.toLowerCase().includes(lowerQuery) ||
+          (fig.name && fig.name.toLowerCase().includes(lowerQuery)) ||
+          (fig.manufacturer && fig.manufacturer.toLowerCase().includes(lowerQuery)) ||
           fig.franchise?.toLowerCase().includes(lowerQuery) ||
           fig.productLine?.toLowerCase().includes(lowerQuery) ||
           fig.subProductLine?.toLowerCase().includes(lowerQuery) ||
-          fig.year.includes(lowerQuery)
+          (fig.year && fig.year.includes(lowerQuery))
       )
       .sort((a, b) => {
         // Sort by: verified first, then by times used, then by date

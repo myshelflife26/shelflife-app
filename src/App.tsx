@@ -1043,13 +1043,13 @@ function MainApp() {
       }
 
       // Other filters
-      if (filters.manufacturers && filters.manufacturers.length > 0 && !filters.manufacturers.includes(figure.manufacturer)) {
+      if (filters.manufacturers && filters.manufacturers.length > 0 && figure.manufacturer && !filters.manufacturers.includes(figure.manufacturer)) {
         return false;
       }
-      if (filters.categories && filters.categories.length > 0 && !filters.categories.includes(figure.category)) {
+      if (filters.categories && filters.categories.length > 0 && figure.category && !filters.categories.includes(figure.category)) {
         return false;
       }
-      if (filters.conditions && filters.conditions.length > 0 && !filters.conditions.includes(figure.condition)) {
+      if (filters.conditions && filters.conditions.length > 0 && figure.condition && !filters.conditions.includes(figure.condition)) {
         return false;
       }
       if (figure.currentValue < filters.priceRange[0] || figure.currentValue > filters.priceRange[1]) {
