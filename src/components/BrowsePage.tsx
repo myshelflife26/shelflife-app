@@ -517,7 +517,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
     if (filters.tags && filters.tags.length > 0) {
       figures = figures.filter(fig =>
-        fig.tags && fig.tags.some(tag => filters.tags.includes(tag))
+        (fig.tags || []).some(tag => filters.tags.includes(tag))
       );
     }
 

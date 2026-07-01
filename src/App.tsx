@@ -1101,7 +1101,7 @@ function MainApp() {
       if (filters.saleTradeStatuses && filters.saleTradeStatuses.length > 0) {
         const figureAvailability = figure.availability || [];
         // Check if figure has any of the filtered statuses
-        const hasMatch = filters.saleTradeStatuses.some(status => figureAvailability.includes(status));
+        const hasMatch = filters.saleTradeStatuses.some(status => (figureAvailability || []).includes(status));
         if (!hasMatch) {
           return false;
         }
