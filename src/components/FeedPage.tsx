@@ -209,7 +209,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS;
     const admiredUsersFigures = publicFiguresWithOwners.filter(f => {
       if (!f.userId) return false;
-      const isAdmired = admiring.includes(f.userId);
+      const isAdmired = (admiring || []).includes(f.userId);
       if (!isAdmired || f.userId === currentUser.id) return false;
 
       // Check if created or made public in last 7 days
@@ -237,7 +237,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     const getRecentFigures = (cutoffTime: number) => {
       return publicFiguresWithOwners.filter(f => {
         if (!f.userId) return false;
-        if (blockedUserIds.includes(f.userId)) return false;
+        if ((blockedUserIds || []).includes(f.userId)) return false;
 
         const recentlyCreated = f.createdAt && f.createdAt > cutoffTime;
         const recentlyPublic = f.updatedAt && f.updatedAt > cutoffTime;
@@ -343,7 +343,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
         .filter(u =>
           u.id !== currentUserId &&
           !BlockingService.isUserBlocked(currentUserId, u.id) &&
-          !admiringUserIds.includes(u.id)
+          !(admiringUserIds || []).includes(u.id)
         );
       console.log('Eligible users for suggestions:', eligibleUsers.length, 'out of', allUsers.length);
       console.log('Eligible user IDs:', eligibleUsers.map(u => `${u.username}:${u.id}`));
@@ -549,7 +549,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
           suggestionScore: uf.figureCount,
           matchedManufacturers: [],
           matchedCategories: [],
-          matchReason: admiringUserIds.includes(uf.user.id)
+          matchReason: (admiringUserIds || []).includes(uf.user.id)
             ? `Already admiring - ${uf.figureCount} public figures`
             : `Active collector with ${uf.figureCount} public figures`
         }));
@@ -683,7 +683,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
       const eligibleUsers = allUsers.filter(u =>
         u.id !== currentUserId &&
         !BlockingService.isUserBlocked(currentUserId, u.id) &&
-        !admiringUserIds.includes(u.id) &&
+        !(admiringUserIds || []).includes(u.id) &&
         publicFiguresWithOwners.some(f => f.userId === u.id)
       );
 
@@ -1728,7 +1728,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   </div>
                 </div>
 
-                {admiringUsers.includes(user.id) ? (
+                {(admiringUsers || []).includes(user.id) ? (
                   <Button
                     size="sm"
                     className="w-full bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
@@ -1827,7 +1827,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
                   </div>
                 </div>
 
-                {admiringUsers.includes(user.id) ? (
+                {(admiringUsers || []).includes(user.id) ? (
                   <Button
                     size="sm"
                     className="w-full bg-gray-400 hover:bg-gray-400 cursor-not-allowed"

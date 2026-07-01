@@ -31,7 +31,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isOwnComment = comment.userId === currentUserId;
-  const hasLiked = comment.likes.includes(currentUserId);
+  const hasLiked = (comment.likes || []).includes(currentUserId);
 
   const handleLike = async () => {
     setIsProcessing(true);

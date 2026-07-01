@@ -463,55 +463,55 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     // Apply filters
     if (filters.manufacturers && filters.manufacturers.length > 0) {
       figures = figures.filter(fig =>
-        fig.manufacturer && filters.manufacturers.includes(fig.manufacturer)
+        fig.manufacturer && (filters.manufacturers || []).includes(fig.manufacturer)
       );
     }
 
     if (filters.categories && filters.categories.length > 0) {
       figures = figures.filter(fig =>
-        fig.category && filters.categories.includes(fig.category)
+        fig.category && (filters.categories || []).includes(fig.category)
       );
     }
 
     if (filters.conditions && filters.conditions.length > 0) {
       figures = figures.filter(fig =>
-        fig.condition && filters.conditions.includes(fig.condition)
+        fig.condition && (filters.conditions || []).includes(fig.condition)
       );
     }
 
     if (filters.sizes && filters.sizes.length > 0) {
       figures = figures.filter(fig =>
-        fig.size && filters.sizes.includes(fig.size)
+        fig.size && (filters.sizes || []).includes(fig.size)
       );
     }
 
     if (filters.packaging && filters.packaging.length > 0) {
       figures = figures.filter(fig =>
-        fig.packaging && filters.packaging.includes(fig.packaging)
+        fig.packaging && (filters.packaging || []).includes(fig.packaging)
       );
     }
 
     if (filters.productLines && filters.productLines.length > 0) {
       figures = figures.filter(fig =>
-        fig.productLine && filters.productLines.includes(fig.productLine)
+        fig.productLine && (filters.productLines || []).includes(fig.productLine)
       );
     }
 
     if (filters.locations && filters.locations.length > 0) {
       figures = figures.filter(fig =>
-        fig.location && filters.locations.includes(fig.location)
+        fig.location && (filters.locations || []).includes(fig.location)
       );
     }
 
     if (filters.years && filters.years.length > 0) {
       figures = figures.filter(fig =>
-        fig.year && filters.years.includes(fig.year)
+        fig.year && (filters.years || []).includes(fig.year)
       );
     }
 
     if (filters.versions && filters.versions.length > 0) {
       figures = figures.filter(fig =>
-        fig.version && filters.versions.includes(fig.version)
+        fig.version && (filters.versions || []).includes(fig.version)
       );
     }
 
@@ -582,9 +582,9 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
       figures = figures.filter(fig => {
         if (!fig.customFields) return false;
         return Object.entries(filters.customFields!).every(([fieldId, values]) => {
-          if (values.length === 0) return true;
+          if ((values || []).length === 0) return true;
           const figValue = fig.customFields![fieldId];
-          return figValue && values.includes(String(figValue));
+          return figValue && (values || []).includes(String(figValue));
         });
       });
     }
