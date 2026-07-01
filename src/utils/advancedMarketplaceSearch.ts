@@ -226,13 +226,13 @@ export class AdvancedMarketplaceSearchService {
 
     // Standard filters (manufacturer, condition, etc.)
     if (filters.manufacturers?.length) {
-      filtered = filtered.filter(f => filters.manufacturers!.includes(f.manufacturer));
+      filtered = filtered.filter(f => f.manufacturer && filters.manufacturers!.includes(f.manufacturer));
     }
     if (filters.conditions?.length) {
-      filtered = filtered.filter(f => filters.conditions!.includes(f.condition));
+      filtered = filtered.filter(f => f.condition && filters.conditions!.includes(f.condition));
     }
     if (filters.categories?.length) {
-      filtered = filtered.filter(f => filters.categories!.includes(f.category));
+      filtered = filtered.filter(f => f.category && filters.categories!.includes(f.category));
     }
     if (filters.sizes?.length) {
       filtered = filtered.filter(f => filters.sizes!.includes(f.size || ''));
