@@ -143,99 +143,99 @@ export function FilterSheet({
   const toggleManufacturer = (mfg: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      manufacturers: prev.manufacturers.includes(mfg)
-        ? prev.manufacturers.filter(m => m !== mfg)
-        : [...prev.manufacturers, mfg]
+      manufacturers: (prev.manufacturers || []).includes(mfg)
+        ? (prev.manufacturers || []).filter(m => m !== mfg)
+        : [...(prev.manufacturers || []), mfg]
     }));
   };
 
   const toggleCategory = (cat: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      categories: prev.categories.includes(cat)
-        ? prev.categories.filter(c => c !== cat)
-        : [...prev.categories, cat]
+      categories: (prev.categories || []).includes(cat)
+        ? (prev.categories || []).filter(c => c !== cat)
+        : [...(prev.categories || []), cat]
     }));
   };
 
   const toggleCondition = (cond: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      conditions: prev.conditions.includes(cond)
-        ? prev.conditions.filter(c => c !== cond)
-        : [...prev.conditions, cond]
+      conditions: (prev.conditions || []).includes(cond)
+        ? (prev.conditions || []).filter(c => c !== cond)
+        : [...(prev.conditions || []), cond]
     }));
   };
 
   const toggleSize = (size: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      sizes: prev.sizes.includes(size)
-        ? prev.sizes.filter(s => s !== size)
-        : [...prev.sizes, size]
+      sizes: (prev.sizes || []).includes(size)
+        ? (prev.sizes || []).filter(s => s !== size)
+        : [...(prev.sizes || []), size]
     }));
   };
 
   const togglePackaging = (pkg: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      packaging: prev.packaging.includes(pkg)
-        ? prev.packaging.filter(p => p !== pkg)
-        : [...prev.packaging, pkg]
+      packaging: (prev.packaging || []).includes(pkg)
+        ? (prev.packaging || []).filter(p => p !== pkg)
+        : [...(prev.packaging || []), pkg]
     }));
   };
 
   const toggleProductLine = (line: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      productLines: prev.productLines.includes(line)
-        ? prev.productLines.filter(l => l !== line)
-        : [...prev.productLines, line]
+      productLines: (prev.productLines || []).includes(line)
+        ? (prev.productLines || []).filter(l => l !== line)
+        : [...(prev.productLines || []), line]
     }));
   };
 
   const toggleLocation = (loc: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      locations: prev.locations.includes(loc)
-        ? prev.locations.filter(l => l !== loc)
-        : [...prev.locations, loc]
+      locations: (prev.locations || []).includes(loc)
+        ? (prev.locations || []).filter(l => l !== loc)
+        : [...(prev.locations || []), loc]
     }));
   };
 
   const toggleYear = (year: number) => {
     setLocalFilters(prev => ({
       ...prev,
-      years: prev.years.includes(year)
-        ? prev.years.filter(y => y !== year)
-        : [...prev.years, year]
+      years: (prev.years || []).includes(year)
+        ? (prev.years || []).filter(y => y !== year)
+        : [...(prev.years || []), year]
     }));
   };
 
   const toggleVersion = (version: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      versions: prev.versions.includes(version)
-        ? prev.versions.filter(v => v !== version)
-        : [...prev.versions, version]
+      versions: (prev.versions || []).includes(version)
+        ? (prev.versions || []).filter(v => v !== version)
+        : [...(prev.versions || []), version]
     }));
   };
 
   const toggleTag = (tag: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
+      tags: (prev.tags || []).includes(tag)
+        ? (prev.tags || []).filter(t => t !== tag)
+        : [...(prev.tags || []), tag]
     }));
   };
 
   const toggleSaleTradeStatus = (status: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      saleTradeStatuses: prev.saleTradeStatuses.includes(status as any)
-        ? prev.saleTradeStatuses.filter(s => s !== status)
-        : [...prev.saleTradeStatuses, status as any]
+      saleTradeStatuses: (prev.saleTradeStatuses || []).includes(status as any)
+        ? (prev.saleTradeStatuses || []).filter(s => s !== status)
+        : [...(prev.saleTradeStatuses || []), status as any]
     }));
   };
 
@@ -309,7 +309,7 @@ export function FilterSheet({
                   <div key={mfg} className="flex items-center space-x-2">
                     <Checkbox
                       id={`mfg-${mfg}`}
-                      checked={localFilters.manufacturers.includes(mfg)}
+                      checked={(localFilters.manufacturers || []).includes(mfg)}
                       onCheckedChange={() => toggleManufacturer(mfg)}
                     />
                     <Label
@@ -333,7 +333,7 @@ export function FilterSheet({
                   <div key={cat} className="flex items-center space-x-2">
                     <Checkbox
                       id={`cat-${cat}`}
-                      checked={localFilters.categories.includes(cat)}
+                      checked={(localFilters.categories || []).includes(cat)}
                       onCheckedChange={() => toggleCategory(cat)}
                     />
                     <Label
@@ -356,7 +356,7 @@ export function FilterSheet({
                 <div key={cond} className="flex items-center space-x-2">
                   <Checkbox
                     id={`cond-${cond}`}
-                    checked={localFilters.conditions.includes(cond)}
+                    checked={(localFilters.conditions || []).includes(cond)}
                     onCheckedChange={() => toggleCondition(cond)}
                   />
                   <Label
@@ -489,7 +489,7 @@ export function FilterSheet({
                   <div key={size} className="flex items-center space-x-2">
                     <Checkbox
                       id={`size-${size}`}
-                      checked={localFilters.sizes.includes(size)}
+                      checked={(localFilters.sizes || []).includes(size)}
                       onCheckedChange={() => toggleSize(size)}
                     />
                     <Label
@@ -513,7 +513,7 @@ export function FilterSheet({
                   <div key={pkg} className="flex items-center space-x-2">
                     <Checkbox
                       id={`pkg-${pkg}`}
-                      checked={localFilters.packaging.includes(pkg)}
+                      checked={(localFilters.packaging || []).includes(pkg)}
                       onCheckedChange={() => togglePackaging(pkg)}
                     />
                     <Label
@@ -537,7 +537,7 @@ export function FilterSheet({
                   <div key={line} className="flex items-center space-x-2">
                     <Checkbox
                       id={`line-${line}`}
-                      checked={localFilters.productLines.includes(line)}
+                      checked={(localFilters.productLines || []).includes(line)}
                       onCheckedChange={() => toggleProductLine(line)}
                     />
                     <Label
@@ -561,7 +561,7 @@ export function FilterSheet({
                   <div key={loc} className="flex items-center space-x-2">
                     <Checkbox
                       id={`loc-${loc}`}
-                      checked={localFilters.locations.includes(loc)}
+                      checked={(localFilters.locations || []).includes(loc)}
                       onCheckedChange={() => toggleLocation(loc)}
                     />
                     <Label
@@ -590,7 +590,7 @@ export function FilterSheet({
                       <div key={year} className="flex items-center space-x-2">
                         <Checkbox
                           id={`year-${year}`}
-                          checked={localFilters.years.includes(year)}
+                          checked={(localFilters.years || []).includes(year)}
                           onCheckedChange={() => toggleYear(year)}
                         />
                         <Label
@@ -614,7 +614,7 @@ export function FilterSheet({
                       <div key={version} className="flex items-center space-x-2">
                         <Checkbox
                           id={`version-${version}`}
-                          checked={localFilters.versions.includes(version)}
+                          checked={(localFilters.versions || []).includes(version)}
                           onCheckedChange={() => toggleVersion(version)}
                         />
                         <Label
@@ -638,7 +638,7 @@ export function FilterSheet({
                       <div key={tag} className="flex items-center space-x-2">
                         <Checkbox
                           id={`tag-${tag}`}
-                          checked={localFilters.tags.includes(tag)}
+                          checked={(localFilters.tags || []).includes(tag)}
                           onCheckedChange={() => toggleTag(tag)}
                         />
                         <Label
@@ -722,7 +722,7 @@ export function FilterSheet({
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="status-sale"
-                  checked={localFilters.saleTradeStatuses.includes('for-sale')}
+                  checked={(localFilters.saleTradeStatuses || []).includes('for-sale')}
                   onCheckedChange={() => toggleSaleTradeStatus('for-sale')}
                 />
                 <Label htmlFor="status-sale" className="text-sm font-normal cursor-pointer">
@@ -732,7 +732,7 @@ export function FilterSheet({
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="status-trade"
-                  checked={localFilters.saleTradeStatuses.includes('for-trade')}
+                  checked={(localFilters.saleTradeStatuses || []).includes('for-trade')}
                   onCheckedChange={() => toggleSaleTradeStatus('for-trade')}
                 />
                 <Label htmlFor="status-trade" className="text-sm font-normal cursor-pointer">

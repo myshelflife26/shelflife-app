@@ -89,6 +89,11 @@ function MainApp() {
   const [authLoading, setAuthLoading] = useState(true); // Add loading state for auth
   const [error, setError] = useState<string>(''); // Add error state for login issues
   const [figures, setFigures] = useState<ActionFigure[]>([]);
+
+  // Expose figures to window for debugging
+  useEffect(() => {
+    (window as any).currentFigures = figures;
+  }, [figures]);
   const [masterFigures, setMasterFigures] = useState<any[]>([]);
   const [darkMode, setDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('collection');
@@ -1023,35 +1028,40 @@ function MainApp() {
 
   // Filter figures
   const filteredFigures = useMemo(() => {
-    return figures.filter(figure => {
-      // Search filter
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const customFormulaParts = figure.customFormula ? Object.values(figure.customFormula).filter(Boolean).join(' ') : '';
-        const searchableText = [
-          figure.name,
-          figure.manufacturer,
-          figure.category,
-          figure.location,
-          figure.notes,
-          customFormulaParts,
-        ].join(' ').toLowerCase();
+    try {
+      console.log('🔍 Starting filteredFigures calculation with filters:', filters);
+      console.log('🔍 Processing', figures.length, 'figures');
 
-        if (!searchableText.includes(searchLower)) {
-          return false;
-        }
-      }
+      return figures.filter(figure => {
+        try {
+          // Search filter
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            const customFormulaParts = figure.customFormula ? Object.values(figure.customFormula).filter(Boolean).join(' ') : '';
+            const searchableText = [
+              figure.name,
+              figure.manufacturer,
+              figure.category,
+              figure.location,
+              figure.notes,
+              customFormulaParts,
+            ].join(' ').toLowerCase();
 
-      // Other filters
-      if (filters.manufacturers && filters.manufacturers.length > 0 && figure.manufacturer && !filters.manufacturers.includes(figure.manufacturer)) {
-        return false;
-      }
-      if (filters.categories && filters.categories.length > 0 && figure.category && !filters.categories.includes(figure.category)) {
-        return false;
-      }
-      if (filters.conditions && filters.conditions.length > 0 && figure.condition && !filters.conditions.includes(figure.condition)) {
-        return false;
-      }
+            if (!searchableText.includes(searchLower)) {
+              return false;
+            }
+          }
+
+          // Other filters with array safety
+          if ((filters.manufacturers || []).length > 0 && figure.manufacturer && !(filters.manufacturers || []).includes(figure.manufacturer)) {
+            return false;
+          }
+          if ((filters.categories || []).length > 0 && figure.category && !(filters.categories || []).includes(figure.category)) {
+            return false;
+          }
+          if ((filters.conditions || []).length > 0 && figure.condition && !(filters.conditions || []).includes(figure.condition)) {
+            return false;
+          }
       if (figure.currentValue < filters.priceRange[0] || figure.currentValue > filters.priceRange[1]) {
         return false;
       }
@@ -1061,23 +1071,23 @@ function MainApp() {
       if (filters.dateRange[1] && figure.purchaseDate > filters.dateRange[1]) {
         return false;
       }
-      if (filters.sizes && filters.sizes.length > 0 && !filters.sizes.includes(figure.size || '')) {
+      if ((filters.sizes || []).length > 0 && !(filters.sizes || []).includes(figure.size || '')) {
         return false;
       }
-      if (filters.packaging && filters.packaging.length > 0 && !filters.packaging.includes(figure.packaging || '')) {
+      if ((filters.packaging || []).length > 0 && !(filters.packaging || []).includes(figure.packaging || '')) {
         return false;
       }
-      if (filters.productLines && filters.productLines.length > 0 && !filters.productLines.includes(figure.productLine || '')) {
+      if ((filters.productLines || []).length > 0 && !(filters.productLines || []).includes(figure.productLine || '')) {
         return false;
       }
-      if (filters.locations && filters.locations.length > 0 && !filters.locations.includes(figure.location || '')) {
+      if ((filters.locations || []).length > 0 && !(filters.locations || []).includes(figure.location || '')) {
         return false;
       }
       // Advanced filters
-      if (filters.years && filters.years.length > 0 && figure.year && !filters.years.includes(figure.year)) {
+      if ((filters.years || []).length > 0 && figure.year && !(filters.years || []).includes(figure.year)) {
         return false;
       }
-      if (filters.versions && filters.versions.length > 0 && !filters.versions.includes(figure.version || '')) {
+      if ((filters.versions || []).length > 0 && !(filters.versions || []).includes(figure.version || '')) {
         return false;
       }
       if (filters.upc && figure.upc && !figure.upc.includes(filters.upc)) {
@@ -1098,10 +1108,10 @@ function MainApp() {
           return false;
         }
       }
-      if (filters.saleTradeStatuses && filters.saleTradeStatuses.length > 0) {
+      if ((filters.saleTradeStatuses || []).length > 0) {
         const figureAvailability = figure.availability || [];
         // Check if figure has any of the filtered statuses
-        const hasMatch = filters.saleTradeStatuses.some(status => (figureAvailability || []).includes(status));
+        const hasMatch = (filters.saleTradeStatuses || []).some(status => (figureAvailability || []).includes(status));
         if (!hasMatch) {
           return false;
         }
@@ -1109,11 +1119,11 @@ function MainApp() {
       // Custom field filters
       if (filters.customFields) {
         for (const [fieldId, selectedValues] of Object.entries(filters.customFields)) {
-          if (selectedValues.length > 0) {
+          if ((selectedValues || []).length > 0) {
             const figureValue = figure.customFields?.[fieldId];
             const figureValueStr = figureValue !== undefined && figureValue !== null ?
               (typeof figureValue === 'object' ? JSON.stringify(figureValue) : String(figureValue)) : '';
-            if (!selectedValues.includes(figureValueStr)) {
+            if (!(selectedValues || []).includes(figureValueStr)) {
               return false;
             }
           }
@@ -1124,17 +1134,32 @@ function MainApp() {
         return false;
       }
       // Tags filter
-      if (filters.tags && filters.tags.length > 0) {
+      if ((filters.tags || []).length > 0) {
         const figureTags = figure.tags || [];
         // Figure must have at least one of the selected tags
-        const hasMatchingTag = filters.tags.some(tag => figureTags.includes(tag));
+        const hasMatchingTag = (filters.tags || []).some(tag => figureTags.includes(tag));
         if (!hasMatchingTag) {
           return false;
         }
       }
 
-      return true;
-    });
+          return true;
+        } catch (figureError) {
+          console.error('❌ Error processing figure in filter:', figure.name, figureError);
+          console.error('❌ Figure data:', {
+            name: figure.name,
+            availability: figure.availability,
+            tags: figure.tags,
+            accessories: figure.accessories
+          });
+          return false; // Skip figures that cause errors
+        }
+      });
+    } catch (filterError) {
+      console.error('❌ Error in filteredFigures useMemo:', filterError);
+      console.error('❌ Filters state:', filters);
+      return []; // Return empty array on error
+    }
   }, [figures, filters]);
 
   // Reset to page 1 when filters change

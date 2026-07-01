@@ -391,38 +391,70 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
   };
 
   const handleImportFigure = (result: FigureSearchResult) => {
-    // Pre-fill form with search result data
-    setFormData(prev => ({
-      ...prev,
-      name: result.name,
-      manufacturer: result.manufacturer || prev.manufacturer,
-      year: result.year ? parseInt(result.year, 10) : prev.year,
-      version: result.version || prev.version,
-      franchise: result.franchise || prev.franchise,
-      productLine: result.productLine || prev.productLine,
-      productLineNumber: result.productLineNumber || prev.productLineNumber,
-      subProductLine: result.subProductLine || prev.subProductLine,
-      category: result.category || prev.category,
-      size: result.size || prev.size,
-      packaging: result.packaging || prev.packaging,
-      upc: result.upc || prev.upc,
-      currentValue: result.estimatedValue || prev.currentValue,
-      images: result.images.length > 0 ? result.images : prev.images,
-      condition: result.condition || prev.condition,
-      // Ensure arrays are always initialized
-      availability: prev.availability || [],
-      tags: prev.tags || [],
-      accessories: prev.accessories || [],
-    }));
+    try {
+      console.log('🔍 Starting handleImportFigure with result:', result);
+      console.log('🔍 Previous form data availability:', formData.availability);
+      console.log('🔍 Previous form data tags:', formData.tags);
+      console.log('🔍 Previous form data accessories:', formData.accessories);
 
-    // Save to community database
-    FigureSearchService.saveToDatabase(result, currentUser.id, currentUser.displayName);
+      // Pre-fill form with search result data
+      setFormData(prev => {
+        console.log('🔍 Inside setFormData, prev state:', {
+          availability: prev.availability,
+          tags: prev.tags,
+          accessories: prev.accessories
+        });
 
-    // Close search modal
-    setSearchModalOpen(false);
+        const newData = {
+          ...prev,
+          name: result.name,
+          manufacturer: result.manufacturer || prev.manufacturer,
+          year: result.year ? parseInt(result.year, 10) : prev.year,
+          version: result.version || prev.version,
+          franchise: result.franchise || prev.franchise,
+          productLine: result.productLine || prev.productLine,
+          productLineNumber: result.productLineNumber || prev.productLineNumber,
+          subProductLine: result.subProductLine || prev.subProductLine,
+          category: result.category || prev.category,
+          size: result.size || prev.size,
+          packaging: result.packaging || prev.packaging,
+          upc: result.upc || prev.upc,
+          currentValue: result.estimatedValue || prev.currentValue,
+          images: result.images.length > 0 ? result.images : prev.images,
+          condition: result.condition || prev.condition,
+          // Ensure arrays are always initialized
+          availability: Array.isArray(prev.availability) ? prev.availability : [],
+          tags: Array.isArray(prev.tags) ? prev.tags : [],
+          accessories: Array.isArray(prev.accessories) ? prev.accessories : []
+        };
 
-    // Show success message
-    console.log('✅ Figure imported from search:', result.name);
+        console.log('🔍 New data after merge:', {
+          availability: newData.availability,
+          tags: newData.tags,
+          accessories: newData.accessories,
+          name: newData.name
+        });
+
+        return newData;
+      });
+
+      // Save to community database
+      console.log('🔍 About to save to community database');
+      FigureSearchService.saveToDatabase(result, currentUser.id, currentUser.displayName);
+
+      // Close search modal
+      console.log('🔍 About to close search modal');
+      setSearchModalOpen(false);
+
+      // Show success message
+      console.log('✅ Figure imported from search:', result.name);
+      console.log('🔍 handleImportFigure completed successfully');
+    } catch (error) {
+      console.error('❌ Error in handleImportFigure:', error);
+      console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      // Still close the modal even if there's an error
+      setSearchModalOpen(false);
+    }
   };
 
   const handleBarcodeScanned = async (barcode: string) => {

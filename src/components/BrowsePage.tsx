@@ -517,7 +517,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
 
     if (filters.tags && filters.tags.length > 0) {
       figures = figures.filter(fig =>
-        (fig.tags || []).some(tag => filters.tags.includes(tag))
+        (fig.tags || []).some(tag => (filters.tags || []).includes(tag))
       );
     }
 
@@ -571,7 +571,7 @@ function BrowsePage({ currentUser, setCurrentPage, initialUserId, onClearInitial
     // Sale/Trade status filter
     if (filters.saleTradeStatuses && filters.saleTradeStatuses.length > 0) {
       figures = figures.filter(fig =>
-        fig.availability && filters.saleTradeStatuses.some(status =>
+        fig.availability && (filters.saleTradeStatuses || []).some(status =>
           (fig.availability || []).includes(status)
         )
       );

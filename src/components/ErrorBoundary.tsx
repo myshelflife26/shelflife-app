@@ -33,6 +33,26 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
+    // Enhanced logging for array-related errors
+    if (error.message?.includes('includes') || error.message?.includes('undefined')) {
+      console.error('🚨 ARRAY ERROR DETECTED!');
+      console.error('🚨 Error message:', error.message);
+      console.error('🚨 Component stack:', errorInfo.componentStack);
+      console.error('🚨 Error stack:', error.stack);
+
+      // Try to identify the specific component
+      const componentMatch = errorInfo.componentStack.match(/at (\w+)/);
+      if (componentMatch) {
+        console.error('🚨 Suspected component:', componentMatch[1]);
+      }
+
+      // Log current figures state if available
+      if ((window as any).currentFigures) {
+        console.error('🚨 Current figures count:', (window as any).currentFigures.length);
+        console.error('🚨 Recent figures:', (window as any).currentFigures.slice(-3));
+      }
+    }
+
     this.setState({
       error,
       errorInfo,
