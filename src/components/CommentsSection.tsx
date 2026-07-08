@@ -386,7 +386,7 @@ export function CommentsSection({ figureId, currentUser, figureOwnerId, figure, 
           sortedComments.map((comment) => {
             const isCommentOwner = comment.userId === currentUser.id;
             const isEditing = editingId === comment.id;
-            const hasLiked = comment.likes.includes(currentUser.id);
+            const hasLiked = (comment.likes || []).includes(currentUser.id);
             const showActions = commentActions === comment.id;
 
             return (
