@@ -293,6 +293,20 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
   const handleImportFromDatabase = async (match: DatabaseMatch) => {
     try {
+      console.log('🔍 DEBUGGING: Starting handleImportFromDatabase');
+      console.log('🔍 DEBUGGING: Match data:', match);
+      console.log('🔍 DEBUGGING: Current formData state:', {
+        availability: formData.availability,
+        tags: formData.tags,
+        accessories: formData.accessories,
+        availabilityType: typeof formData.availability,
+        tagsType: typeof formData.tags,
+        accessoriesType: typeof formData.accessories,
+        availabilityIsArray: Array.isArray(formData.availability),
+        tagsIsArray: Array.isArray(formData.tags),
+        accessoriesIsArray: Array.isArray(formData.accessories)
+      });
+
       console.log('Importing from database:', match.id);
       const masterFigure = await MasterFiguresService.getById(match.id);
 
@@ -344,7 +358,26 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
       setDatabaseMatches([]);
 
       console.log('✅ Figure imported from database:', masterFigure.name);
+
+      // Add debugging for state after import
+      setTimeout(() => {
+        console.log('🔍 DEBUGGING: State after handleImportFromDatabase (after React update):');
+        console.log('🔍 DEBUGGING: Final formData state:', {
+          availability: formData.availability,
+          tags: formData.tags,
+          accessories: formData.accessories,
+          availabilityType: typeof formData.availability,
+          tagsType: typeof formData.tags,
+          accessoriesType: typeof formData.accessories,
+          availabilityIsArray: Array.isArray(formData.availability),
+          tagsIsArray: Array.isArray(formData.tags),
+          accessoriesIsArray: Array.isArray(formData.accessories)
+        });
+      }, 100);
+
     } catch (error) {
+      console.error('❌ DEBUGGING: Error in handleImportFromDatabase:', error);
+      console.error('❌ DEBUGGING: Error stack:', error.stack);
       console.error('Failed to import figure:', error);
       alert('Error importing figure data. Please try again or fill manually.');
     }

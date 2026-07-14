@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import type { ActionFigure, Filters } from './types/index';
 import type { User } from './types/user';
+import { ArrayDebugger } from './utils/arrayDebugger';
+import './utils/globalErrorHandler'; // Import for side effects
 import { Storage } from './utils/storage';
 import { SettingsService } from './utils/settings';
 import { FirebaseAuthService } from './utils/firebaseAuth';
@@ -1039,12 +1041,12 @@ function MainApp() {
             const searchLower = filters.search.toLowerCase();
             const customFormulaParts = figure.customFormula ? Object.values(figure.customFormula).filter(Boolean).join(' ') : '';
             const searchableText = [
-              figure.name,
-              figure.manufacturer,
-              figure.category,
-              figure.location,
-              figure.notes,
-              customFormulaParts,
+              figure.name || '',
+              figure.manufacturer || '',
+              figure.category || '',
+              figure.location || '',
+              figure.notes || '',
+              customFormulaParts || '',
             ].join(' ').toLowerCase();
 
             if (!searchableText.includes(searchLower)) {
@@ -1109,9 +1111,9 @@ function MainApp() {
         }
       }
       if ((filters.saleTradeStatuses || []).length > 0) {
-        const figureAvailability = figure.availability || [];
+        const figureAvailability = Array.isArray(figure.availability) ? figure.availability : [];
         // Check if figure has any of the filtered statuses
-        const hasMatch = (filters.saleTradeStatuses || []).some(status => (figureAvailability || []).includes(status));
+        const hasMatch = (filters.saleTradeStatuses || []).some(status => figureAvailability.includes(status));
         if (!hasMatch) {
           return false;
         }
@@ -1135,7 +1137,7 @@ function MainApp() {
       }
       // Tags filter
       if ((filters.tags || []).length > 0) {
-        const figureTags = figure.tags || [];
+        const figureTags = Array.isArray(figure.tags) ? figure.tags : [];
         // Figure must have at least one of the selected tags
         const hasMatchingTag = (filters.tags || []).some(tag => figureTags.includes(tag));
         if (!hasMatchingTag) {
@@ -2093,14 +2095,14 @@ function MainApp() {
                         </div>
                       )}
                       {/* For Sale/For Trade badges */}
-                      {figure.availability && figure.availability.length > 0 && (
+                      {Array.isArray(figure.availability) && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {(figure.availability || []).includes('for-sale') && (
+                          {figure.availability.includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {(figure.availability || []).includes('for-trade') && (
+                          {figure.availability.includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>
@@ -2127,14 +2129,14 @@ function MainApp() {
                         </div>
                       )}
                       {/* For Sale/For Trade badges */}
-                      {figure.availability && figure.availability.length > 0 && (
+                      {Array.isArray(figure.availability) && figure.availability.length > 0 && (
                         <div className="absolute bottom-2 left-2 flex gap-1">
-                          {(figure.availability || []).includes('for-sale') && (
+                          {figure.availability.includes('for-sale') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-600 text-white shadow">
                               For Sale
                             </span>
                           )}
-                          {(figure.availability || []).includes('for-trade') && (
+                          {figure.availability.includes('for-trade') && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white shadow">
                               For Trade
                             </span>

@@ -201,7 +201,14 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
   useEffect(() => {
     if (figure) {
       const { id, ...rest } = figure;
-      setFormData(rest);
+      // Ensure array properties are always arrays when editing existing figures
+      setFormData({
+        ...rest,
+        availability: Array.isArray(rest.availability) ? rest.availability : [],
+        tags: Array.isArray(rest.tags) ? rest.tags : [],
+        images: Array.isArray(rest.images) ? rest.images : [],
+        accessories: Array.isArray(rest.accessories) ? rest.accessories : []
+      });
     } else {
       // Reset form when adding new
       setFormData({
@@ -249,7 +256,14 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
     const hasAvailability = (formData.availability || []).length > 0;
 
     // Clean up the form data - remove undefined values that Firebase doesn't like
-    const cleanFormData = { ...formData };
+    const cleanFormData = {
+      ...formData,
+      // Ensure array properties are always arrays
+      availability: Array.isArray(formData.availability) ? formData.availability : [],
+      tags: Array.isArray(formData.tags) ? formData.tags : [],
+      images: Array.isArray(formData.images) ? formData.images : [],
+      accessories: Array.isArray(formData.accessories) ? formData.accessories : []
+    };
 
     if (hasAvailability) {
       // Build custom build details for custom figures
