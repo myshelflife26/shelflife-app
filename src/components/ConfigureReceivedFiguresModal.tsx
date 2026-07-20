@@ -165,9 +165,11 @@ export function ConfigureReceivedFiguresModal({
               {figures.map(figure => (
                 <div key={figure.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    {figure.images && figure.images.length > 0 ? (
+                    {(figure.images && figure.images.length > 0) || figure.imageUrl ? (
                       <img
-                        src={figure.images[figure.mainImageIndex || 0]}
+                        src={(figure.images && figure.images.length > 0)
+                          ? figure.images[figure.mainImageIndex || 0]
+                          : figure.imageUrl}
                         alt={figure.name}
                         className="w-16 h-16 object-cover rounded"
                       />

@@ -863,7 +863,7 @@ function FeedPage({ currentUser, onNavigateToBrowse }: FeedPageProps) {
     if (figure.images && figure.images.length > 0) {
       return figure.images[figure.mainImageIndex ?? 0];
     }
-    return null;
+    return figure.imageUrl || null;
   };
 
   const hasReacted = (figureId: string, ownerId: string, type: 'fire' | 'love' | 'appreciate'): boolean => {

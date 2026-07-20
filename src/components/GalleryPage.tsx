@@ -78,11 +78,18 @@ function GalleryPage({
     const items: { figure: ActionFigure; imageUrl: string }[] = [];
 
     sortedFigures.forEach(figure => {
+      let imageUrl = null;
       if (figure.images && figure.images.length > 0) {
         const mainImageIndex = figure.mainImageIndex ?? 0;
+        imageUrl = figure.images[mainImageIndex];
+      } else if (figure.imageUrl) {
+        imageUrl = figure.imageUrl;
+      }
+
+      if (imageUrl) {
         items.push({
           figure,
-          imageUrl: figure.images[mainImageIndex]
+          imageUrl
         });
       }
     });

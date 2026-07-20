@@ -601,9 +601,11 @@ function MarketplacePage({ currentUser }: MarketplacePageProps) {
                 >
                   {/* Image */}
                   <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative">
-                    {figure.images && figure.images.length > 0 ? (
+                    {(figure.images && figure.images.length > 0) || figure.imageUrl ? (
                       <img
-                        src={figure.images[figure.mainImageIndex || 0]}
+                        src={(figure.images && figure.images.length > 0)
+                          ? figure.images[figure.mainImageIndex || 0]
+                          : figure.imageUrl}
                         alt={figure.name}
                         className="w-full h-full object-cover"
                         style={{ objectPosition: figure.imagePosition || 'center center' }}
@@ -761,9 +763,11 @@ function MarketplacePage({ currentUser }: MarketplacePageProps) {
                 >
                   {/* Image */}
                   <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative">
-                    {figure.images && figure.images.length > 0 ? (
+                    {(figure.images && figure.images.length > 0) || figure.imageUrl ? (
                       <img
-                        src={figure.images[figure.mainImageIndex || 0]}
+                        src={(figure.images && figure.images.length > 0)
+                          ? figure.images[figure.mainImageIndex || 0]
+                          : figure.imageUrl}
                         alt={figure.name}
                         className="w-full h-full object-cover"
                         style={{ objectPosition: figure.imagePosition || 'center center' }}

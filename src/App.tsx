@@ -2057,7 +2057,7 @@ function MainApp() {
               {paginatedFigures.map((figure) => {
               const mainImage = figure.images && figure.images.length > 0
                 ? figure.images[figure.mainImageIndex ?? 0]
-                : null;
+                : figure.imageUrl || null;
 
               return (
                 <div

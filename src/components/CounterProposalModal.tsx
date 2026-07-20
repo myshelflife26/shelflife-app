@@ -261,9 +261,11 @@ export function CounterProposalModal({
                         }`}>
                           {mySelectedFigures.has(figure.id) && <Check className="h-3 w-3 text-white" />}
                         </div>
-                        {figure.images && figure.images.length > 0 && (
+                        {((figure.images && figure.images.length > 0) || figure.imageUrl) && (
                           <img
-                            src={figure.images[figure.mainImageIndex || 0]}
+                            src={(figure.images && figure.images.length > 0)
+                              ? figure.images[figure.mainImageIndex || 0]
+                              : figure.imageUrl}
                             alt={figure.name}
                             className="w-12 h-12 object-cover rounded"
                           />
@@ -343,9 +345,11 @@ export function CounterProposalModal({
                         }`}>
                           {theirSelectedFigures.has(figure.id) && <Check className="h-3 w-3 text-white" />}
                         </div>
-                        {figure.images && figure.images.length > 0 && (
+                        {((figure.images && figure.images.length > 0) || figure.imageUrl) && (
                           <img
-                            src={figure.images[figure.mainImageIndex || 0]}
+                            src={(figure.images && figure.images.length > 0)
+                              ? figure.images[figure.mainImageIndex || 0]
+                              : figure.imageUrl}
                             alt={figure.name}
                             className="w-12 h-12 object-cover rounded"
                           />
