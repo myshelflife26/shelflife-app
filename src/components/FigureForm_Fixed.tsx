@@ -92,10 +92,13 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
 
   // Helper function to ensure current value is in options list
   const ensureValueInOptions = (options: string[], currentValue?: string): string[] => {
-    if (!currentValue || options.includes(currentValue)) {
-      return options;
+    // Safety check: ensure options is an array
+    const safeOptions = Array.isArray(options) ? options : [];
+
+    if (!currentValue || safeOptions.includes(currentValue)) {
+      return safeOptions;
     }
-    return [...options, currentValue].sort();
+    return [...safeOptions, currentValue].sort();
   };
 
   // Debounced search function for real-time database matching
@@ -788,7 +791,7 @@ export function FigureForm({ open, onClose, onSave, figure, currentUser }: Figur
                 value={formData.condition}
                 onChange={handleChange}
               >
-                {settings.conditionOptions.map(condition => (
+                {(Array.isArray(settings.conditionOptions) ? settings.conditionOptions : []).map(condition => (
                   <option key={condition} value={condition}>
                     {condition}
                   </option>
