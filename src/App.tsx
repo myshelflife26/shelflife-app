@@ -1034,8 +1034,19 @@ function MainApp() {
       console.log('🔍 Starting filteredFigures calculation with filters:', filters);
       console.log('🔍 Processing', figures.length, 'figures');
 
+      // Safety check: ensure filters object exists and has required properties
+      if (!filters || !Array.isArray(figures)) {
+        console.warn('🔍 Invalid filters or figures array, returning empty array');
+        return [];
+      }
+
       return figures.filter(figure => {
         try {
+          // Safety check: ensure figure object exists
+          if (!figure || typeof figure !== 'object') {
+            return false;
+          }
+
           // Search filter
           if (filters.search) {
             const searchLower = filters.search.toLowerCase();
@@ -1054,105 +1065,129 @@ function MainApp() {
             }
           }
 
-          // Other filters with array safety
-          if ((filters.manufacturers || []).length > 0 && figure.manufacturer && !(filters.manufacturers || []).includes(figure.manufacturer)) {
+          // Array filters with comprehensive safety checks
+          const safeArrayCheck = (filterArray, figureValue) => {
+            const filterArr = Array.isArray(filterArray) ? filterArray : [];
+            return filterArr.length > 0 && figureValue && !filterArr.includes(figureValue);
+          };
+
+          if (safeArrayCheck(filters.manufacturers, figure.manufacturer)) {
             return false;
           }
-          if ((filters.categories || []).length > 0 && figure.category && !(filters.categories || []).includes(figure.category)) {
+          if (safeArrayCheck(filters.categories, figure.category)) {
             return false;
           }
-          if ((filters.conditions || []).length > 0 && figure.condition && !(filters.conditions || []).includes(figure.condition)) {
+          if (safeArrayCheck(filters.conditions, figure.condition)) {
             return false;
           }
-      if (figure.currentValue < filters.priceRange[0] || figure.currentValue > filters.priceRange[1]) {
-        return false;
-      }
-      if (filters.dateRange[0] && figure.purchaseDate < filters.dateRange[0]) {
-        return false;
-      }
-      if (filters.dateRange[1] && figure.purchaseDate > filters.dateRange[1]) {
-        return false;
-      }
-      if ((filters.sizes || []).length > 0 && !(filters.sizes || []).includes(figure.size || '')) {
-        return false;
-      }
-      if ((filters.packaging || []).length > 0 && !(filters.packaging || []).includes(figure.packaging || '')) {
-        return false;
-      }
-      if ((filters.productLines || []).length > 0 && !(filters.productLines || []).includes(figure.productLine || '')) {
-        return false;
-      }
-      if ((filters.locations || []).length > 0 && !(filters.locations || []).includes(figure.location || '')) {
-        return false;
-      }
-      // Advanced filters
-      if ((filters.years || []).length > 0 && figure.year && !(filters.years || []).includes(figure.year)) {
-        return false;
-      }
-      if ((filters.versions || []).length > 0 && !(filters.versions || []).includes(figure.version || '')) {
-        return false;
-      }
-      if (filters.upc && figure.upc && !figure.upc.includes(filters.upc)) {
-        return false;
-      }
-      if (filters.isComplete && filters.isComplete !== 'all') {
-        if (filters.isComplete === 'yes' && !figure.isComplete) {
-          return false;
-        }
-        if (filters.isComplete === 'no' && figure.isComplete) {
-          return false;
-        }
-      }
-      // Completeness percentage filter (for accessories)
-      if (filters.completenessRange) {
-        const completeness = figure.completenessPercentage ?? 100;
-        if (completeness < filters.completenessRange[0] || completeness > filters.completenessRange[1]) {
-          return false;
-        }
-      }
-      if ((filters.saleTradeStatuses || []).length > 0) {
-        const figureAvailability = Array.isArray(figure.availability) ? figure.availability : [];
-        // Check if figure has any of the filtered statuses
-        const hasMatch = (filters.saleTradeStatuses || []).some(status => figureAvailability.includes(status));
-        if (!hasMatch) {
-          return false;
-        }
-      }
-      // Custom field filters
-      if (filters.customFields) {
-        for (const [fieldId, selectedValues] of Object.entries(filters.customFields)) {
-          if ((selectedValues || []).length > 0) {
-            const figureValue = figure.customFields?.[fieldId];
-            const figureValueStr = figureValue !== undefined && figureValue !== null ?
-              (typeof figureValue === 'object' ? JSON.stringify(figureValue) : String(figureValue)) : '';
-            if (!(selectedValues || []).includes(figureValueStr)) {
+          if (safeArrayCheck(filters.sizes, figure.size)) {
+            return false;
+          }
+          if (safeArrayCheck(filters.packaging, figure.packaging)) {
+            return false;
+          }
+          if (safeArrayCheck(filters.productLines, figure.productLine)) {
+            return false;
+          }
+          if (safeArrayCheck(filters.locations, figure.location)) {
+            return false;
+          }
+          if (safeArrayCheck(filters.years, figure.year)) {
+            return false;
+          }
+          if (safeArrayCheck(filters.versions, figure.version)) {
+            return false;
+          }
+
+          // Price range filter with safety checks
+          const priceRange = Array.isArray(filters.priceRange) ? filters.priceRange : [0, 10000];
+          const currentValue = typeof figure.currentValue === 'number' ? figure.currentValue : 0;
+          if (currentValue < priceRange[0] || currentValue > priceRange[1]) {
+            return false;
+          }
+
+          // Date range filter with safety checks
+          const dateRange = Array.isArray(filters.dateRange) ? filters.dateRange : ['', ''];
+          if (dateRange[0] && figure.purchaseDate && figure.purchaseDate < dateRange[0]) {
+            return false;
+          }
+          if (dateRange[1] && figure.purchaseDate && figure.purchaseDate > dateRange[1]) {
+            return false;
+          }
+
+          // UPC filter
+          if (filters.upc && figure.upc && !figure.upc.includes(filters.upc)) {
+            return false;
+          }
+
+          // Completeness filter
+          if (filters.isComplete && filters.isComplete !== 'all') {
+            if (filters.isComplete === 'yes' && !figure.isComplete) {
+              return false;
+            }
+            if (filters.isComplete === 'no' && figure.isComplete) {
               return false;
             }
           }
-        }
-      }
-      // Favorites filter
-      if (filters.showFavoritesOnly && !figure.isFavorite) {
-        return false;
-      }
-      // Tags filter
-      if ((filters.tags || []).length > 0) {
-        const figureTags = Array.isArray(figure.tags) ? figure.tags : [];
-        // Figure must have at least one of the selected tags
-        const hasMatchingTag = (filters.tags || []).some(tag => figureTags.includes(tag));
-        if (!hasMatchingTag) {
-          return false;
-        }
-      }
+
+          // Completeness percentage filter (for accessories)
+          if (filters.completenessRange && Array.isArray(filters.completenessRange)) {
+            const completeness = figure.completenessPercentage ?? 100;
+            if (completeness < filters.completenessRange[0] || completeness > filters.completenessRange[1]) {
+              return false;
+            }
+          }
+
+          // Sale/Trade status filter with enhanced safety
+          const saleTradeStatuses = Array.isArray(filters.saleTradeStatuses) ? filters.saleTradeStatuses : [];
+          if (saleTradeStatuses.length > 0) {
+            const figureAvailability = Array.isArray(figure.availability) ? figure.availability : [];
+            // Check if figure has any of the filtered statuses
+            const hasMatch = saleTradeStatuses.some(status => figureAvailability.includes(status));
+            if (!hasMatch) {
+              return false;
+            }
+          }
+
+          // Custom field filters with enhanced safety
+          if (filters.customFields && typeof filters.customFields === 'object') {
+            for (const [fieldId, selectedValues] of Object.entries(filters.customFields)) {
+              const selectedValuesArray = Array.isArray(selectedValues) ? selectedValues : [];
+              if (selectedValuesArray.length > 0) {
+                const figureValue = figure.customFields?.[fieldId];
+                const figureValueStr = figureValue !== undefined && figureValue !== null ?
+                  (typeof figureValue === 'object' ? JSON.stringify(figureValue) : String(figureValue)) : '';
+                if (!selectedValuesArray.includes(figureValueStr)) {
+                  return false;
+                }
+              }
+            }
+          }
+
+          // Favorites filter
+          if (filters.showFavoritesOnly && !figure.isFavorite) {
+            return false;
+          }
+
+          // Tags filter with enhanced safety
+          const filterTags = Array.isArray(filters.tags) ? filters.tags : [];
+          if (filterTags.length > 0) {
+            const figureTags = Array.isArray(figure.tags) ? figure.tags : [];
+            // Figure must have at least one of the selected tags
+            const hasMatchingTag = filterTags.some(tag => figureTags.includes(tag));
+            if (!hasMatchingTag) {
+              return false;
+            }
+          }
 
           return true;
         } catch (figureError) {
-          console.error('❌ Error processing figure in filter:', figure.name, figureError);
+          console.error('❌ Error processing figure in filter:', figure?.name || 'unknown', figureError);
           console.error('❌ Figure data:', {
-            name: figure.name,
-            availability: figure.availability,
-            tags: figure.tags,
-            accessories: figure.accessories
+            name: figure?.name,
+            availability: figure?.availability,
+            tags: figure?.tags,
+            accessories: figure?.accessories
           });
           return false; // Skip figures that cause errors
         }
